@@ -59,8 +59,8 @@ async function init() {
   
   await BackgroundManager.apply(settings);
   
-  // REVELADO INSTANTÁNEO: Quitamos el estado de carga lo antes posible
-  document.body.classList.remove('loading');
+  // REVELADO INSTANTÁNEO: El contenido ya es visible por CSS
+  // Proceder con la carga de datos sin esperas visuales
   
   // Cargar el resto de los datos (tiles, notes, etc.) lo más rápido posible
   const fullSettings = await storageGet(null);

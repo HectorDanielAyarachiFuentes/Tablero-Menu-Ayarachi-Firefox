@@ -49,10 +49,7 @@ body.with-load-animations .tab-pane {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
-body.loading .main {
-  opacity: 0;
-  transform: translateY(0);
-}
+/* Eliminado el estado oculto inicial */
 
 .main {
   flex: 1;
@@ -61,17 +58,13 @@ body.loading .main {
   align-items: center;
   gap: 18px;
   padding: 12px;
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out, filter .4s ease, background-color .3s;
+  transition: filter .4s ease, background-color .3s;
   opacity: 1;
   transform: translateY(0);
   will-change: filter;
 }
 
-body.loading .live-info,
-body.loading .search-section,
-body.loading .tiles-section {
-  opacity: 0;
-}
+/* Eliminado el estado oculto inicial de secciones */
 
 body.with-load-animations .search-section {
   transition: opacity 0.4s ease-out, transform 0.4s ease-out;

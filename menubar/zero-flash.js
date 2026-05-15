@@ -13,7 +13,19 @@
       BackgroundManager.apply(settings);
   }
 
-  // 3. Renderizado instantáneo de textos (Saludo y Reloj)
+  // 3. Restauración instantánea de Tiles (HTML Snapshot)
+  // Esto hace que los iconos aparezcan antes de que el motor de la extensión se inicie
+  const tilesSnapshot = localStorage.getItem('tiles_snapshot');
+  if (tilesSnapshot) {
+      window.addEventListener('DOMContentLoaded', () => {
+          const tilesContainer = document.getElementById('tiles');
+          if (tilesContainer && !tilesContainer.innerHTML.trim()) {
+              tilesContainer.innerHTML = tilesSnapshot;
+          }
+      });
+  }
+
+  // 4. Renderizado instantáneo de textos (Saludo y Reloj)
   window.addEventListener('DOMContentLoaded', () => {
     const greetingEl = document.getElementById('header-greeting');
     const clockEl = document.getElementById('header-clock');

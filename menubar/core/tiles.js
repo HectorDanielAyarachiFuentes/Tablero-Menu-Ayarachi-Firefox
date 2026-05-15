@@ -152,6 +152,12 @@ function loadMoreTiles() {
     }
 
     tilesEl.appendChild(fragment);
+    
+    // GUARDAR SNAPSHOT: Capturar el estado actual tras añadir nuevos tiles
+    if (FolderManager.isRootView()) {
+        localStorage.setItem('tiles_snapshot', tilesEl.innerHTML);
+    }
+
     loadedCount += nextBatch.length;
     isLoading = false;
 
@@ -199,6 +205,11 @@ function ensureAddButton(container, count) {
         openModal();
     });
     container.appendChild(addNode);
+    
+    // GUARDAR SNAPSHOT: Capturar el estado actual para carga instantánea
+    if (FolderManager.isRootView()) {
+        localStorage.setItem('tiles_snapshot', container.innerHTML);
+    }
 }
 
 function handleTileClick(e) {
