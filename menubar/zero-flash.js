@@ -9,24 +9,45 @@
   const root = document.documentElement.style;
 
   // 2. Aplicar variables de color y fuente (Siempre)
-  if (settings.premiumThemeData) {
-    const theme = settings.premiumThemeData;
-    const panel = theme.panel;
-    const colors = theme.colors;
-    root.setProperty('--panel-bg', settings.panelBg || panel.bg);
-    root.setProperty('--panel-opacity', settings.panelOpacity ?? panel.opacity);
-    root.setProperty('--panel-blur', (settings.panelBlur ?? panel.blur) + 'px');
-    root.setProperty('--panel-radius', (settings.panelRadius ?? panel.radius) + 'px');
-    root.setProperty('--panel-text-color', settings.panelTextColor || colors.text);
-    root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || colors.textSecondary);
-    root.setProperty('--accent-color', settings.accentColor || colors.accent);
-    root.setProperty('--greeting-color', settings.greetingColor || colors.greeting);
-    root.setProperty('--name-color', settings.nameColor || colors.name);
-    root.setProperty('--clock-color', settings.clockColor || colors.clock);
-    root.setProperty('--date-color', settings.dateColor || colors.date);
-    root.setProperty('--greeting-font', settings.greetingFont || (theme.fonts ? theme.fonts.main : "'Poppins', sans-serif"));
-    root.setProperty('--date-font', settings.dateFont || (theme.fonts ? theme.fonts.secondary : "'Poppins', sans-serif"));
+  // 2. Aplicar variables de color y fuente
+  const theme = settings.premiumThemeData || {};
+  const panel = theme.panel || {};
+  const colors = theme.colors || {};
+
+  const panelBg = settings.panelBg || panel.bg || '#000000';
+  root.setProperty('--panel-bg', panelBg);
+  
+  // Calcular RGB para transparencia fluida
+  let rgb = [0, 0, 0];
+  const hex = panelBg.trim();
+  if (hex.startsWith('#')) {
+    if (hex.length === 4) {
+      rgb = [1, 2, 3].map(i => parseInt(hex[i] + hex[i], 16));
+    } else {
+      const match = hex.substring(1).match(/.{2}/g);
+      if (match) rgb = match.slice(0, 3).map(x => parseInt(x, 16));
+    }
+  } else if (hex.includes('rgb')) {
+    const match = hex.match(/\d+/g);
+    if (match) rgb = match.slice(0, 3).map(Number);
   }
+  root.setProperty('--panel-bg-rgb', rgb.join(', '));
+  root.setProperty('--panel-opacity', settings.panelOpacity ?? panel.opacity ?? 0.1);
+  root.setProperty('--panel-blur', (settings.panelBlur ?? panel.blur ?? 10) + 'px');
+  root.setProperty('--panel-radius', (settings.panelRadius ?? panel.radius ?? 12) + 'px');
+  root.setProperty('--panel-text-color', settings.panelTextColor || colors.text || '#ffffff');
+  root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || colors.textSecondary || 'rgba(255, 255, 255, 0.7)');
+  
+  // Colores de acento y UI
+  root.setProperty('--accent-color', settings.accentColor || colors.accent || '#16a085');
+  root.setProperty('--greeting-color', settings.greetingColor || colors.greeting || '#ffffff');
+  root.setProperty('--name-color', settings.nameColor || colors.name || '#ffffff');
+  root.setProperty('--clock-color', settings.clockColor || colors.clock || '#ffffff');
+  root.setProperty('--date-color', settings.dateColor || colors.date || '#ffffff');
+  
+  // Fuentes
+  root.setProperty('--greeting-font', settings.greetingFont || (theme.fonts ? theme.fonts.main : "'Poppins', sans-serif"));
+  root.setProperty('--date-font', settings.dateFont || (theme.fonts ? theme.fonts.secondary : "'Poppins', sans-serif"));
 
   // 3. DETERMINAR FONDO BASE (Jerarquía de prioridad para evitar flash negro)
   let baseBg = '#050505'; 
@@ -83,6 +104,9 @@
       const options = { weekday: 'long', day: 'numeric', month: 'long' };
       dateEl.textContent = new Intl.DateTimeFormat('es-ES', options).format(new Date());
     }
+
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
   });
 
   // 4. Renderizado instantáneo del Doodle (Encima del fondo base)

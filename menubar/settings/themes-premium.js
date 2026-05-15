@@ -633,8 +633,8 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
         await saveAndSyncSetting({
             activePremiumTheme: themeId,
             premiumThemeData: theme,
+            gradient: theme.background.gradient,
             bgType: 'premium',
-            selectedGradient: theme.background.gradient,
             // Guardamos los valores individuales para que el usuario pueda "editarlos" y que persistan
             panelBg: theme.panel.bg,
             panelOpacity: theme.panel.opacity,

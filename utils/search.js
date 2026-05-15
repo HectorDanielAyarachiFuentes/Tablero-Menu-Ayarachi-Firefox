@@ -9,6 +9,15 @@ export function initSearch() {
     $('#searchGo').addEventListener('click', performSearch);
     $('#searchInput').addEventListener('keypress', e => e.key === 'Enter' && performSearch());
 
+    const privacyToggle = $('#privacyToggle');
+    if (privacyToggle) {
+        privacyToggle.addEventListener('click', () => {
+            const isActive = privacyToggle.classList.toggle('active');
+            $('.search-card').classList.toggle('private-mode', isActive);
+            privacyToggle.title = isActive ? 'Búsqueda privada activada' : 'Activar búsqueda privada';
+        });
+    }
+
     $('#engineSelectTrigger').addEventListener('click', () => {
         const list = $('#engineSelectList');
         const isHidden = list.hidden;
@@ -39,8 +48,10 @@ export function initSearch() {
 async function performSearch() {
     const q = $('#searchInput').value.trim();
     if (q) {
+        const isPrivate = $('#privacyToggle')?.classList.contains('active');
         const { engine } = await storageGet(['engine']);
-        window.open(buildSearchUrl(engine || 'google', q));
+        const activeEngine = isPrivate ? 'startpage' : (engine || 'google');
+        window.open(buildSearchUrl(activeEngine, q));
     }
 }
 
@@ -49,6 +60,8 @@ function buildSearchUrl(engine, q) {
     const urls = {
         google: 'https://www.google.com/search?q=',
         duck: 'https://duckduckgo.com/?q=',
+        startpage: 'https://www.startpage.com/do/search?q=',
+        brave: 'https://search.brave.com/search?q=',
         bing: 'https://www.bing.com/search?q=',
         youtube: 'https://www.youtube.com/results?search_query=',
         wiki: 'https://es.wikipedia.org/w/index.php?search=',
@@ -60,7 +73,8 @@ function buildSearchUrl(engine, q) {
 function updateSearchIcon(engine) {
     const domains = {
         google: 'google.com', duck: 'duckduckgo.com', bing: 'bing.com',
-        youtube: 'youtube.com', wiki: 'wikipedia.org', ecosia: 'ecosia.org'
+        youtube: 'youtube.com', wiki: 'wikipedia.org', ecosia: 'ecosia.org',
+        startpage: 'startpage.com', brave: 'brave.com'
     };
     if (domains[engine]) {
         $('#selectedEngineIcon').src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domains[engine]}&size=32`;
@@ -73,9 +87,14 @@ export async function renderFavoritesInSelect() {
     const { engine: currentEngine } = await storageGet(['engine']);
 
     const engines = [
-        { value: 'google', text: 'Google' }, { value: 'duck', text: 'DuckDuckGo' },
-        { value: 'bing', text: 'Bing' }, { value: 'youtube', text: 'YouTube' },
-        { value: 'wiki', text: 'Wikipedia' }, { value: 'ecosia', text: 'Ecosia' },
+        { value: 'google', text: 'Google' }, 
+        { value: 'duck', text: 'DuckDuckGo' },
+        { value: 'startpage', text: 'Startpage (Privado)' },
+        { value: 'brave', text: 'Brave Search' },
+        { value: 'bing', text: 'Bing' }, 
+        { value: 'youtube', text: 'YouTube' },
+        { value: 'wiki', text: 'Wikipedia' }, 
+        { value: 'ecosia', text: 'Ecosia' },
     ];
 
     const createOption = (item) => {

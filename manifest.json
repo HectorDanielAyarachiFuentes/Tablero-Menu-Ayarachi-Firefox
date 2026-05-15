@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Tablero - Nueva Pestaña",
-  "version": "1.0.0",
+  "name": "Tablero",
+  "version": "2.0.0",
   "description": "Un tablero personalizable para tu página de nueva pestaña.",
   "icons": {
     "16": "icons/icon16.png",

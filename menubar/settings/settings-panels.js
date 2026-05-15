@@ -185,8 +185,20 @@ export function updateSliderValueSpans() {
     $('#shadowBlurValue').textContent = `${$('#panelShadowBlur').value}px`;
 }
 
-export function updatePanelRgb(hex) {
-    const rgb = hex.match(/\w\w/g).map(x => parseInt(x, 16));
+export function updatePanelRgb(color) {
+    let rgb = [0, 0, 0];
+    const hex = color.trim();
+    if (hex.startsWith('#')) {
+        if (hex.length === 4) {
+            rgb = [1, 2, 3].map(i => parseInt(hex[i] + hex[i], 16));
+        } else {
+            const match = hex.substring(1).match(/.{2}/g);
+            if (match) rgb = match.slice(0, 3).map(x => parseInt(x, 16));
+        }
+    } else if (hex.includes('rgb')) {
+        const match = hex.match(/\d+/g);
+        if (match) rgb = match.slice(0, 3).map(Number);
+    }
     document.documentElement.style.setProperty('--panel-bg-rgb', rgb.join(', '));
 }
 
@@ -198,7 +210,10 @@ async function resetPanelStyles() {
 }
 
 function clearActiveTheme() {
-    saveAndSyncSetting({ activePanelTheme: null });
+    saveAndSyncSetting({ 
+        activePanelTheme: null,
+        activePremiumTheme: null // Desvincular de temas premium para evitar sobreescritura
+    });
     updateActivePanelThemeButton(null);
 }
 
@@ -248,6 +263,6 @@ function applyShadowStyle(enabled) {
     if (enabled) {
         document.documentElement.style.setProperty('--panel-shadow', '0 5px var(--panel-shadow-blur, 10px) var(--panel-shadow-color, #000000)');
     } else {
-        document.documentElement.style.setProperty('--panel-shadow', 'none');
+        document.documentElement.style.setProperty('--panel-shadow', '0 0 0 transparent');
     }
 }

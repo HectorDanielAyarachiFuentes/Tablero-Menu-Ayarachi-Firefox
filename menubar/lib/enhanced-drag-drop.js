@@ -39,12 +39,19 @@ class EnhancedDragDrop {
     createDragHelper() {
         this.dragHelper = document.createElement('div');
         this.dragHelper.className = 'drag-helper';
-        this.dragHelper.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"></path>
-            </svg>
-            <span>Arrastra para reordenar • Suelta en carpeta para mover</span>
-        `;
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "16"); svg.setAttribute("height", "16"); svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2");
+        svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20");
+        svg.appendChild(path);
+        
+        const span = document.createElement('span');
+        span.textContent = 'Arrastra para reordenar • Suelta en carpeta para mover';
+        
+        this.dragHelper.appendChild(svg);
+        this.dragHelper.appendChild(span);
         this.dragHelper.hidden = true;
         document.body.appendChild(this.dragHelper);
     }
@@ -290,12 +297,13 @@ class EnhancedDragDrop {
     showUndoNotification(onUndo) {
         const notification = document.createElement('div');
         notification.className = 'undo-notification';
-        notification.innerHTML = `
-            <span>Elemento movido</span>
-            <button>Deshacer</button>
-        `;
+        const span = document.createElement('span');
+        span.textContent = 'Elemento movido';
+        const button = document.createElement('button');
+        button.textContent = 'Deshacer';
+        notification.appendChild(span);
+        notification.appendChild(button);
 
-        const button = notification.querySelector('button');
         button.addEventListener('click', () => {
             if (onUndo) onUndo();
             notification.remove();

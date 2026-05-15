@@ -307,7 +307,7 @@ function populateGreetingSelect() {
 export async function loadGradients(activeGradient) {
     const gradientListEl = $('#gradient-list');
 
-    gradientListEl.innerHTML = '';
+    gradientListEl.textContent = '';
     GRADIENTS.forEach(g => {
         const btn = document.createElement('button');
         btn.className = 'gradient-btn';

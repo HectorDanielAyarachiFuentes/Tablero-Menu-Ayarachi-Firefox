@@ -32,7 +32,7 @@ async function init() {
     'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData', 
     'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-    'tiles', 'trash'
+    'tiles', 'trash', 'socialMigrationDone'
   ];
   
   const settings = await storageGet(criticalKeys);
@@ -102,13 +102,41 @@ async function init() {
 
 async function applyCriticalVisuals(settings) {
   let initialTiles = settings.tiles || [];
-  if (initialTiles.length === 0) {
-      initialTiles = [
-        { type: 'link', name: 'YouTube', url: 'https://www.youtube.com/' },
-        { type: 'link', name: 'Google', url: 'https://www.google.com/', favorite: true },
-        { type: 'link', name: 'Wikipedia', url: 'https://es.wikipedia.org/' },
-        { type: 'link', name: 'GitHub', url: 'https://github.com/' }
+  
+  // MIGRACIÓN ÚNICA: Añadir nuevos iconos recomendados si no existen
+  if (!settings.socialMigrationDone) {
+      const currentNames = new Set(initialTiles.map(t => t.name.toLowerCase()));
+      const recommended = [
+        { type: 'link', name: 'Instagram', url: 'https://www.instagram.com/' },
+        { type: 'link', name: 'TikTok', url: 'https://www.tiktok.com/' },
+        { type: 'link', name: 'X', url: 'https://x.com/' },
+        { type: 'link', name: 'Threads', url: 'https://www.threads.net/' },
+        { type: 'link', name: 'Gmail', url: 'https://mail.google.com/' },
+        { type: 'link', name: 'Hotmail', url: 'https://outlook.live.com/' }
       ];
+
+      let needsUpdate = false;
+      recommended.forEach(item => {
+          if (!currentNames.has(item.name.toLowerCase())) {
+              initialTiles.push(item);
+              needsUpdate = true;
+          }
+      });
+
+      if (needsUpdate || initialTiles.length === 0) {
+          if (initialTiles.length === 0) {
+              initialTiles = [
+                { type: 'link', name: 'YouTube', url: 'https://www.youtube.com/' },
+                { type: 'link', name: 'Google', url: 'https://www.google.com/', favorite: true },
+                { type: 'link', name: 'Wikipedia', url: 'https://es.wikipedia.org/' },
+                { type: 'link', name: 'GitHub', url: 'https://github.com/' },
+                ...recommended
+              ];
+          }
+          storageSet({ tiles: initialTiles, socialMigrationDone: true });
+      } else {
+          storageSet({ socialMigrationDone: true });
+      }
   }
   setTiles(initialTiles);
   setTrash(settings.trash || []);
@@ -132,6 +160,15 @@ async function applyCriticalVisuals(settings) {
   root.setProperty('--panel-opacity', panelOpacity);
   root.setProperty('--panel-blur', `${panelBlur}px`);
   root.setProperty('--panel-radius', `${panelRadius}px`);
+  
+  const shadowEnabled = settings.panelShadowEnabled || false;
+  if (shadowEnabled) {
+      const shadowBlur = settings.panelShadowBlur || 10;
+      const shadowColor = settings.panelShadowColor || '#000000';
+      root.setProperty('--panel-shadow', `0 5px ${shadowBlur}px ${shadowColor}`);
+  } else {
+      root.setProperty('--panel-shadow', '0 0 0 transparent');
+  }
   updatePanelRgb(panelBg);
 
   renderTiles();
@@ -173,7 +210,7 @@ export async function updateBackground() {
   const doodle = DOODLES_LIST.find(d => d.id === doodleId);
 
   const doodleBgContainer = $('#doodle-background');
-  doodleBgContainer.innerHTML = '';
+  doodleBgContainer.textContent = '';
 
   if (doodle && doodle.id !== 'none' && doodle.template) {
     $('.wrap').style.backgroundColor = 'transparent';

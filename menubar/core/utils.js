@@ -18,14 +18,17 @@ export const clearHTML = (el) => {
   while (el.firstChild) el.removeChild(el.firstChild);
 };
 
-/**
- * Asigna HTML de forma segura (usando insertAdjacentHTML tras limpiar).
- * Nota: El contenido ya debería estar sanitizado con DOMPurify antes de llamar a esta función.
- */
 export const setHTML = (el, html) => {
   if (!el) return;
   clearHTML(el);
-  el.insertAdjacentHTML('afterbegin', html);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  // Usamos un fragmento para mover los elementos de forma segura
+  const fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(doc.body.firstChild);
+  }
+  el.appendChild(fragment);
 };
 
 /**

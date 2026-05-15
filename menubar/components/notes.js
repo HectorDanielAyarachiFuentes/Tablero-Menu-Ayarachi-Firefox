@@ -2,7 +2,7 @@
  * Gestiona toda la funcionalidad relacionada con el panel de notas.
  * Se encarga de renderizar las notas, y manejar su creación, edición y eliminación.
  */
-import { $, $$ } from '../core/utils.js';
+import { $, $$, setHTML } from '../core/utils.js';
 import { tiles, trash, saveAndRender } from '../core/tiles.js';
 import { openModal } from './modal.js';
 
@@ -17,7 +17,7 @@ export function renderNotes() {
     const allNotes = tiles.map((tile, index) => ({ ...tile, originalIndex: index }))
                          .filter(tile => tile.type === 'note');
 
-    notesListEl.innerHTML = '';
+    notesListEl.textContent = '';
 
     if (allNotes.length === 0) {
         const emptyDiv = document.createElement('div');
@@ -79,9 +79,7 @@ export function renderNotes() {
 
         const content = document.createElement('div');
         content.className = 'note-item-content';
-        // Note content is already sanitized, we use insertAdjacentHTML which is slightly better 
-        // but ideally we'd avoid it. However for rich text we need it.
-        content.insertAdjacentHTML('afterbegin', note.content || ''); 
+        setHTML(content, note.content || ''); 
 
         const actions = document.createElement('div');
         actions.className = 'note-item-actions';
