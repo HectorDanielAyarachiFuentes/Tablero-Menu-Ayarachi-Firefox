@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tablero",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Un tablero personalizable para tu página de nueva pestaña con gestión de notas.",
   
   "icons": {
