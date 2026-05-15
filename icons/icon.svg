@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Minimalist Palette -->
+    <linearGradient id="main-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8baaff" /> <!-- Soft Blue -->
+      <stop offset="100%" stop-color="#8a2be2" /> <!-- Ayarachi Purple -->
+    </linearGradient>
+  </defs>
+  
+  <!-- Background: Clean Dark Canvas (representing the board) -->
+  <rect x="0" y="0" width="512" height="512" rx="128" fill="#0f172a" />
+  
+  <!-- The "Grid" Concept (Organizing Links) -->
+  <!-- We use a clean 2x2 arrangement of "Tiles" with different visual weights -->
+  
+  <!-- Tile 1: Top Left (Active/Highlighted) -->
+  <rect x="96" y="96" width="144" height="144" rx="32" fill="url(#main-gradient)" />
+  
+  <!-- Tile 2: Top Right (Secondary) -->
+  <rect x="272" y="96" width="144" height="144" rx="32" fill="white" opacity="0.15" />
+  
+  <!-- Tile 3: Bottom Left (Secondary) -->
+  <rect x="96" y="272" width="144" height="144" rx="32" fill="white" opacity="0.15" />
+  
+  <!-- Tile 4: Bottom Right (Accent/Action) -->
+  <!-- A slightly different shape or opacity to imply interaction or variety -->
+  <rect x="272" y="272" width="144" height="144" rx="32" fill="white" opacity="0.08" />
+  
+  <!-- Minimalist subtle border/stroke to define the "Board" feel without heavy outlines -->
+  <rect x="32" y="32" width="448" height="448" rx="100" fill="none" stroke="white" stroke-width="16" opacity="0.05" />
+
+</svg>

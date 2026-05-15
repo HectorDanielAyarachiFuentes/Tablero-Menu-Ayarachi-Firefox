@@ -1,0 +1,347 @@
+/* ============================================
+   DRAG & DROP MEJORADO - ESTILOS
+   ============================================ */
+
+/* Estado de arrastre mejorado */
+.tile.dragging {
+    opacity: 0.5;
+    transform: scale(1.05) rotate(2deg);
+    cursor: grabbing !important;
+    z-index: 1000;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Ghost/Preview del elemento arrastrado */
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.8;
+    transform: scale(1.1) rotate(3deg);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+    transition: transform 0.15s ease-out;
+}
+
+/* Indicador de posición de inserción */
+.drop-indicator {
+    position: absolute;
+    width: 4px;
+    height: 100%;
+    background: var(--accent-color, #8a2be2);
+    border-radius: 2px;
+    box-shadow: 0 0 10px var(--accent-color, #8a2be2);
+    animation: pulse-indicator 1s ease-in-out infinite;
+    z-index: 100;
+    pointer-events: none;
+}
+
+@keyframes pulse-indicator {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scaleY(0.95);
+    }
+}
+
+/* Zona de drop activa - Reordenamiento */
+.tile.drag-over {
+    background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.1);
+    /* Border removed - use box-shadow for visual feedback without layout shift */
+    box-shadow: inset 0 0 0 2px var(--accent-color, #8a2be2);
+    transform: scale(0.98);
+    transition: all 0.2s ease-out;
+}
+
+/* Zona de drop activa - Carpeta */
+.tile.drag-over-folder {
+    background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.15);
+    border: 3px solid var(--accent-color, #8a2be2);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(var(--accent-color-rgb, 138, 43, 226), 0.4);
+    animation: folder-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes folder-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(var(--accent-color-rgb, 138, 43, 226), 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(var(--accent-color-rgb, 138, 43, 226), 0.6);
+    }
+}
+
+/* Cursor personalizado durante drag */
+.tiles.dragging-active {
+    cursor: grabbing !important;
+}
+
+.tiles.dragging-active .tile:not(.dragging) {
+    cursor: copy;
+}
+
+.tiles.dragging-active .tile.drag-over-folder {
+    cursor: alias;
+}
+
+/* Animación de lift-off al iniciar drag */
+@keyframes lift-off {
+    0% {
+        transform: scale(1) translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: scale(1.08) translateY(-8px) rotate(1deg);
+    }
+
+    100% {
+        transform: scale(1.05) translateY(-4px) rotate(2deg);
+    }
+}
+
+.tile.drag-starting {
+    animation: lift-off 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Animación de drop */
+@keyframes drop-land {
+    0% {
+        transform: scale(1.05) translateY(-4px);
+        opacity: 0.5;
+    }
+
+    60% {
+        transform: scale(0.95) translateY(2px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.tile.drop-landing {
+    animation: drop-land 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Animación de elementos que se desplazan */
+@keyframes shift-position {
+    0% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(-4px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.tile.shifting {
+    animation: shift-position 0.3s ease-out;
+}
+
+/* Efecto de ripple al soltar */
+.drop-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--accent-color-rgb, 138, 43, 226), 0.3) 0%, transparent 70%);
+    pointer-events: none;
+    animation: ripple-expand 0.6s ease-out;
+}
+
+@keyframes ripple-expand {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 1;
+    }
+
+    100% {
+        width: 200px;
+        height: 200px;
+        opacity: 0;
+    }
+}
+
+/* Indicador visual de "no se puede soltar aquí" */
+.tile.drag-invalid {
+    background: rgba(255, 0, 0, 0.1);
+    border: 2px dashed #ff4444;
+    cursor: not-allowed;
+}
+
+/* Overlay semi-transparente durante drag */
+.drag-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.05);
+    pointer-events: none;
+    z-index: 999;
+    backdrop-filter: blur(1px);
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Mensaje de ayuda durante drag */
+.drag-helper {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(var(--panel-bg-rgb), 0.95);
+    backdrop-filter: blur(10px);
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--panel-text-color);
+    font-size: 14px;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.drag-helper svg {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 8px;
+    stroke: var(--accent-color);
+}
+
+/* Mejoras para touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .tile.dragging {
+        transform: scale(1.1) rotate(3deg);
+        opacity: 0.7;
+    }
+
+    .tile.drag-over,
+    .tile.drag-over-folder {
+        transform: scale(1.05);
+    }
+}
+
+/* Animación de entrada a carpeta */
+@keyframes enter-folder {
+    0% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(0.8) translateY(-20px);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(0) translateY(-40px);
+        opacity: 0;
+    }
+}
+
+.tile.entering-folder {
+    animation: enter-folder 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Notificación de undo */
+.undo-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(var(--panel-bg-rgb), 0.95);
+    backdrop-filter: blur(10px);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--panel-text-color);
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.undo-notification button {
+    background: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.undo-notification button:hover {
+    transform: scale(1.05);
+}
+
+/* Prevenir selección de texto durante drag */
+.tiles.dragging-active * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+}
+
+/* Efecto de partículas al soltar en carpeta */
+@keyframes particle-burst {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--tx), var(--ty)) scale(0);
+        opacity: 0;
+    }
+}
+
+.folder-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-burst 0.6s ease-out forwards;
+}

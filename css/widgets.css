@@ -1,0 +1,802 @@
+/* ============================================
+   SISTEMA DE WIDGETS PRO (CLEAN & MINIMAL)
+   Estilo Tipo: Notion / Linear / Productivity Tools
+   ============================================ */
+
+/* Botón flotante */
+#widgets-toggle-btn {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 48px;
+    height: 48px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--panel-blur));
+    -webkit-backdrop-filter: blur(var(--panel-blur));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    color: var(--panel-text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10000;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+#widgets-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-4px) scale(1.05);
+    border-color: var(--accent-color);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+#widgets-toggle-btn.active {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 0 25px rgba(var(--accent-color-rgb), 0.4);
+}
+
+/* Sidebar */
+.widgets-sidebar {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 380px;
+    height: 100vh;
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--panel-blur));
+    -webkit-backdrop-filter: blur(var(--panel-blur));
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 9999;
+    padding: 40px 30px;
+    transition: right 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    box-shadow: -10px 0 50px rgba(0, 0, 0, 0.3);
+}
+
+.widgets-sidebar.open {
+    right: 0;
+}
+
+.widgets-sidebar::-webkit-scrollbar {
+    width: 0;
+}
+
+/* Header */
+.widgets-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.widgets-header h2 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+/* Widget Card - Minimalista */
+.widget-card {
+    background: transparent;
+    /* Sin fondo para look integrado */
+    border-radius: 0;
+    padding: 0;
+    border: none;
+    margin-bottom: 30px;
+}
+
+.widget-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 15px;
+    color: rgba(255, 255, 255, 0.3);
+    /* Muy sutil */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* === POMODORO PRO === */
+.pomo-settings-icon-btn {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.pomo-settings-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* Config panel */
+.pomo-config-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+    margin-bottom: 0;
+}
+
+.pomo-config-panel.show {
+    max-height: 120px;
+    opacity: 1;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.pomo-config-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.pomo-config-row label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    width: 60px;
+    flex-shrink: 0;
+}
+
+.pomo-config-unit {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.pomo-config-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    padding: 2px 4px;
+}
+
+.pomo-step-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 1rem;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.pomo-step-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* Mode switch */
+.pomodoro-mode-switch {
+    display: flex;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 16px;
+    gap: 3px;
+}
+
+.pomodoro-mode-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 7px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+}
+
+.pomodoro-mode-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* Ring */
+.pomo-ring-container {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 16px;
+}
+
+.pomo-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.pomo-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 6;
+}
+
+.pomo-ring-progress {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.8);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.4s;
+}
+
+/* Focus = warm amber, break = teal */
+.pomo-ring-container[data-mode="short-break"] .pomo-ring-progress {
+    stroke: rgba(100, 220, 180, 0.85);
+}
+
+.pomo-ring-container.running .pomo-ring-progress {
+    stroke: rgba(255, 190, 80, 0.9);
+}
+
+.pomo-ring-container[data-mode="short-break"].running .pomo-ring-progress {
+    stroke: rgba(80, 220, 180, 0.9);
+}
+
+.pomo-ring-container.pomo-complete .pomo-ring-progress {
+    stroke: rgba(120, 255, 150, 0.9);
+    filter: drop-shadow(0 0 6px rgba(120, 255, 150, 0.6));
+}
+
+.pomo-ring-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.pomodoro-time {
+    font-family: 'SF Mono', 'Roboto Mono', monospace;
+    font-size: 2.6rem;
+    font-weight: 300;
+    color: #fff;
+    letter-spacing: -1px;
+    line-height: 1;
+    transition: color 0.5s;
+}
+
+.pomo-mode-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+}
+
+/* Running pulse */
+@keyframes pomoRingPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.pomo-ring-container.running .pomo-ring-progress {
+    animation: pomoRingPulse 2s ease-in-out infinite;
+}
+
+/* Controls */
+.pomodoro-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.pomodoro-btn {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.pomodoro-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    transform: scale(1.06);
+}
+
+.pomodoro-btn:active {
+    transform: scale(0.95);
+}
+
+.pomodoro-btn-reset {
+    width: 38px;
+    height: 38px;
+    align-self: center;
+    background: transparent;
+}
+
+.pomodoro-input {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: inherit;
+    text-align: center;
+    width: 36px;
+    font-size: 0.9rem;
+}
+
+.pomodoro-input:focus {
+    outline: none;
+}
+
+.pomodoro-input::-webkit-inner-spin-button,
+.pomodoro-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+}
+
+/* === CALENDARIO PRO === */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.calendar-header-day {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.calendar-day {
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    cursor: default;
+    margin: 0 auto;
+    transition: all 0.2s;
+}
+
+.calendar-day:hover:not(.empty) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.calendar-day.today {
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.calendar-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.calendar-month-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.calendar-nav-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.calendar-nav-btn:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+
+/* === TO-DO PRO === */
+.todo-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 4px 4px 4px 14px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.todo-input-row:focus-within {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+}
+
+.todo-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.875rem;
+    padding: 7px 0;
+    min-width: 0;
+    font-family: inherit;
+}
+
+.todo-input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.todo-input:focus {
+    outline: none;
+}
+
+.todo-add-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 7px;
+    width: 32px;
+    height: 32px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.todo-add-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.todo-add-btn:active {
+    transform: scale(0.95);
+}
+
+.todo-counter {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 1px 7px;
+    letter-spacing: 0;
+    min-width: 18px;
+    text-align: center;
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.todo-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.todo-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+.todo-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 0 16px;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 6px 9px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    transition: background 0.15s;
+    animation: todoSlideIn 0.2s ease both;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.todo-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.todo-item-removing {
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+}
+
+@keyframes todoSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom checkbox */
+.todo-checkbox-label {
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+}
+
+.todo-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.todo-checkbox:checked {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+.todo-checkmark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    color: #0a0a14;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.todo-checkbox:checked~.todo-checkmark {
+    opacity: 1;
+}
+
+.todo-text {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    word-break: break-word;
+    transition: color 0.2s;
+}
+
+.todo-item.completed .todo-text {
+    color: rgba(255, 255, 255, 0.28);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 255, 255, 0.2);
+}
+
+.todo-delete {
+    opacity: 0;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.todo-item:hover .todo-delete {
+    opacity: 1;
+}
+
+.todo-delete:hover {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+}
+
+@keyframes todoInputShake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20%,
+    60% {
+        transform: translateX(-4px);
+    }
+
+    40%,
+    80% {
+        transform: translateX(4px);
+    }
+}
+
+.todo-input-shake {
+    animation: todoInputShake 0.35s ease;
+    border-color: rgba(255, 100, 100, 0.5) !important;
+}
+
+/* === QUOTES PRO === */
+.quote-text {
+    font-family: 'Athelas', 'Seravek', 'Helvetica Neue', serif;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    line-height: 1.6;
+    margin: 20px 0;
+    position: relative;
+    padding: 0 10px;
+}
+
+.quote-text::before {
+    content: '“';
+    font-family: serif;
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.05);
+    position: absolute;
+    top: -20px;
+    left: -10px;
+}
+
+.quote-author {
+    display: block;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+.quote-refresh-btn {
+    display: block;
+    margin: 20px auto 0;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quote-refresh-btn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+/* Animations & Mobile */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake-pro {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-2px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(2px);
+    }
+}
+
+.widget-shake {
+    animation: shake-pro 0.4s ease-in-out;
+    border: 1px solid rgba(255, 68, 68, 0.3) !important;
+}
+
+@media (max-width: 768px) {
+    .widgets-sidebar {
+        width: 100%;
+        right: -100%;
+        padding: 20px;
+    }
+}

@@ -1,0 +1,299 @@
+[
+    {
+        "id": "cyberpunk",
+        "name": "Cyberpunk 2077",
+        "description": "Neones vibrantes sobre un abismo digital",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(135deg, #050110 0%, #1a0033 50%, #050110 100%)"
+        },
+        "panel": {
+            "bg": "#0e0a24",
+            "bgRgb": "14, 10, 36",
+            "opacity": 0.3,
+            "blur": 25,
+            "radius": 16,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(255, 0, 110, 0.4)",
+            "shadowBlur": 40
+        },
+        "colors": {
+            "text": "#00f2fe",
+            "textSecondary": "#ff006e",
+            "accent": "#ff006e",
+            "greeting": "#00f2fe",
+            "name": "#ff006e",
+            "clock": "#ffffff",
+            "date": "#8338ec"
+        },
+        "fonts": {
+            "main": "'Oswald', sans-serif",
+            "secondary": "'Source Code Pro', monospace"
+        }
+    },
+    {
+        "id": "luxury-gold",
+        "name": "Oro de 24 Kilates",
+        "description": "El epítome del lujo y la exclusividad",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "radial-gradient(circle at center, #1c1c1c 0%, #000000 100%)"
+        },
+        "panel": {
+            "bg": "#bf953f",
+            "bgRgb": "191, 149, 63",
+            "opacity": 0.1,
+            "blur": 20,
+            "radius": 12,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(191, 149, 63, 0.3)",
+            "shadowBlur": 35
+        },
+        "colors": {
+            "text": "#fcf6ba",
+            "textSecondary": "#b38728",
+            "accent": "#bf953f",
+            "greeting": "#ffffff",
+            "name": "#bf953f",
+            "clock": "#fcf6ba",
+            "date": "#aa771c"
+        },
+        "fonts": {
+            "main": "'Playfair Display', serif",
+            "secondary": "'Lato', sans-serif"
+        }
+    },
+    {
+        "id": "tokyo-night",
+        "name": "Tokio Nocturno",
+        "description": "La energía eléctrica de Shinjuku",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(165deg, #0f0c29 0%, #302b63 50%, #24243e 100%)"
+        },
+        "panel": {
+            "bg": "#1e1e2f",
+            "bgRgb": "30, 30, 47",
+            "opacity": 0.4,
+            "blur": 30,
+            "radius": 20,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(0, 245, 255, 0.2)",
+            "shadowBlur": 40
+        },
+        "colors": {
+            "text": "#00f5ff",
+            "textSecondary": "#ff00ff",
+            "accent": "#ff00ff",
+            "greeting": "#00f5ff",
+            "name": "#ff00ff",
+            "clock": "#ffffff",
+            "date": "#302b63"
+        },
+        "fonts": {
+            "main": "'Oswald', sans-serif",
+            "secondary": "'Source Code Pro', monospace"
+        }
+    },
+    {
+        "id": "neon-inferno",
+        "name": "Infierno de Neón",
+        "description": "Intensidad volcánica y calor digital",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(135deg, #120000 0%, #450000 50%, #120000 100%)"
+        },
+        "panel": {
+            "bg": "#ff0000",
+            "bgRgb": "255, 0, 0",
+            "opacity": 0.08,
+            "blur": 20,
+            "radius": 15,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(255, 69, 0, 0.4)",
+            "shadowBlur": 45
+        },
+        "colors": {
+            "text": "#ff4500",
+            "textSecondary": "#ffd700",
+            "accent": "#ff0000",
+            "greeting": "#ffffff",
+            "name": "#ff0000",
+            "clock": "#ff4500",
+            "date": "#450000"
+        },
+        "fonts": {
+            "main": "'Montserrat', sans-serif",
+            "secondary": "'Roboto', sans-serif"
+        }
+    },
+    {
+        "id": "cloud-sea",
+        "name": "Mar de Nubes",
+        "description": "Paz etérea sobre el horizonte",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(to top, #accbee 0%, #e7f0fd 100%)"
+        },
+        "panel": {
+            "bg": "#ffffff",
+            "bgRgb": "255, 255, 255",
+            "opacity": 0.2,
+            "blur": 40,
+            "radius": 40,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(0, 0, 0, 0.03)",
+            "shadowBlur": 30
+        },
+        "colors": {
+            "text": "#2c3e50",
+            "textSecondary": "#34495e",
+            "accent": "#3498db",
+            "greeting": "#2c3e50",
+            "name": "#3498db",
+            "clock": "#2c3e50",
+            "date": "#7f8c8d"
+        },
+        "fonts": {
+            "main": "'Raleway', sans-serif",
+            "secondary": "'Lato', sans-serif"
+        }
+    },
+    {
+        "id": "minimalist-light",
+        "name": "Cuarzo Blanco",
+        "description": "Elegancia pura con transparencias cristalinas",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(135deg, #e0e0e0 0%, #ffffff 50%, #dbe7ff 100%)"
+        },
+        "panel": {
+            "bg": "#ffffff",
+            "bgRgb": "255, 255, 255",
+            "opacity": 0.6,
+            "blur": 20,
+            "radius": 20,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(0, 0, 0, 0.05)",
+            "shadowBlur": 20
+        },
+        "colors": {
+            "text": "#1a1a1a",
+            "textSecondary": "#555555",
+            "accent": "#4facfe",
+            "greeting": "#1a1a1a",
+            "name": "#4facfe",
+            "clock": "#1a1a1a",
+            "date": "#666666"
+        },
+        "fonts": {
+            "main": "'Playfair Display', serif",
+            "secondary": "'Montserrat', sans-serif"
+        }
+    },
+    {
+        "id": "deep-space",
+        "name": "Abismo Estelar",
+        "description": "Negros profundos con aura galáctica",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+        },
+        "panel": {
+            "bg": "#000000",
+            "bgRgb": "0, 0, 0",
+            "opacity": 0.4,
+            "blur": 30,
+            "radius": 12,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(131, 56, 236, 0.3)",
+            "shadowBlur": 50
+        },
+        "colors": {
+            "text": "#e0e0e0",
+            "textSecondary": "#8338ec",
+            "accent": "#3a86ff",
+            "greeting": "#ffffff",
+            "name": "#3a86ff",
+            "clock": "#ffffff",
+            "date": "#8338ec"
+        },
+        "fonts": {
+            "main": "'Poppins', sans-serif",
+            "secondary": "'Raleway', sans-serif"
+        }
+    },
+    {
+        "id": "silk-dawn",
+        "name": "Amanecer de Seda",
+        "description": "Suavidad pastel y calma visual",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)"
+        },
+        "panel": {
+            "bg": "#ffffff",
+            "bgRgb": "255, 255, 255",
+            "opacity": 0.25,
+            "blur": 15,
+            "radius": 30,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(251, 194, 235, 0.4)",
+            "shadowBlur": 30
+        },
+        "colors": {
+            "text": "#4a4e69",
+            "textSecondary": "#9a8c98",
+            "accent": "#fbc2eb",
+            "greeting": "#4a4e69",
+            "name": "#fbc2eb",
+            "clock": "#4a4e69",
+            "date": "#9a8c98"
+        },
+        "fonts": {
+            "main": "'Montserrat', sans-serif",
+            "secondary": "'Poppins', sans-serif"
+        }
+    },
+    {
+        "id": "emerald-forest",
+        "name": "Bosque Esmeralda",
+        "description": "Lujo orgánico y tonos naturales profundos",
+        "category": "premium",
+        "background": {
+            "type": "gradient",
+            "gradient": "linear-gradient(135deg, #064e3b 0%, #065f46 50%, #022c22 100%)"
+        },
+        "panel": {
+            "bg": "#064e3b",
+            "bgRgb": "6, 78, 59",
+            "opacity": 0.2,
+            "blur": 25,
+            "radius": 18,
+            "shadowEnabled": true,
+            "shadowColor": "rgba(52, 211, 153, 0.2)",
+            "shadowBlur": 35
+        },
+        "colors": {
+            "text": "#ecfdf5",
+            "textSecondary": "#6ee7b7",
+            "accent": "#34d399",
+            "greeting": "#ecfdf5",
+            "name": "#34d399",
+            "clock": "#ffffff",
+            "date": "#6ee7b7"
+        },
+        "fonts": {
+            "main": "'Playfair Display', serif",
+            "secondary": "'Lato', sans-serif"
+        }
+    }
+]

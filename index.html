@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="es" style="background-color: #050505; color-scheme: dark;">
+
+<head>
+  <meta name="color-scheme" content="dark">
+  <style>
+    /* Estilo crítico para eliminar destello blanco (Permitido por CSP) */
+    html {
+      background-color: #050505;
+      color-scheme: dark !important;
+    }
+    .wrap {
+      display: none;
+    }
+    #doodle-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.5s ease-out;
+    }
+    #doodle-background.ready {
+      opacity: 1;
+    }
+    /* Evitar que se vea el código del doodle antes de que se active el componente */
+    css-doodle:not(:defined) {
+      display: none;
+    }
+  </style>
+  <script src="menubar/zero-flash.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <script src="menubar/fast-loader.js" type="module"></script>
+  <title>Tablero - Nueva pestaña</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="loading">
+  <div class="wrap">
+    <header class="header">
+      <div class="brand-container">
+        <button id="backBtn" class="back-btn" hidden aria-label="Volver a la carpeta anterior">‹</button>
+        <div id="header-greeting" class="brand"><span class="placeholder"></span></div>
+        <div id="header-clock" class="clock-header"><span class="placeholder"></span></div>
+      </div>
+      <div class="controls">
+        <button id="openNotes" title="Notas">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path>
+            <polyline points="15 3 15 8 20 8"></polyline>
+          </svg>
+        </button>
+        <button id="openSettings" title="Configuración">
+          <svg width="24" height="24" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+            <path
+              d="M30.935 4.558 13.702 6.281l-8.55 16.902 8.65 15.212L31.001 36.704l8.583-16.935L30.935 4.558Zm-8.02 6.893c4.466-.01 7.953 3.77 7.953 8.848 0 5.418-3.99 10.276-8.882 10.837-4.892.56-8.848-3.398-8.848-8.815 0-5.418 3.956-10.243 8.848-10.804.306-.035.63-.066.928-.066Z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+
+
+    <main id="main-content" class="main">
+      <section class="top-content">
+        <div id="date" class="date"><span class="placeholder"></span></div>
+      </section>
+
+      <section class="search-section">
+        <div class="search-card">
+          <div class="custom-select-wrapper">
+            <div id="engineSelectTrigger" class="custom-select-trigger" tabindex="0" aria-haspopup="listbox"
+              aria-expanded="false" data-engine="google">
+              <img id="selectedEngineIcon" src="https://www.google.com/favicon.ico" alt="">
+              <span id="selectedEngineName"></span>
+              <svg class="arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div id="engineSelectList" class="custom-select-options" role="listbox" hidden>
+            </div>
+          </div>
+          <div class="search-input-group">
+            <input id="searchInput" placeholder="Buscar en la web..." aria-label="Término de búsqueda" />
+            <button id="searchGo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Buscar</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tiles-section">
+        <div id="tiles" class="tiles"></div>
+      </section>
+    </main>
+
+    <footer class="footer">Ayarachi © 2025</footer>
+  </div>
+
+  <!-- El contenedor del doodle se mueve aquí, fuera de .wrap, para que pueda actuar como un fondo independiente. -->
+  <div id="doodle-background"></div>
+
+  <!-- Weather Widget - Posicionado de forma fija -->
+  <div id="weather" class="weather-widget-fixed">
+    <div class="weather-summary">
+      <div class="weather-details"><span class="placeholder"></span></div>
+    </div>
+  </div>
+
+  <!-- Overlay for settings panel -->
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
+
+  <!-- Notes Panel -->
+  <aside id="notes-panel" class="notes-panel" aria-hidden="true">
+    <header class="notes-header">
+      <div class="notes-title-group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path>
+          <polyline points="15 3 15 8 20 8"></polyline>
+        </svg>
+        <h3>Mis Notas</h3>
+        <button id="addNote" class="add-note-btn" title="Añadir nueva nota">+</button>
+      </div>
+      <button id="closeNotes" aria-label="Cerrar notas">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </header>
+    <div class="notes-body">
+      <div id="notes-list" class="notes-list"></div>
+    </div>
+  </aside>
+
+  <!-- Settings panel -->
+  <aside id="settings" class="settings" aria-hidden="true" role="dialog" aria-labelledby="settings-title">
+    <header class="settings-header">
+      <div>
+        <h3 id="settings-title">Configuración</h3>
+        <div id="saveStatus" class="save-status"></div>
+      </div>
+      <button id="closeSettings" aria-label="Cerrar configuración">
+        <img src="images/cerrar.svg" alt="Ícono de cerrar" width="24" height="24">
+      </button>
+    </header>
+    <div class="settings-tabs">
+      <button class="tab-btn active" data-tab="accesos">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Accesos</span>
+      </button>
+      <button class="tab-btn" data-tab="general">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        <span>General</span>
+      </button>
+      <button class="tab-btn" data-tab="fondo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        <span>Fondo</span>
+      </button>
+      <button class="tab-btn" data-tab="doodle">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        <span>Doodle</span>
+      </button>
+      <button class="tab-btn" data-tab="paneles">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M12.89 1.45l8 4A2 2 0 0 1 22 7.24v9.53a2 2 0 0 1-1.11 1.79l-8 4a2 2 0 0 1-1.79 0l-8-4A2 2 0 0 1 2 16.76V7.24a2 2 0 0 1 1.11-1.79l8-4a2 2 0 0 1 1.78 0z">
+          </path>
+          <polyline points="2.32 6.16 12 11 21.68 6.16"></polyline>
+          <line x1="12" y1="22.76" x2="12" y2="11"></line>
+        </svg>
+        <span>Paneles</span>
+      </button>
+      <button class="tab-btn" data-tab="datos">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Datos</span>
+      </button>
+      <button class="tab-btn" data-tab="papelera">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+        <span>Papelera</span>
+      </button>
+    </div>
+    <div class="settings-body">
+      <!-- Tab: Accesos -->
+      <div class="tab-pane active" id="tab-accesos">
+        <div class="field">
+          <label>Gestionar Accesos</label>
+          <div class="button-group">
+            <button id="syncBookmarks" class="btn" title="Importar favoritos de Chrome">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Sincronizar Marcadores
+            </button>
+            <button id="addTile" class="btn primary">+ Añadir acceso</button>
+            <button id="addFolder" class="btn">+ Añadir carpeta</button>
+          </div>
+          <div class="editor-search-container">
+            <input id="editorSearchInput" placeholder="Buscar accesos por nombre o URL..." />
+          </div>
+          <div id="editor" class="editor"></div>
+        </div>
+      </div>
+      <!-- Tab: General -->
+      <div class="tab-pane" id="tab-general">
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" data-subtab="contenido">Contenido</button>
+          <button class="sub-tab-btn" data-subtab="apariencia">Interfaz</button>
+          <button class="sub-tab-btn" data-subtab="colores">Colores</button>
+        </div>
+        <div class="sub-tab-content">
+          <!-- Sub-tab: Contenido -->
+          <div class="sub-tab-pane active" id="subtab-contenido">
+            <div class="field">
+              <label for="userName">Tu Nombre</label>
+              <input id="userName" placeholder="¿Cómo te llamas?" />
+            </div>
+            <div class="field">
+              <label for="weatherCity">Ubicación del Clima</label>
+              <input id="weatherCity" placeholder="Dejar en blanco para autodetectar" />
+            </div>
+            <div class="field">
+              <label for="greetingSelect">Tipo de Saludo</label>
+              <select id="greetingSelect">
+                <option value="random">Aleatorio (por momento del día)</option>
+                <option value="custom">Personalizado</option>
+                <!-- Los saludos predefinidos se cargarán aquí -->
+              </select>
+            </div>
+            <div class="field" id="customGreetingsContainer" hidden>
+              <label for="customGreetingsInput">Mis Saludos (uno por línea)</label>
+              <textarea id="customGreetingsInput" rows="4"
+                placeholder="¡Qué onda, campeón! 😎\n¡A darle que es mole de olla!"></textarea>
+            </div>
+          </div>
+          <!-- Sub-tab: Apariencia -->
+          <div class="sub-tab-pane" id="subtab-apariencia">
+            <!-- CAMBIO: El nombre de la pestaña en el HTML es ahora "Interfaz" -->
+            <div class="field">
+              <label>Formato del Reloj</label>
+            </div>
+            <div class="field field-toggle">
+              <label for="clockFormatToggle">Usar formato de 12 horas (AM/PM)</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="clockFormatToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field field-toggle">
+              <label for="showSecondsToggle">Mostrar segundos en el reloj</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="showSecondsToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Elementos de la Interfaz</label>
+              <p class="field-description">Controla qué elementos se muestran en la página principal.</p>
+            </div>
+            <div class="field field-toggle">
+              <label for="showSearchToggle">Mostrar barra de búsqueda</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="showSearchToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field field-toggle">
+              <label for="showWeatherToggle">Mostrar widget del clima</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="showWeatherToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field field-toggle">
+              <label for="showDateToggle">Mostrar fecha completa</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="showDateToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Animaciones de Carga</label>
+              <p class="field-description">Controla si los elementos aparecen con animaciones al cargar la página.</p>
+            </div>
+            <div class="field field-toggle">
+              <label for="enableLoadAnimationsToggle">Activar animaciones de carga</label>
+              <div class="switch-container">
+                <label class="switch"><input type="checkbox" id="enableLoadAnimationsToggle"><span
+                    class="slider round"></span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Tipografía</label>
+              <p class="field-description">Elige las fuentes para diferentes elementos de la interfaz.</p>
+            </div>
+            <div class="field">
+              <label for="greetingFont">Fuente del Saludo y Reloj</label>
+              <select id="greetingFont">
+                <option value="'Poppins', sans-serif">Poppins (Defecto)</option>
+                <optgroup label="Sans Serif">
+                  <option value="'Roboto', sans-serif">Roboto</option>
+                  <option value="'Open Sans', sans-serif">Open Sans</option>
+                  <option value="'Lato', sans-serif">Lato</option>
+                  <option value="'Montserrat', sans-serif">Montserrat</option>
+                  <option value="'Oswald', sans-serif">Oswald</option>
+                  <option value="'Raleway', sans-serif">Raleway</option>
+                </optgroup>
+                <optgroup label="Serif">
+                  <option value="'Playfair Display', serif">Playfair Display</option>
+                  <option value="'Merriweather', serif">Merriweather</option>
+                </optgroup>
+                <optgroup label="Monospace">
+                  <option value="'Source Code Pro', monospace">Source Code Pro</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="field">
+              <label for="dateFont">Fuente de la Fecha</label>
+              <select id="dateFont">
+                <option value="'Poppins', sans-serif">Poppins (Defecto)</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Open Sans', sans-serif">Open Sans</option>
+                <option value="'Lato', sans-serif">Lato</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+              </select>
+            </div>
+          </div>
+          <!-- Sub-tab: Colores -->
+          <div class="sub-tab-pane" id="subtab-colores">
+            <div class="field">
+              <label for="masterTextColor">Color General de Texto</label>
+              <div class="color-input-group">
+                <input type="color" id="masterTextColor" value="#FFFFFF">
+                <button id="applyMasterTextColor" class="btn btn-small">Aplicar a todos</button>
+              </div>
+              <p class="field-description">Usa este control para cambiar todos los colores de texto a la vez.</p>
+            </div>
+            <div class="field">
+              <label for="greetingColor">Color del Saludo</label>
+              <div class="color-input-group">
+                <input type="color" id="greetingColor" value="#FFFFFF">
+              </div>
+            </div>
+            <div class="field">
+              <label for="nameColor">Color del Nombre</label>
+              <div class="color-input-group">
+                <input type="color" id="nameColor" value="#FFFFFF">
+              </div>
+            </div>
+            <div class="field">
+              <label for="clockColor">Color del Reloj</label>
+              <div class="color-input-group">
+                <input type="color" id="clockColor" value="#FFFFFF">
+              </div>
+            </div>
+            <div class="field">
+              <label for="dateColor">Color de la Fecha</label>
+              <div class="color-input-group">
+                <input type="color" id="dateColor" value="#FFFFFF">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab: Fondo -->
+      <div class="tab-pane" id="tab-fondo">
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" data-subtab="degradados">Degradados</button>
+          <button class="sub-tab-btn" data-subtab="imagen">Imagen</button>
+        </div>
+        <div class="sub-tab-content">
+          <!-- Sub-tab: Degradados -->
+          <div class="sub-tab-pane active" id="subtab-degradados">
+            <div class="field">
+              <label>Degradados</label>
+              <div id="gradient-list" class="gradient-list">
+                <!-- Los degradados se cargarán aquí desde JS -->
+              </div>
+            </div>
+            <div class="field field-toggle">
+              <label for="randomBgToggle">Degradado aleatorio en cada pestaña</label>
+              <div class="switch-container">
+                <label class="switch">
+                  <input type="checkbox" id="randomBgToggle">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-tab: Imagen -->
+          <div class="sub-tab-pane" id="subtab-imagen">
+            <div class="field">
+              <label for="bgUrl">Fondo Personalizado</label>
+              <input id="bgUrl" placeholder="Pega una URL de imagen para verla al instante" />
+              <div class="or">o</div>
+              <label for="bgFile" class="btn file-label">Subir imagen</label>
+              <input id="bgFile" type="file" accept="image/*" hidden />
+            </div>
+            <div class="field" id="bgDisplayMode" hidden> <!-- ESTO SE MOVIÓ AQUÍ -->
+              <label>Modo de visualización de imagen</label>
+              <div class="button-group" id="bgModeSelector">
+                <button class="btn" data-mode="cover">Rellenar</button>
+                <button class="btn" data-mode="contain">Ajustar</button>
+                <button class="btn" data-mode="stretch">Estirar</button>
+                <button class="btn" data-mode="center">Centrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Tab: Doodle -->
+      <div class="tab-pane" id="tab-doodle">
+        <div class="field">
+          <label>Elige un Doodle</label>
+          <p class="field-description">Selecciona un doodle para mostrarlo en la página principal. Los doodles son
+            animaciones o imágenes interactivas que aparecen sobre el fondo.</p>
+        </div>
+        <div class="field">
+          <label>Vista Previa</label>
+          <div id="doodle-preview" class="doodle-preview">
+            <span class="placeholder-text">Selecciona un doodle para verlo aquí</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Doodles Disponibles</label>
+          <div id="doodle-list" class="doodle-list">
+            <button class="doodle-item" data-doodle-id="none">
+              <div class="doodle-item-preview none"></div>
+              <span class="doodle-item-name">Ninguno</span>
+            </button>
+            <!-- Aquí se cargarán más doodles con JS -->
+            <!-- Ejemplo de un doodle -->
+            <button class="doodle-item" data-doodle-id="lluvia-estrellas">
+              <div class="doodle-item-preview lluvia-estrellas"></div>
+              <span class="doodle-item-name">Lluvia de Estrellas</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Tab: Paneles -->
+      <div class="tab-pane" id="tab-paneles">
+        <!-- Sub-tabs for Paneles -->
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" data-subtab="temas">Temas</button>
+          <button class="sub-tab-btn" data-subtab="apariencia">Apariencia</button>
+          <button class="sub-tab-btn" data-subtab="sombra">Sombra</button>
+        </div>
+
+        <div class="sub-tab-content">
+          <!-- Sub-tab: Temas -->
+          <div class="sub-tab-pane active" id="subtab-temas">
+            <div class="field">
+              <label>Temas Predefinidos</label>
+              <div id="panel-theme-list" class="theme-list panel-theme-list">
+                <!-- Los temas de paneles se cargarán aquí desde JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-tab: Apariencia -->
+          <div class="sub-tab-pane" id="subtab-apariencia">
+            <div class="field">
+              <label for="panelColor">Color de Fondo</label>
+              <input type="color" id="panelColor" value="#000000">
+            </div>
+            <div class="field">
+              <label for="panelTextColor">Color de Texto Principal</label>
+              <input type="color" id="panelTextColor" value="#ffffff">
+            </div>
+            <div class="field">
+              <label for="panelTextSecondaryColor">Color de Texto Secundario</label>
+              <input type="color" id="panelTextSecondaryColor" value="#ffffff">
+            </div>
+            <div class="field">
+              <label for="panelOpacity">Opacidad <span id="opacityValue">5%</span></label>
+              <input type="range" id="panelOpacity" min="0" max="1" step="0.01" value="0.05">
+            </div>
+            <div class="field">
+              <label for="panelBlur">Desenfoque <span id="blurValue">6px</span></label>
+              <input type="range" id="panelBlur" min="0" max="50" step="1" value="6">
+            </div>
+            <div class="field">
+              <label for="panelRadius">Radio de borde <span id="radiusValue">12px</span></label>
+              <input type="range" id="panelRadius" min="0" max="60" step="1" value="12">
+            </div>
+          </div>
+
+          <!-- Sub-tab: Sombra -->
+          <div class="sub-tab-pane" id="subtab-sombra">
+            <div class="field field-toggle">
+              <label for="panelShadowToggle">Habilitar sombra</label>
+              <div class="switch-container"><label class="switch"><input type="checkbox" id="panelShadowToggle"><span
+                    class="slider round"></span></label></div>
+            </div>
+            <div id="panelShadowOptions" hidden>
+              <div class="field"><label for="panelShadowColor">Color de sombra</label><input type="color"
+                  id="panelShadowColor" value="#000000"></div>
+              <div class="field"><label for="panelShadowBlur">Desenfoque <span
+                    id="shadowBlurValue">10px</span></label><input type="range" id="panelShadowBlur" min="0" max="80"
+                  step="1" value="10"></div>
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top: 16px;">
+          <button id="resetPanelsBtn" class="btn full-width">Restablecer Estilos de Paneles</button>
+        </div>
+      </div>
+      <!-- Tab: Datos -->
+      <div class="tab-pane" id="tab-datos">
+        <div class="data-section">
+          <h4>Sincronización Interna</h4>
+          <div id="data-status" class="data-status-container"></div>
+          <div class="field">
+            <div id="dirPath" class="dir-path"><span>Estado: <b>Sincronización Activa</b></span></div>
+            <p class="field-description">
+              Tus datos se guardan de forma segura y automática en el almacenamiento interno de tu navegador (OPFS).
+              Esto garantiza que tus accesos, notas y configuraciones persistan incluso si limpias la caché.
+            </p>
+          </div>
+
+          <div class="field field-toggle">
+            <label for="autoSyncToggle">Auto-respaldo Interno</label>
+            <div class="switch-container">
+              <label class="switch"><input type="checkbox" id="autoSyncToggle"><span
+                  class="slider round"></span></label>
+            </div>
+            <p class="field-description">Mantiene una copia de seguridad interna actualizada en tiempo real.</p>
+            <button id="manualSaveBtn" class="btn" hidden>Forzar Respaldo Ahora</button>
+          </div>
+        </div>
+
+        <div class="data-section">
+          <h4>Copia de Seguridad Externa</h4>
+          <p class="field-description">Exporta toda tu configuración a un archivo JSON para moverla a otro navegador o guardarla como respaldo manual.</p>
+          <div class="button-group">
+            <button id="importJsonBtn" class="btn">Importar JSON</button>
+            <button id="exportJsonBtn" class="btn primary">Exportar JSON</button>
+          </div>
+        </div>
+      </div>
+      <!-- Tab: Papelera -->
+      <div class="tab-pane tab-pane-full-height" id="tab-papelera">
+        <div class="field">
+          <div class="field-header">
+            <label>Accesos Eliminados</label>
+            <button id="emptyTrashBtn" class="btn btn-danger" title="Vaciar toda la papelera" disabled>Vaciar
+              Papelera</button>
+          </div>
+          <div class="scrollable-content">
+            <div id="trash-list" class="trash-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="settings-footer">
+      <a href="https://github.com/HectorDanielAyarachiFuentes" class="about-link" rel="noopener noreferrer"
+        title="GitHub del desarrollador">
+        <img src="images/Dulce-flamenco.png" alt="Foto del autor" class="about-photo" />
+        <svg class="github-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+        </svg>
+        <span>Creado por Héctor Daniel Ayarachi</span>
+      </a>
+    </footer>
+  </aside>
+
+  <!-- Edit modal -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <header class="modal-header">
+        <h4 id="modalTitle">Editar Acceso</h4>
+        <button id="closeModal" class="modal-close" aria-label="Cerrar modal">✕</button>
+      </header>
+      <div class="modal-body">
+        <div id="modalIconContainer" class="modal-icon-container">
+          <div id="modalIconPreview" class="modal-icon-preview" role="button" tabindex="0"
+            aria-label="Cambiar imagen del ícono">
+            <img id="modalPreviewImg" src="" alt="Vista previa del ícono" hidden>
+            <div id="modalIconPlaceholder" class="modal-icon-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Subir icono</span>
+            </div>
+          </div>
+          <button id="modalResetIcon" class="modal-icon-reset" aria-label="Restablecer ícono" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+          </button>
+        </div>
+        <input type="file" id="modalIconFile" accept="image/*" hidden>
+        <div class="form-group with-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          <input id="modalName" type="text" required placeholder=" " />
+          <label for="modalName">Nombre</label>
+        </div>
+        <div id="modalUrlGroup" class="form-group with-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
+          </svg>
+          <input id="modalUrl" type="url" required placeholder=" " />
+          <label for="modalUrl">Dirección (URL)</label>
+        </div>
+        <div id="modalContentGroup" class="form-group" hidden>
+          <div class="rich-editor-container">
+            <div class="rich-editor-toolbar">
+              <button data-command="bold" title="Negrita (Ctrl+B)"><b>B</b></button>
+              <button data-command="italic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+              <button data-command="underline" title="Subrayado (Ctrl+U)"><u>U</u></button>
+              <button data-command="insertUnorderedList" title="Lista con viñetas">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div id="modalContent" class="rich-text-editor" contenteditable="true" data-placeholder=" "></div>
+          </div>
+          <label for="modalContent">Contenido de la Nota</label>
+        </div>
+      </div>
+      <footer class="modal-footer">
+        <button id="modalCancel" class="btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Cancelar
+        </button>
+        <button id="modalSave" class="btn primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Aceptar
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Menú contextual para los accesos -->
+  <div id="contextMenu" class="context-menu" hidden>
+    <ul>
+      <li><button data-action="favorite">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+            </polygon>
+          </svg>
+          <span>Marcar como favorito</span>
+        </button></li>
+      <li><button data-action="open-tab">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          <span>Abrir en pestaña nueva</span>
+        </button></li>
+      <li><button data-action="open-window">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"></path>
+            <path d="M14 3h7v7"></path>
+            <path d="M11 13 21 3"></path>
+          </svg>
+          <span>Abrir en ventana nueva</span>
+        </button></li>
+      <li><button data-action="open-private">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2"></path>
+            <path d="M12 21v2"></path>
+            <path d="m4.22 4.22 1.42 1.42"></path>
+            <path d="m18.36 18.36 1.42 1.42"></path>
+            <path d="M1 12h2"></path>
+            <path d="M21 12h2"></path>
+            <path d="m4.22 19.78 1.42-1.42"></path>
+            <path d="m18.36 5.64 1.42-1.42"></path>
+          </svg>
+          <span>Abrir en ventana privada</span>
+        </button></li>
+      <li class="separator"></li>
+      <li><button data-action="edit">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          <span>Editar</span>
+        </button></li>
+      <li><button data-action="delete">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+          <span>Enviar a la papelera</span>
+        </button></li>
+    </ul>
+  </div>
+
+  <template id="tileTpl">
+    <div class="tile" draggable="true">
+      <!-- CAMBIO: Se añade loading="lazy" para mejorar rendimiento inicial -->
+      <img class="thumb" width="56" height="56" alt="" loading="lazy">
+      <div class="info">
+        <div class="title"></div>
+        <div class="url"></div>
+      </div>
+      <div class="actions"> <button class="more-btn" aria-label="Más opciones para este acceso"> <svg
+            xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="5" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+          </svg> </button> </div>
+    </div>
+  </template>
+
+  <script src="menubar/app.js" type="module"></script>
+</body>
+
+</html>
