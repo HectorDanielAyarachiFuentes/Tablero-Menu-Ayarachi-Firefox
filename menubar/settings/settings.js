@@ -7,7 +7,7 @@ import { $, $$, storageGet, storageSet } from '../core/utils.js';
 import { saveAndSyncSetting } from '../core/utils.js';
 import { updateActiveGradientButton, showSaveStatus, updateDataTabUI, renderGreeting, updateBgModeUI } from '../components/ui.js';
 import { updateSliderValueSpans, updatePanelRgb } from './settings-panels.js';
-import { updateBackground } from '../app.js';
+// BackgroundManager ahora es global
 import { tiles, trash, setTiles, setTrash, saveAndRender, renderTiles } from '../core/tiles.js';
 import { renderNotes } from '../components/notes.js';
 import { renderTrash } from '../components/trash.js';
@@ -38,7 +38,9 @@ export function initSettings(initialState) {
         if (!url) return;
         const { bgDisplayMode: currentMode } = await storageGet(['bgDisplayMode']);
         const mode = currentMode || 'cover';
-        saveAndSyncSetting({ bgUrl: url, bgData: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, updateBackground);
+        saveAndSyncSetting({ bgUrl: url, bgData: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, () => {
+            window.dispatchEvent(new CustomEvent('background-changed'));
+        });
     });
 
     $$('#bgModeSelector button').forEach(btn => {
@@ -321,50 +323,7 @@ export async function loadGradients(activeGradient) {
     });
 }
 
-export function applyGradient(gradientId) {
-    const gradient = GRADIENTS.find(g => g.id === gradientId);
-    if (!gradient) return;
 
-    const colors = gradient.cssVariables || DEFAULT_GRADIENT_COLORS;
-
-    // Aplicar todas las variables CSS del degradado (o las por defecto)
-    for (const [key, value] of Object.entries(colors)) {
-        document.documentElement.style.setProperty(key, value);
-    }
-
-    // Si no hay un color de panel personalizado, usar el del degradado.
-    storageGet(['panelBg']).then(({ panelBg }) => {
-        if (!panelBg) updatePanelRgb(colors['--panel-bg']);
-    });
-
-    document.body.style.backgroundImage = gradient.gradient;
-    // Guardar para carga ultra-rápida (Zero-Flash)
-    localStorage.setItem('lastPremiumGradient', gradient.gradient);
-}
-
-export function applyBackgroundStyles(mode = 'cover') {
-    const style = document.body.style;
-
-    if (mode === 'contain') {
-        style.backgroundSize = 'contain';
-        style.backgroundPosition = 'center center';
-        style.backgroundRepeat = 'no-repeat';
-    } else if (mode === 'stretch') {
-        style.backgroundSize = '100% 100%';
-        style.backgroundPosition = 'center center';
-        style.backgroundRepeat = 'no-repeat';
-    } else if (mode === 'center') {
-        style.backgroundSize = 'auto';
-        style.backgroundPosition = 'center center'; // Asegurar que esté centrado
-        style.backgroundRepeat = 'no-repeat';
-    } else { // 'cover' is the default
-        style.backgroundSize = 'cover';
-        style.backgroundPosition = 'center center';
-        style.backgroundRepeat = 'no-repeat';
-    }
-    document.documentElement.style.setProperty('--panel-radius', `${appState.panelRadius || DEFAULT_PANEL_SETTINGS.panelRadius}px`);
-    document.body.classList.remove('theme-background');
-}
 
 function handleBgFileChange(e) {
     const file = e.target.files[0];
@@ -379,22 +338,27 @@ function handleBgFileChange(e) {
         const { bgDisplayMode } = await storageGet(['bgDisplayMode']);
         const mode = bgDisplayMode || 'cover';
         // Guardamos y sincronizamos, asegurándonos de desactivar el doodle y el tema premium
-        saveAndSyncSetting({ bgData: e.target.result, bgUrl: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, updateBackground);
-        // Actualizamos la UI después de guardar
-        $('#bgUrl').value = '';
+        saveAndSyncSetting({ bgData: e.target.result, bgUrl: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, () => {
+            window.dispatchEvent(new CustomEvent('background-changed'));
+            $('#bgUrl').value = '';
+        });
     };
     reader.readAsDataURL(file);
 }
 
 function handleBgModeChange(e) {
     const mode = e.currentTarget.dataset.mode;
-    saveAndSyncSetting({ bgDisplayMode: mode }, updateBackground);
-    updateBgModeUI(true, mode);
+    saveAndSyncSetting({ bgDisplayMode: mode }, () => {
+        window.dispatchEvent(new CustomEvent('background-changed'));
+        updateBgModeUI(true, mode);
+    });
 }
 
 function handleBackgroundChange(e) {
     const gradientId = e.target.dataset.gradientId;
-    saveAndSyncSetting({ gradient: gradientId, bgUrl: null, bgData: null, doodle: 'none', activePremiumTheme: null }, updateBackground);
+    saveAndSyncSetting({ gradient: gradientId, bgUrl: null, bgData: null, doodle: 'none', activePremiumTheme: null }, () => {
+        window.dispatchEvent(new CustomEvent('background-changed'));
+    });
     // Actualizamos el estado de la aplicación para que el hover no lo revierta al anterior.
     appState.currentGradient = gradientId;
     appState.currentBackgroundValue = null;
@@ -472,54 +436,4 @@ async function handleImport(e) {
     e.target.value = ''; // Reset input
 }
 
-export function applyTextColors(settings) {
-    const isPremium = !!(settings.activePremiumTheme && settings.premiumThemeData);
-    const premiumColors = isPremium ? settings.premiumThemeData.colors : null;
 
-    const textColors = {
-        greetingColor: { var: '--greeting-color', premiumKey: 'greeting' },
-        nameColor: { var: '--name-color', premiumKey: 'name' },
-        clockColor: { var: '--clock-color', premiumKey: 'clock' },
-        dateColor: { var: '--date-color', premiumKey: 'date' }
-    };
-
-    Object.entries(textColors).forEach(([key, config]) => {
-        // Prioridad: 1. Ajuste individual (el del usuario), 2. Ajuste del tema premium
-        let color = settings[key];
-        if (color === undefined && isPremium && premiumColors) {
-            color = premiumColors[config.premiumKey];
-        }
-        if (color === undefined) color = '#FFFFFF';
-        
-        document.documentElement.style.setProperty(config.var, color);
-    });
-
-    // Colores de texto del panel
-    const panelTextColor = settings.panelTextColor || (premiumColors ? premiumColors.text : '#ffffff');
-    const panelTextSecondaryColor = settings.panelTextSecondaryColor || (premiumColors ? premiumColors.textSecondary : 'rgba(255, 255, 255, 0.7)');
-    const accentColor = settings.accentColor || (premiumColors ? premiumColors.accent : '#a855f7');
-
-    document.documentElement.style.setProperty('--panel-text-color', panelTextColor);
-    document.documentElement.style.setProperty('--panel-text-secondary-color', panelTextSecondaryColor);
-    document.documentElement.style.setProperty('--accent-color', accentColor);
-}
-
-export function applyTextFonts(settings) {
-    const isPremium = !!(settings.activePremiumTheme && settings.premiumThemeData);
-    const premiumFonts = isPremium ? settings.premiumThemeData.fonts : null;
-
-    const textFonts = {
-        greetingFont: { var: '--greeting-font', premiumKey: 'main' },
-        dateFont: { var: '--date-font', premiumKey: 'secondary' }
-    };
-
-    Object.entries(textFonts).forEach(([key, config]) => {
-        let font = settings[key];
-        if (font === undefined && isPremium && premiumFonts) {
-            font = premiumFonts[config.premiumKey];
-        }
-        if (font === undefined) font = '\'Poppins\', sans-serif';
-        
-        document.documentElement.style.setProperty(config.var, font);
-    });
-}

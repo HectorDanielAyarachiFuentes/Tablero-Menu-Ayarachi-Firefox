@@ -8,74 +8,12 @@
 
   const root = document.documentElement.style;
 
-  // 2. Aplicar variables de color y fuente (Siempre)
-  // 2. Aplicar variables de color y fuente
-  const theme = settings.premiumThemeData || {};
-  const panel = theme.panel || {};
-  const colors = theme.colors || {};
-
-  const panelBg = settings.panelBg || panel.bg || '#000000';
-  root.setProperty('--panel-bg', panelBg);
-  
-  // Calcular RGB para transparencia fluida
-  let rgb = [0, 0, 0];
-  const hex = panelBg.trim();
-  if (hex.startsWith('#')) {
-    if (hex.length === 4) {
-      rgb = [1, 2, 3].map(i => parseInt(hex[i] + hex[i], 16));
-    } else {
-      const match = hex.substring(1).match(/.{2}/g);
-      if (match) rgb = match.slice(0, 3).map(x => parseInt(x, 16));
-    }
-  } else if (hex.includes('rgb')) {
-    const match = hex.match(/\d+/g);
-    if (match) rgb = match.slice(0, 3).map(Number);
-  }
-  root.setProperty('--panel-bg-rgb', rgb.join(', '));
-  root.setProperty('--panel-opacity', settings.panelOpacity ?? panel.opacity ?? 0.1);
-  root.setProperty('--panel-blur', (settings.panelBlur ?? panel.blur ?? 10) + 'px');
-  root.setProperty('--panel-radius', (settings.panelRadius ?? panel.radius ?? 12) + 'px');
-  root.setProperty('--panel-text-color', settings.panelTextColor || colors.text || '#ffffff');
-  root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || colors.textSecondary || 'rgba(255, 255, 255, 0.7)');
-  
-  // Colores de acento y UI
-  root.setProperty('--accent-color', settings.accentColor || colors.accent || '#16a085');
-  root.setProperty('--greeting-color', settings.greetingColor || colors.greeting || '#ffffff');
-  root.setProperty('--name-color', settings.nameColor || colors.name || '#ffffff');
-  root.setProperty('--clock-color', settings.clockColor || colors.clock || '#ffffff');
-  root.setProperty('--date-color', settings.dateColor || colors.date || '#ffffff');
-  
-  // Fuentes
-  root.setProperty('--greeting-font', settings.greetingFont || (theme.fonts ? theme.fonts.main : "'Poppins', sans-serif"));
-  root.setProperty('--date-font', settings.dateFont || (theme.fonts ? theme.fonts.secondary : "'Poppins', sans-serif"));
-
-  // 3. DETERMINAR FONDO BASE (Jerarquía de prioridad para evitar flash negro)
-  let baseBg = '#050505'; 
-  let isImage = false;
-
-  if (settings.activePremiumTheme && settings.premiumThemeData) {
-    baseBg = settings.premiumThemeData.background.gradient;
-  } else if (settings.gradient) {
-    baseBg = settings.gradient;
-  } else if (settings.bgData || settings.bgUrl) {
-    baseBg = 'url(' + (settings.bgData || settings.bgUrl) + ')';
-    isImage = true;
-  } else if (settings.bgColor) {
-    // AÑADIDO: Soporte para color sólido (Verde, Violeta, etc.)
-    baseBg = settings.bgColor;
-  } else if (settings.doodleColor) {
-    baseBg = settings.doodleColor;
+  // 2. Aplicar TODO lo visual a través del BackgroundManager
+  if (window.BackgroundManager) {
+      BackgroundManager.apply(settings);
   }
 
-  // Aplicar el fondo base al HTML inmediatamente
-  root.setProperty('background', baseBg, 'important');
-  root.setProperty('background-attachment', 'fixed', 'important');
-  root.setProperty('background-size', 'cover', 'important');
-  if (isImage) {
-    root.setProperty('background-position', 'center', 'important');
-  }
-
-  // 3.5. Renderizado instantáneo de textos (Saludo y Reloj)
+  // 3. Renderizado instantáneo de textos (Saludo y Reloj)
   window.addEventListener('DOMContentLoaded', () => {
     const greetingEl = document.getElementById('header-greeting');
     const clockEl = document.getElementById('header-clock');
@@ -118,16 +56,15 @@
         return;
       }
 
-      // Si la librería no está cargada, la cargamos dinámicamente
       if (!window.customElements || !customElements.get('css-doodle')) {
         if (!document.getElementById('css-doodle-lib')) {
           const script = document.createElement('script');
           script.id = 'css-doodle-lib';
           script.src = 'doodle/css-doodle.min.js';
-          script.onload = () => injectDoodle(); // Re-intentar al cargar
+          script.onload = () => injectDoodle();
           document.head.appendChild(script);
         } else {
-          setTimeout(injectDoodle, 20); // Esperar a que cargue el script existente
+          setTimeout(injectDoodle, 20);
         }
         return;
       }
@@ -151,7 +88,6 @@
   style.textContent = '* { transition: none !important; }';
   document.documentElement.appendChild(style);
 
-  // Intentar limpiar las transiciones lo antes posible
   const cleanTrans = () => {
     const s = document.getElementById('zero-flash-no-trans');
     if (s) s.remove();

@@ -51,7 +51,7 @@ body.with-load-animations .tab-pane {
 
 body.loading .main {
   opacity: 0;
-  transform: translateY(5px);
+  transform: translateY(0);
 }
 
 .main {
@@ -74,13 +74,13 @@ body.loading .tiles-section {
 }
 
 body.with-load-animations .search-section {
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-  transition-delay: 0.2s;
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  transition-delay: 0.05s;
 }
 
 body.with-load-animations .tiles-section {
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-  transition-delay: 0.3s;
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  transition-delay: 0.1s;
 }
 
 * {
@@ -88,7 +88,29 @@ body.with-load-animations .tiles-section {
 }
 
 html {
-  background: #0a0a0a;
+  background-color: #050505 !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 1000;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+body.bg-progressive-loading::before {
+  opacity: 0.15;
+  animation: dither-shake 0.3s steps(3) infinite;
+}
+
+@keyframes dither-shake {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-1px, 1px); }
+  100% { transform: translate(1px, -1px); }
 }
 
 body {
@@ -96,11 +118,13 @@ body {
   color: var(--panel-text-color);
   height: 100%;
   margin: 0;
+  background-color: #050505;
   background-image: var(--bg-image);
-  transition: background-image .4s ease-in-out, color .4s ease-in-out;
+  transition: color .4s ease-in-out;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  position: relative;
 }
 
 body.no-scroll {
@@ -111,7 +135,8 @@ body.no-scroll {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.15);
+  will-change: opacity;
 }
 
 .header {

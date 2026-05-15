@@ -5,6 +5,7 @@
  */
 import { $, $$, saveAndSyncSetting, storageGet, setSVG } from '../core/utils.js';
 import { updatePanelRgb } from './settings-panels.js';
+// BackgroundManager ahora es global
 
 let premiumThemes = [
     {
@@ -596,35 +597,14 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
     const theme = premiumThemes.find(t => t.id === themeId);
     if (!theme) return;
 
-    document.body.style.background = theme.background.gradient;
-    document.body.classList.add('theme-background');
-
-    const panel = theme.panel;
-    document.documentElement.style.setProperty('--panel-bg', panel.bg);
-    document.documentElement.style.setProperty('--panel-bg-rgb', panel.bgRgb);
-    document.documentElement.style.setProperty('--panel-opacity', panel.opacity);
-    document.documentElement.style.setProperty('--panel-blur', `${panel.blur}px`);
-    document.documentElement.style.setProperty('--panel-radius', `${panel.radius}px`);
-
-    if (panel.shadowEnabled) {
-        document.documentElement.style.setProperty('--panel-shadow', `0 5px ${panel.shadowBlur}px ${panel.shadowColor}`);
-    } else {
-        document.documentElement.style.setProperty('--panel-shadow', 'none');
-    }
-
-    const colors = theme.colors;
-    document.documentElement.style.setProperty('--panel-text-color', colors.text);
-    document.documentElement.style.setProperty('--panel-text-secondary-color', colors.textSecondary);
-    document.documentElement.style.setProperty('--accent-color', colors.accent);
-    document.documentElement.style.setProperty('--greeting-color', colors.greeting);
-    document.documentElement.style.setProperty('--name-color', colors.name);
-    document.documentElement.style.setProperty('--clock-color', colors.clock);
-    document.documentElement.style.setProperty('--date-color', colors.date);
-
-    if (theme.fonts) {
-        document.documentElement.style.setProperty('--greeting-font', theme.fonts.main);
-        document.documentElement.style.setProperty('--date-font', theme.fonts.secondary);
-    }
+    // Aplicación centralizada a través del BackgroundManager
+    BackgroundManager.apply({
+        activePremiumTheme: themeId,
+        premiumThemeData: theme,
+        ...theme.background,
+        ...theme.colors,
+        ...theme.fonts
+    });
 
     updateThemeControls(theme);
     updateActivePremiumTheme(themeId);
