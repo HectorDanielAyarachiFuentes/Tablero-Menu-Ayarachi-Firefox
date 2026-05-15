@@ -104,7 +104,8 @@ export function renderTiles() {
     // Resetear contador de carga
     loadedCount = 0;
     isLoading = false;
-    tilesEl.textContent = '';
+    // Ya no limpiamos aquí para evitar parpadeo (lo hace loadMoreTiles de forma atómica)
+    // tilesEl.textContent = '';
     
     // Desconectar observador previo
     if (intersectionObserver) intersectionObserver.disconnect();
@@ -139,7 +140,16 @@ function loadMoreTiles() {
     nextBatch.forEach((t, i) => {
         const realIndex = loadedCount + i;
         const node = FolderManager.renderTile(t, realIndex, tpl, tiles);
-        node.style.setProperty('--animation-delay', `${(realIndex % PAGE_SIZE) * 15}ms`);
+        
+        // Si es la primera carga (intercambio con snapshot), desactivamos la animación
+        // para que no haya parpadeo al aparecer sobre la "foto" previa.
+        if (loadedCount === 0) {
+            node.style.animation = 'none';
+            node.style.opacity = '1';
+        } else {
+            node.style.setProperty('--animation-delay', `${(realIndex % PAGE_SIZE) * 15}ms`);
+        }
+        
         fragment.appendChild(node);
     });
 
@@ -151,7 +161,12 @@ function loadMoreTiles() {
         oldSentinel.remove();
     }
 
-    tilesEl.appendChild(fragment);
+    // INTERCAMBIO ATÓMICO: Si es la primera carga, reemplazamos el snapshot de un golpe
+    if (loadedCount === 0) {
+        tilesEl.replaceChildren(fragment);
+    } else {
+        tilesEl.appendChild(fragment);
+    }
     
     // GUARDAR SNAPSHOT: Capturar el estado actual tras añadir nuevos tiles
     if (FolderManager.isRootView()) {
