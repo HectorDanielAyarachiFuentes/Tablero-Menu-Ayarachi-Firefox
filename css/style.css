@@ -666,7 +666,10 @@ a.tile {
   position: fixed;
   right: 20px;
   top: 20px;
-  width: 440px;
+  width: 550px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   background: var(--panel-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 20px;
@@ -819,7 +822,8 @@ a.tile {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .settings-header {
@@ -848,6 +852,7 @@ a.tile {
 
 .settings-tabs {
   display: flex;
+  justify-content: center;
   margin-bottom: 20px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -855,6 +860,7 @@ a.tile {
   -ms-overflow-style: none;
   /* IE and Edge */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .settings-tabs::-webkit-scrollbar {
@@ -936,7 +942,7 @@ a.tile {
 
 .settings-body {
   position: relative;
-  max-height: calc(100vh - 230px);
+  flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--accent-color) transparent;
@@ -1732,7 +1738,7 @@ body.theme-background {
 
 @media (min-width: 641px) {
   .settings {
-    width: 580px;
+    width: 700px;
   }
 }
 
@@ -1741,6 +1747,7 @@ body.theme-background {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .about-link {
@@ -2132,6 +2139,7 @@ body.theme-background {
 
 .modal-card {
   width: min(480px, 95vw);
+  max-height: 90vh;
   background: rgba(var(--panel-bg-rgb), var(--panel-opacity));
   backdrop-filter: blur(var(--panel-blur));
   -webkit-backdrop-filter: blur(var(--panel-blur));
@@ -2188,6 +2196,10 @@ body.theme-background {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) transparent;
 }
 
 .modal-footer {
