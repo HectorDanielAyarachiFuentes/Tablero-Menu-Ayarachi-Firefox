@@ -20,7 +20,7 @@ let premiumThemes = [
             "opacity": 0.3,
             "blur": 25,
             "radius": 16,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(255, 0, 110, 0.4)",
             "shadowBlur": 40
         },
@@ -51,7 +51,7 @@ let premiumThemes = [
             "opacity": 0.1,
             "blur": 20,
             "radius": 12,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(191, 149, 63, 0.3)",
             "shadowBlur": 35
         },
@@ -82,7 +82,7 @@ let premiumThemes = [
             "opacity": 0.4,
             "blur": 30,
             "radius": 20,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(0, 245, 255, 0.2)",
             "shadowBlur": 40
         },
@@ -113,7 +113,7 @@ let premiumThemes = [
             "opacity": 0.08,
             "blur": 20,
             "radius": 15,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(255, 69, 0, 0.4)",
             "shadowBlur": 45
         },
@@ -144,7 +144,7 @@ let premiumThemes = [
             "opacity": 0.2,
             "blur": 40,
             "radius": 40,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(0, 0, 0, 0.03)",
             "shadowBlur": 30
         },
@@ -175,7 +175,7 @@ let premiumThemes = [
             "opacity": 0.6,
             "blur": 20,
             "radius": 20,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(0, 0, 0, 0.05)",
             "shadowBlur": 20
         },
@@ -206,7 +206,7 @@ let premiumThemes = [
             "opacity": 0.4,
             "blur": 30,
             "radius": 12,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(131, 56, 236, 0.3)",
             "shadowBlur": 50
         },
@@ -237,7 +237,7 @@ let premiumThemes = [
             "opacity": 0.25,
             "blur": 15,
             "radius": 30,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(251, 194, 235, 0.4)",
             "shadowBlur": 30
         },
@@ -268,7 +268,7 @@ let premiumThemes = [
             "opacity": 0.2,
             "blur": 25,
             "radius": 18,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(52, 211, 153, 0.2)",
             "shadowBlur": 35
         },
@@ -299,7 +299,7 @@ let premiumThemes = [
             "opacity": 0.4,
             "blur": 15,
             "radius": 24,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(5, 150, 105, 0.3)",
             "shadowBlur": 30
         },
@@ -326,7 +326,7 @@ let premiumThemes = [
             "opacity": 0.6,
             "blur": 30,
             "radius": 32,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(148, 163, 184, 0.2)",
             "shadowBlur": 25
         },
@@ -353,7 +353,7 @@ let premiumThemes = [
             "opacity": 0.4,
             "blur": 15,
             "radius": 18,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(244, 63, 94, 0.3)",
             "shadowBlur": 35
         },
@@ -380,7 +380,7 @@ let premiumThemes = [
             "opacity": 0.7,
             "blur": 10,
             "radius": 12,
-            "shadowEnabled": true,
+            "shadowEnabled": false,
             "shadowColor": "rgba(168, 162, 158, 0.1)",
             "shadowBlur": 20
         },
