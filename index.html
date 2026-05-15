@@ -4,18 +4,28 @@
 <head>
   <meta name="color-scheme" content="dark">
   <style>
-    /* Estilo crítico para eliminar destello blanco (Permitido por CSP) */
+    /* Estilo crítico para eliminar destellos de carga (Permitido por CSP) */
     html {
       background-color: #050505 !important;
+      background-image: none !important;
       color-scheme: dark !important;
     }
+
     body {
       background-color: #050505 !important;
+      background-image: none !important;
       margin: 0;
     }
+
+    /* Prevenir destello de colores de acento (ej. morado #a855f7) */
+    :root {
+      --accent-color: #050505 !important;
+    }
+
     .wrap {
       opacity: 1;
     }
+
     #doodle-background {
       position: fixed;
       top: 0;
@@ -26,9 +36,11 @@
       opacity: 0;
       transition: opacity 0.5s ease-out;
     }
+
     #doodle-background.ready {
       opacity: 1;
     }
+
     /* Evitar que se vea el código del doodle antes de que se active el componente */
     css-doodle:not(:defined) {
       display: none;
@@ -39,7 +51,9 @@
   <script src="menubar/zero-flash.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"
+    rel="stylesheet">
   <meta charset="utf-8" />
   <script src="menubar/fast-loader.js" type="module"></script>
   <title>Tablero</title>
@@ -96,7 +110,8 @@
           </div>
           <input id="searchInput" placeholder="Buscar en la web..." aria-label="Término de búsqueda" />
           <button id="privacyToggle" class="privacy-btn" title="Activar búsqueda privada">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </button>
@@ -244,7 +259,8 @@
           <label>Gestionar Accesos</label>
           <div class="button-group">
             <button id="syncBookmarks" class="btn" title="Importar favoritos de Chrome">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
               </svg>
               Sincronizar Marcadores
@@ -589,7 +605,8 @@
 
         <div class="data-section">
           <h4>Copia de Seguridad Externa</h4>
-          <p class="field-description">Exporta toda tu configuración a un archivo JSON para moverla a otro navegador o guardarla como respaldo manual.</p>
+          <p class="field-description">Exporta toda tu configuración a un archivo JSON para moverla a otro navegador o
+            guardarla como respaldo manual.</p>
           <div class="button-group">
             <button id="importJsonBtn" class="btn">Importar JSON</button>
             <button id="exportJsonBtn" class="btn primary">Exportar JSON</button>

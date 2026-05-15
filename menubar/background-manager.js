@@ -2,8 +2,11 @@
  * Background Manager - El cerebro visual del tablero.
  * Centraliza la aplicación de fondos con un efecto de carga progresiva (Dithering).
  */
-(function() {
+(function () {
     const BackgroundManager = {
+        // Almacena el último fondo aplicado (para restaurar cuando se quita un doodle)
+        lastAppliedBg: null,
+
         /**
          * Aplica de forma integral un conjunto de ajustes visuales.
          */
@@ -18,26 +21,26 @@
             const theme = isPremium ? settings.premiumThemeData : null;
             const isDoodle = settings.doodle && settings.doodle !== 'none';
 
-            const panelBg = settings.panelBg || (theme ? theme.panel.bg : 'rgba(0, 0, 0, 0.2)');
-            const accentColor = settings.accentColor || (theme ? theme.colors.accent : '#16a085');
-            const textColor = settings.panelTextColor || (theme ? theme.colors.text : '#ffffff');
+            const panelBg = settings.panelBg || (theme && theme.panel ? theme.panel.bg : 'rgba(0, 0, 0, 0.2)');
+            const accentColor = settings.accentColor || (theme && theme.colors ? theme.colors.accent : '#16a085');
+            const textColor = settings.panelTextColor || (theme && theme.colors ? theme.colors.text : '#ffffff');
 
             root.setProperty('--panel-bg', panelBg);
             root.setProperty('--accent-color', accentColor);
             root.setProperty('--panel-text-color', textColor);
-            root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || (theme ? theme.colors.textSecondary : 'rgba(255, 255, 255, 0.7)'));
-            
-            root.setProperty('--greeting-color', settings.greetingColor || (theme ? theme.colors.greeting : '#ffffff'));
-            root.setProperty('--name-color', settings.nameColor || (theme ? theme.colors.name : '#ffffff'));
-            root.setProperty('--clock-color', settings.clockColor || (theme ? theme.colors.clock : '#ffffff'));
-            root.setProperty('--date-color', settings.dateColor || (theme ? theme.colors.date : '#ffffff'));
+            root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || (theme && theme.colors ? theme.colors.textSecondary : 'rgba(255, 255, 255, 0.7)'));
 
-            root.setProperty('--greeting-font', settings.greetingFont || (theme ? theme.fonts.main : "'Poppins', sans-serif"));
-            root.setProperty('--date-font', settings.dateFont || (theme ? theme.fonts.secondary : "'Poppins', sans-serif"));
+            root.setProperty('--greeting-color', settings.greetingColor || (theme && theme.colors ? theme.colors.greeting : '#ffffff'));
+            root.setProperty('--name-color', settings.nameColor || (theme && theme.colors ? theme.colors.name : '#ffffff'));
+            root.setProperty('--clock-color', settings.clockColor || (theme && theme.colors ? theme.colors.clock : '#ffffff'));
+            root.setProperty('--date-color', settings.dateColor || (theme && theme.colors ? theme.colors.date : '#ffffff'));
 
-            root.setProperty('--panel-opacity', settings.panelOpacity ?? (theme ? theme.panel.opacity : 0.1));
-            root.setProperty('--panel-blur', `${settings.panelBlur ?? (theme ? theme.panel.blur : 10)}px`);
-            root.setProperty('--panel-radius', `${settings.panelRadius ?? (theme ? theme.panel.radius : 12)}px`);
+            root.setProperty('--greeting-font', settings.greetingFont || (theme && theme.fonts ? theme.fonts.main : "'Poppins', sans-serif"));
+            root.setProperty('--date-font', settings.dateFont || (theme && theme.fonts ? theme.fonts.secondary : "'Poppins', sans-serif"));
+
+            root.setProperty('--panel-opacity', settings.panelOpacity ?? (theme && theme.panel ? theme.panel.opacity : 0.1));
+            root.setProperty('--panel-blur', `${settings.panelBlur ?? (theme && theme.panel ? theme.panel.blur : 10)}px`);
+            root.setProperty('--panel-radius', `${settings.panelRadius ?? (theme && theme.panel ? theme.panel.radius : 12)}px`);
 
             this.updatePanelRgb(panelBg);
 
@@ -56,10 +59,10 @@
 
             if (isDoodle) {
                 finalBg = 'transparent';
-                fallbackColor = settings.doodleColor || (theme ? theme.panel.bg : '#050505');
-            } else if (isPremium) {
+                fallbackColor = settings.doodleColor || (theme && theme.panel ? theme.panel.bg : '#050505');
+            } else if (isPremium && theme && theme.background && theme.background.gradient) {
                 finalBg = theme.background.gradient;
-                fallbackColor = theme.panel.bg;
+                fallbackColor = (theme.panel && theme.panel.bg) ? theme.panel.bg : '#050505';
             } else if (settings.bgData || settings.bgUrl) {
                 finalBg = `url('${settings.bgData || settings.bgUrl}')`;
                 fallbackColor = '#050505';
@@ -71,11 +74,14 @@
 
             // SMART PERSISTENCE: Solo animamos si el fondo REALMENTE cambió
             const hasChanged = this.normalizeBg(finalBg) !== this.normalizeBg(lastAppliedBg);
-            
+
             if (isDoodle) {
+                // Guardar el fondo que se usaría si no fuera doodle (para restaurar después)
+                this.lastAppliedBg = finalBg;
                 root.setProperty('background', 'transparent', 'important');
                 if (body) body.style.background = 'transparent';
             } else {
+                this.lastAppliedBg = finalBg;
                 this.applyBackground(finalBg, hasChanged);
             }
 
@@ -98,12 +104,12 @@
                 body.style.background = bg;
                 body.style.backgroundSize = 'cover';
                 body.style.backgroundAttachment = 'fixed';
-                
+
                 if (animate) {
                     // Solo activar efectos si es un fondo nuevo (ej. desde Settings)
                     body.classList.remove('bg-ready');
                     body.classList.add('bg-blur', 'bg-progressive-loading');
-                    
+
                     setTimeout(() => {
                         body.classList.remove('bg-blur', 'bg-progressive-loading');
                         body.classList.add('bg-ready');
@@ -128,23 +134,26 @@
         updateCache(settings, bg, color, accent) {
             try {
                 if (bg && bg !== 'transparent') localStorage.setItem('last_bg', bg);
-                localStorage.setItem('last_bg_color', color);
-                
+
+                // Asegurar que last_bg_color siempre tenga un valor válido (nunca morado por defecto)
+                const validColor = color && color !== '#a855f7' ? color : '#050505';
+                localStorage.setItem('last_bg_color', validColor);
+
                 const cache = JSON.parse(localStorage.getItem('zero_flash_cache') || '{}');
                 const keysToSync = [
-                    'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius', 
-                    'panelTextColor', 'panelTextSecondaryColor', 'accentColor', 
+                    'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+                    'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
                     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
                     'activePremiumTheme', 'premiumThemeData', 'doodle', 'userName',
                     'showSearch', 'showWeather', 'showDate', 'greetingFont', 'dateFont'
                 ];
-                
+
                 keysToSync.forEach(k => {
                     if (settings[k] !== undefined) cache[k] = settings[k];
                 });
                 if (!settings.accentColor && accent) cache.accentColor = accent;
                 localStorage.setItem('zero_flash_cache', JSON.stringify(cache));
-            } catch (e) {}
+            } catch (e) { }
         },
 
         updatePanelRgb(color) {
@@ -163,7 +172,7 @@
                     if (match) rgb = match.slice(0, 3).join(', ');
                 }
                 document.documentElement.style.setProperty('--panel-bg-rgb', rgb);
-            } catch (e) {}
+            } catch (e) { }
         }
     };
 

@@ -1,28 +1,41 @@
-(function() {
+(function () {
   // 1. Obtener toda la configuración de un solo golpe
   let settings = {};
   try {
     const cache = localStorage.getItem('zero_flash_cache');
     if (cache) settings = JSON.parse(cache);
-  } catch(e) { return; }
+  } catch (e) { return; }
 
   const root = document.documentElement.style;
 
   // 2. Aplicar TODO lo visual a través del BackgroundManager
   if (window.BackgroundManager) {
-      BackgroundManager.apply(settings);
+    BackgroundManager.apply(settings);
+  }
+
+  // 3. Forzar que el body mantenga el fondo aplicado por instant-bg.js
+  // Esto previene que el CSS externo sobrescriba el fondo durante la carga
+  const lastBg = localStorage.getItem('last_bg');
+  const lastColor = localStorage.getItem('last_bg_color');
+  if (lastBg && document.body) {
+    document.body.style.background = lastBg;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundAttachment = 'fixed';
+    document.body.style.backgroundPosition = 'center';
+  } else if (lastColor && document.body) {
+    document.body.style.background = lastColor;
   }
 
   // 3. Restauración instantánea de Tiles (HTML Snapshot)
   // Esto hace que los iconos aparezcan antes de que el motor de la extensión se inicie
   const tilesSnapshot = localStorage.getItem('tiles_snapshot');
   if (tilesSnapshot) {
-      window.addEventListener('DOMContentLoaded', () => {
-          const tilesContainer = document.getElementById('tiles');
-          if (tilesContainer && !tilesContainer.innerHTML.trim()) {
-              tilesContainer.innerHTML = tilesSnapshot;
-          }
-      });
+    window.addEventListener('DOMContentLoaded', () => {
+      const tilesContainer = document.getElementById('tiles');
+      if (tilesContainer && !tilesContainer.innerHTML.trim()) {
+        tilesContainer.innerHTML = tilesSnapshot;
+      }
+    });
   }
 
   // 4. Renderizado instantáneo de textos (Saludo y Reloj)
