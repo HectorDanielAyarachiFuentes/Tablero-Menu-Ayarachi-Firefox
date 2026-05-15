@@ -94,6 +94,19 @@ async function init() {
     BackgroundManager.apply(currentSettings);
     // Renderizar doodle si es necesario
     renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
+
+    // Actualizar el cache de localStorage para nuevas pestañas
+    try {
+      const zeroFlashCache = {};
+      const currentDoodle = DOODLES_LIST.find(d => d.id === currentSettings.doodle);
+      if (currentDoodle) {
+        zeroFlashCache.doodle = currentDoodle.id;
+        zeroFlashCache.doodleTemplate = currentDoodle.template;
+      } else {
+        zeroFlashCache.doodle = 'none';
+      }
+      localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
+    } catch (e) { /* ignorar */ }
   });
 
   /**

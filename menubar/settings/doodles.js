@@ -24,30 +24,43 @@ export function initDoodleSettings(activeDoodleId) {
     const preview = document.createElement('div');
     preview.className = `doodle-item-preview ${doodle.id}`;
     if (doodle.id === 'none') preview.classList.add('none');
-    
+
     if (doodle.template) {
-        const cssDoodle = document.createElement('css-doodle');
-        cssDoodle.textContent = doodle.template;
-        preview.appendChild(cssDoodle);
+      const cssDoodle = document.createElement('css-doodle');
+      cssDoodle.textContent = doodle.template;
+      preview.appendChild(cssDoodle);
     }
-    
+
     const name = document.createElement('span');
     name.className = 'doodle-item-name';
     name.textContent = doodle.name;
 
     button.appendChild(preview);
     button.appendChild(name);
-    
+
     button.addEventListener('click', async () => {
-        await saveAndSyncSetting({
-          doodle: doodle.id
-        });
-        window.dispatchEvent(new CustomEvent('background-changed'));
+      // Actualizar el cache de localStorage inmediatamente para nuevas pestañas
+      try {
+        const cacheStr = localStorage.getItem('zero_flash_cache');
+        const cache = cacheStr ? JSON.parse(cacheStr) : {};
+        cache.doodle = doodle.id;
+        // Buscar el template del doodle
+        const doodleData = DOODLES_LIST.find(d => d.id === doodle.id);
+        if (doodleData && doodleData.template) {
+          cache.doodleTemplate = doodleData.template;
+        }
+        localStorage.setItem('zero_flash_cache', JSON.stringify(cache));
+      } catch (e) { /* ignorar */ }
+
+      await saveAndSyncSetting({
+        doodle: doodle.id
+      });
+      window.dispatchEvent(new CustomEvent('background-changed'));
     });
 
     const doodleElement = button.querySelector('css-doodle');
     if (doodleElement) {
-        setTimeout(() => { if(doodleElement.pause) doodleElement.pause(); }, 100);
+      setTimeout(() => { if (doodleElement.pause) doodleElement.pause(); }, 100);
     }
 
     button.addEventListener('mouseenter', () => {
@@ -68,7 +81,7 @@ export function initDoodleSettings(activeDoodleId) {
 export function updateDoodleSelectionUI(doodleId) {
   const doodlePreviewContainer = $('#doodle-preview');
   if (!doodlePreviewContainer) return;
-  
+
   $$('#doodle-list .doodle-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.doodleId === doodleId);
   });
