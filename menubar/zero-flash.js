@@ -32,8 +32,14 @@
   if (tilesSnapshot) {
     window.addEventListener('DOMContentLoaded', () => {
       const tilesContainer = document.getElementById('tiles');
-      if (tilesContainer && !tilesContainer.innerHTML.trim()) {
-        tilesContainer.innerHTML = tilesSnapshot;
+      if (tilesContainer && !tilesContainer.hasChildNodes()) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(tilesSnapshot, 'text/html');
+        const fragment = document.createDocumentFragment();
+        while (doc.body.firstChild) {
+          fragment.appendChild(doc.body.firstChild);
+        }
+        tilesContainer.appendChild(fragment);
       }
     });
   }
