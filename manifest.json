@@ -1,44 +1,48 @@
 {
   "manifest_version": 3,
   "name": "Tablero",
-  "version": "2.0.1",
-  "description": "Un tablero personalizable para tu página de nueva pestaña.",
+  "version": "2.0.4",
+  "description": "Un tablero personalizable para tu página de nueva pestaña con gestión de notas.",
+  
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "chrome_url_overrides": {
-    "newtab": "index.html"
-  },
-  "background": {
-    "scripts": [
-      "menubar/background.js"
-    ]
-  },
+
   "browser_specific_settings": {
     "gecko": {
       "id": "tablero-hector@ayarachi.com",
-      "strict_min_version": "115.0"
+      "strict_min_version": "130.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
+
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+
+  "background": {
+    "scripts": ["menubar/background.js"]
+  },
+
   "permissions": [
     "storage",
     "geolocation",
     "bookmarks",
     "unlimitedStorage"
   ],
+
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: https://* https://www.google.com https://google.com https://t3.gstatic.com blob:;"
   },
+
   "web_accessible_resources": [
     {
-      "resources": [
-        "menubar/system/file-worker.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["menubar/system/file-worker.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
