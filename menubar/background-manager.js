@@ -12,13 +12,11 @@
 
             const root = document.documentElement.style;
             const body = document.body;
-            let finalBg = '#050505';
-            let fallbackColor = '#050505';
-            const isDoodle = settings.doodle && settings.doodle !== 'none';
 
             // 1. DETERMINAR COLORES Y TEMA
             const isPremium = settings.activePremiumTheme && settings.premiumThemeData;
             const theme = isPremium ? settings.premiumThemeData : null;
+            const isDoodle = settings.doodle && settings.doodle !== 'none';
 
             const panelBg = settings.panelBg || (theme ? theme.panel.bg : 'rgba(0, 0, 0, 0.2)');
             const accentColor = settings.accentColor || (theme ? theme.colors.accent : '#16a085');
@@ -43,7 +41,7 @@
 
             this.updatePanelRgb(panelBg);
 
-            // Visibilidad de secciones
+            // Visibilidad de secciones (Protección contra elementos nulos en carga temprana)
             const searchSec = document.querySelector('.search-section');
             if (searchSec) searchSec.hidden = !(settings.showSearch ?? true);
             const weatherEl = document.getElementById('weather');
@@ -51,10 +49,13 @@
             const dateEl = document.getElementById('date');
             if (dateEl) dateEl.hidden = !(settings.showDate ?? true);
 
-            // 2. DETERMINAR FONDO Y ACTIVAR EFECTO PROGRESIVO
+            // 2. DETERMINAR FONDO Y COMPARAR PARA PERSISTENCIA
+            const lastAppliedBg = localStorage.getItem('last_bg');
+            let finalBg = '#050505';
+            let fallbackColor = '#050505';
+
             if (isDoodle) {
-                root.setProperty('background', 'transparent', 'important');
-                if (body) body.style.background = 'transparent';
+                finalBg = 'transparent';
                 fallbackColor = settings.doodleColor || (theme ? theme.panel.bg : '#050505');
             } else if (isPremium) {
                 finalBg = theme.background.gradient;
@@ -68,39 +69,60 @@
                 if (match) fallbackColor = match[0];
             }
 
-            // Aplicar efecto de "Revelado por Puntos" (Dither)
-            if (!isDoodle) {
-                this.triggerProgressiveReveal(finalBg, fallbackColor);
+            // SMART PERSISTENCE: Solo animamos si el fondo REALMENTE cambió
+            const hasChanged = this.normalizeBg(finalBg) !== this.normalizeBg(lastAppliedBg);
+            
+            if (isDoodle) {
+                root.setProperty('background', 'transparent', 'important');
+                if (body) body.style.background = 'transparent';
+            } else {
+                this.applyBackground(finalBg, hasChanged);
             }
 
             this.updateCache(settings, finalBg, fallbackColor, accentColor);
         },
 
         /**
-         * Simula la carga progresiva de videojuegos usando una máscara de ruido.
+         * Aplica el fondo y maneja la transición inteligente.
          */
-        triggerProgressiveReveal(bg, fallback) {
+        applyBackground(bg, animate) {
             const root = document.documentElement.style;
             const body = document.body;
 
-            // Inyectar el fondo al HTML inmediatamente para evitar flash
+            // Siempre inyectar al HTML para evitar cualquier flash
             root.setProperty('background', bg, 'important');
             root.setProperty('background-size', 'cover', 'important');
             root.setProperty('background-attachment', 'fixed', 'important');
 
             if (body) {
-                // Añadimos una clase para activar el shader de ruido en el CSS
-                body.classList.add('bg-progressive-loading');
                 body.style.background = bg;
                 body.style.backgroundSize = 'cover';
                 body.style.backgroundAttachment = 'fixed';
                 
-                // Quitamos el efecto tras una breve animación
-                setTimeout(() => {
-                    body.classList.remove('bg-progressive-loading');
+                if (animate) {
+                    // Solo activar efectos si es un fondo nuevo (ej. desde Settings)
+                    body.classList.remove('bg-ready');
+                    body.classList.add('bg-blur', 'bg-progressive-loading');
+                    
+                    setTimeout(() => {
+                        body.classList.remove('bg-blur', 'bg-progressive-loading');
+                        body.classList.add('bg-ready');
+                    }, 600);
+                } else {
+                    // Si ya estaba cargado, asegurar estado listo sin transiciones
+                    body.classList.remove('bg-blur', 'bg-progressive-loading');
                     body.classList.add('bg-ready');
-                }, 400);
+                }
             }
+        },
+
+        /**
+         * Normaliza strings de fondo para una comparación precisa.
+         */
+        normalizeBg(bg) {
+            if (!bg) return '';
+            // Eliminar comillas, espacios y URLs relativas para comparar el contenido real
+            return bg.replace(/['"]/g, '').replace(/\s+/g, '').toLowerCase();
         },
 
         updateCache(settings, bg, color, accent) {
@@ -145,6 +167,5 @@
         }
     };
 
-    // Hacerlo disponible globalmente
     window.BackgroundManager = BackgroundManager;
 })();
