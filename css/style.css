@@ -109,7 +109,7 @@ body.bg-blur {
 }
 
 body.bg-ready {
-  filter: blur(0);
+  filter: none;
 }
 
 @keyframes dither-fade {
@@ -2479,5 +2479,65 @@ input[type=range]::-moz-range-thumb {
   cursor: pointer;
   border: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Botón para volver arriba (Scroll to Top) */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(var(--panel-blur, 10px)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur, 10px)) !important;
+  border: 1px solid var(--border-light, rgba(255, 255, 255, 0.1)) !important;
+  color: var(--panel-text-color) !important;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 99;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s,
+              border-color 0.3s,
+              box-shadow 0.3s !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Cuando el botón de volver arriba está visible, desplazamos el clima horizontalmente a la izquierda */
+body.scroll-btn-visible .weather-widget-fixed {
+  right: 80px;
+}
+
+.scroll-to-top-btn.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-to-top-btn:hover {
+  background: var(--hover-overlay, rgba(255, 255, 255, 0.1)) !important;
+  border-color: var(--accent-color) !important;
+  color: var(--accent-color) !important;
+  transform: translateY(-5px) scale(1.05) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 15px var(--shadow-accent);
+}
+
+.scroll-to-top-btn:active {
+  transform: translateY(-2px) scale(0.95) !important;
+}
+
+.scroll-to-top-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.scroll-to-top-btn:hover svg {
+  transform: translateY(-2px);
 }
 

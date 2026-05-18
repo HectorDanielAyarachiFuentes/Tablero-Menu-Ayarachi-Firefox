@@ -184,6 +184,7 @@ function initInteractionLogic(settings) {
   initUI();
   initTiles();
   initSearch();
+  initScrollToTop();
   initSettings({
     currentGradient: settings.gradient,
     currentBackgroundValue,
@@ -216,6 +217,29 @@ function loadNonCriticalCSS() {
     const link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = file;
     document.head.appendChild(link);
+  });
+}
+
+function initScrollToTop() {
+  const btn = document.getElementById('scrollToTopBtn');
+  if (!btn) return;
+
+  window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset || document.documentElement.scrollTop;
+    if (scrolled > 300) {
+      btn.classList.add('visible');
+      document.body.classList.add('scroll-btn-visible');
+    } else {
+      btn.classList.remove('visible');
+      document.body.classList.remove('scroll-btn-visible');
+    }
+  });
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   });
 }
 
