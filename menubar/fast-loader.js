@@ -1,3 +1,5 @@
+import { GRADIENTS } from '../utils/gradients.js';
+
 /**
  * Fast Loader - Combines Background and Pre-loader logic.
  * Optimizes startup by doing a single storage fetch for all critical visual elements.
@@ -24,7 +26,11 @@
     // 1. APLICAR TEMA (Fondo y Paneles)
     if (settings.activePremiumTheme && settings.premiumThemeData) {
       const theme = settings.premiumThemeData;
-      bodyStyle.background = theme.background.gradient;
+      rootStyle.setProperty('background', theme.background.gradient, 'important');
+      rootStyle.setProperty('background-size', 'cover', 'important');
+      rootStyle.setProperty('background-attachment', 'fixed', 'important');
+      rootStyle.setProperty('background-position', 'center', 'important');
+      bodyStyle.setProperty('background', 'transparent', 'important');
       document.body.classList.add('theme-background');
 
       const pt = theme.panel;
@@ -42,16 +48,27 @@
       rootStyle.setProperty('--clock-color', settings.clockColor || colors.clock);
       rootStyle.setProperty('--date-color', settings.dateColor || colors.date);
     } else if (settings.gradient) {
-        // Fallback simple para degradados (se completará en settings.js)
-        bodyStyle.backgroundImage = settings.gradient;
+        const gradId = settings.gradient;
+        const gradObj = GRADIENTS.find(g => g.id === gradId);
+        const resolvedBg = gradObj ? gradObj.gradient : (gradId.includes('gradient') ? gradId : 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)');
+        rootStyle.setProperty('background', resolvedBg, 'important');
+        rootStyle.setProperty('background-size', 'cover', 'important');
+        rootStyle.setProperty('background-attachment', 'fixed', 'important');
+        rootStyle.setProperty('background-position', 'center', 'important');
+        bodyStyle.setProperty('background', 'transparent', 'important');
     } else if (settings.bgData || settings.bgUrl) {
-        bodyStyle.backgroundImage = `url('${settings.bgData || settings.bgUrl}')`;
-        bodyStyle.backgroundSize = 'cover';
+        rootStyle.setProperty('background', `url('${settings.bgData || settings.bgUrl}')`, 'important');
+        rootStyle.setProperty('background-size', 'cover', 'important');
+        rootStyle.setProperty('background-attachment', 'fixed', 'important');
+        rootStyle.setProperty('background-position', 'center', 'important');
+        bodyStyle.setProperty('background', 'transparent', 'important');
+    } else {
+        bodyStyle.setProperty('background', 'transparent', 'important');
     }
 
     if (settings.doodle && settings.doodle !== 'none') {
         rootStyle.setProperty('background', 'transparent', 'important');
-        document.body.style.setProperty('background', 'transparent', 'important');
+        bodyStyle.setProperty('background', 'transparent', 'important');
     }
 
     // 2. RENDERIZAR SALUDO, RELOJ Y FECHA

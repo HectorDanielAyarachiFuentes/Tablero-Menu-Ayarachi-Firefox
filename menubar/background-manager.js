@@ -67,7 +67,20 @@
                 finalBg = `url('${settings.bgData || settings.bgUrl}')`;
                 fallbackColor = '#050505';
             } else {
-                finalBg = settings.gradient || 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+                const gradId = settings.gradient || 'aurora-mist';
+                const gradObj = window.GRADIENTS ? window.GRADIENTS.find(g => g.id === gradId) : null;
+                if (gradObj) {
+                    finalBg = gradObj.gradient;
+                } else if (gradId.includes('gradient')) {
+                    finalBg = gradId;
+                } else {
+                    const cachedBg = localStorage.getItem('last_bg');
+                    if (cachedBg && cachedBg.includes('gradient')) {
+                        finalBg = cachedBg;
+                    } else {
+                        finalBg = 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)';
+                    }
+                }
                 const match = finalBg.match(/#(?:[0-9a-fA-F]{3}){1,2}|rgba?\([^)]+\)/);
                 if (match) fallbackColor = match[0];
             }
@@ -79,7 +92,7 @@
                 // Guardar el fondo que se usaría si no fuera doodle (para restaurar después)
                 this.lastAppliedBg = finalBg;
                 root.setProperty('background', 'transparent', 'important');
-                if (body) body.style.background = 'transparent';
+                if (body) body.style.setProperty('background', 'transparent', 'important');
             } else {
                 this.lastAppliedBg = finalBg;
                 this.applyBackground(finalBg, hasChanged);
@@ -101,9 +114,7 @@
             root.setProperty('background-attachment', 'fixed', 'important');
 
             if (body) {
-                body.style.background = bg;
-                body.style.backgroundSize = 'cover';
-                body.style.backgroundAttachment = 'fixed';
+                body.style.setProperty('background', 'transparent', 'important');
 
                 if (animate) {
                     // Solo activar efectos si es un fondo nuevo (ej. desde Settings)

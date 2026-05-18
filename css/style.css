@@ -81,7 +81,7 @@ body.with-load-animations .tiles-section {
 }
 
 html {
-  background-color: #050505 !important;
+  background-color: #050505;
 }
 
 body::before {
@@ -122,12 +122,8 @@ body {
   color: var(--panel-text-color);
   height: 100vh;
   margin: 0;
-  background-color: #050505;
-  background-image: var(--bg-image);
+  background: transparent !important;
   transition: color .4s ease-in-out;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   position: relative;
   overflow-x: hidden;
 }

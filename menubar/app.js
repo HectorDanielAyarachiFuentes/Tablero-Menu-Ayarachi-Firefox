@@ -14,6 +14,7 @@ import { renderTrash } from './components/trash.js';
 import { initSearch, renderFavoritesInSelect } from '../utils/search.js';
 import { initSettings, loadGradients } from './settings/settings.js';
 import { GRADIENTS } from '../utils/gradients.js';
+window.GRADIENTS = GRADIENTS;
 import { WeatherManager } from '../utils/tiempo.js';
 import { loadDoodles, initDoodleSettings, updateDoodleSelectionUI } from './settings/doodles.js';
 import { DOODLES_LIST } from './settings/doodles-list.js';
@@ -122,9 +123,9 @@ async function init() {
     if (!doodleId || doodleId === 'none') {
       container.textContent = '';
       container.classList.remove('ready');
-      // Restaurar fondo del body si estaba transparente
+      // Restaurar fondo si estaba transparente
       if (BackgroundManager.lastAppliedBg) {
-        document.body.style.background = BackgroundManager.lastAppliedBg;
+        BackgroundManager.applyBackground(BackgroundManager.lastAppliedBg);
       }
       return;
     }

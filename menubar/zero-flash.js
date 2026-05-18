@@ -17,13 +17,8 @@
   // Esto previene que el CSS externo sobrescriba el fondo durante la carga
   const lastBg = localStorage.getItem('last_bg');
   const lastColor = localStorage.getItem('last_bg_color');
-  if (lastBg && document.body) {
-    document.body.style.background = lastBg;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundAttachment = 'fixed';
-    document.body.style.backgroundPosition = 'center';
-  } else if (lastColor && document.body) {
-    document.body.style.background = lastColor;
+  if (document.body) {
+    document.body.style.setProperty('background', 'transparent', 'important');
   }
 
   // 3. Restauración instantánea de Tiles (HTML Snapshot)

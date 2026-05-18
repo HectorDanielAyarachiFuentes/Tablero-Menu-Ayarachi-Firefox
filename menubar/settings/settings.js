@@ -31,7 +31,7 @@ export function initSettings(initialState) {
 
     $('#bgFile').addEventListener('change', handleBgFileChange);
     $('#bgUrl').addEventListener('input', (e) => {
-        if (e.target.value.trim()) document.body.style.setProperty('--bg-image', `url('${e.target.value.trim()}')`);
+        if (e.target.value.trim()) document.documentElement.style.setProperty('background', `url('${e.target.value.trim()}')`, 'important');
     });
     $('#bgUrl').addEventListener('change', async (e) => {
         const url = e.target.value.trim();
