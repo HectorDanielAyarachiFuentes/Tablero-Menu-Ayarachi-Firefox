@@ -2320,12 +2320,131 @@ body.theme-background {
   color: var(--panel-text-color, #fff) !important; /* Garantiza visibilidad de textos en todo momento */
 }
 
-/* Efecto hover interactivo: se expande horizontalmente de forma espectacular */
-.weather-widget-fixed:hover {
-  width: 140px; /* Se abre más ancho para mostrar toda la info */
-  border-radius: 16px;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+/* Efecto hover interactivo: se expande horizontalmente de forma espectacular a la tarjeta de la segunda imagen */
+.weather-widget-fixed:hover,
+.weather-widget-fixed.open {
+  width: 220px !important;
+  height: auto !important;
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+  cursor: pointer !important;
+}
+
+/* Cabecera en modo horizontal: Icono a la derecha, detalles a la izquierda */
+.weather-widget-fixed:hover .weather-summary,
+.weather-widget-fixed.open .weather-summary {
+  flex-direction: row !important; /* Icono a la derecha, detalles a la izquierda */
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 12px !important;
+}
+
+.weather-widget-fixed:hover .weather-details,
+.weather-widget-fixed.open .weather-details {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  width: auto !important;
+}
+
+.weather-widget-fixed:hover .weather-icon,
+.weather-widget-fixed.open .weather-icon {
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  order: 2 !important; /* Mueve el icono a la derecha */
+  opacity: 1 !important;
+}
+
+.weather-widget-fixed:hover .weather-temp,
+.weather-widget-fixed.open .weather-temp {
+  font-size: 26px !important; /* Temperatura grande y legible */
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+  margin-bottom: 2px !important;
+  text-align: left !important;
+  display: inline-block !important;
+}
+
+/* Ciudad en modo horizontal */
+.weather-widget-fixed:hover .weather-city,
+.weather-widget-fixed.open .weather-city {
+  display: block !important;
+  font-size: 13px !important; /* Texto un poco más grande */
+  font-weight: 400 !important;
+  max-width: 160px !important;
+  text-overflow: ellipsis !important;
+  opacity: 0.95 !important;
+  margin: 0 0 2px 0 !important;
+  text-align: left !important;
+  text-transform: capitalize !important;
+}
+
+/* Ocultamos el pin localizador en hover/open para que quede limpio */
+.weather-widget-fixed:hover .weather-city::before,
+.weather-widget-fixed.open .weather-city::before {
+  display: none !important;
+}
+
+/* Emojis y métricas en modo horizontal */
+.weather-widget-fixed:hover .weather-extra,
+.weather-widget-fixed.open .weather-extra {
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+  opacity: 0.75 !important;
+}
+
+.weather-widget-fixed:hover .weather-humidity,
+.weather-widget-fixed.open .weather-humidity,
+.weather-widget-fixed:hover .weather-wind,
+.weather-widget-fixed.open .weather-wind {
+  width: auto !important;
+  justify-content: flex-start !important;
+}
+
+/* Hilos de prefijo H: y V: en lugar de los emojis */
+.weather-widget-fixed:hover .weather-humidity .weather-emoji,
+.weather-widget-fixed.open .weather-humidity .weather-emoji,
+.weather-widget-fixed:hover .weather-wind .weather-emoji,
+.weather-widget-fixed.open .weather-wind .weather-emoji {
+  display: none !important;
+}
+
+.weather-widget-fixed:hover .weather-humidity::before,
+.weather-widget-fixed.open .weather-humidity::before {
+  content: "H: " !important;
+  font-weight: 600 !important;
+}
+
+.weather-widget-fixed:hover .weather-wind::before,
+.weather-widget-fixed.open .weather-wind::before {
+  content: "V: " !important;
+  font-weight: 600 !important;
+}
+
+.weather-widget-fixed:hover .weather-divider,
+.weather-widget-fixed.open .weather-divider {
+  display: inline !important;
+}
+
+.weather-widget-fixed:hover .weather-unit,
+.weather-widget-fixed.open .weather-unit {
+  display: inline !important;
+}
+
+/* Ocultamos el pronóstico extendido ya que la tarjeta horizontal limpia no lo lleva */
+.weather-widget-fixed:hover .weather-expanded,
+.weather-widget-fixed.open .weather-expanded {
+  display: none !important;
 }
 
 .weather-summary {
@@ -2382,14 +2501,6 @@ body.theme-background {
   transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
 }
 
-/* Al pasar el mouse, el nombre de la ciudad se desliza suavemente hacia afuera */
-.weather-widget-fixed:hover .weather-city {
-  font-size: 8px; /* Regresa a su tamaño legible en hover */
-  max-width: 120px;
-  text-overflow: ellipsis; /* Puntos suspensivos si sigue siendo demasiado largo para 120px */
-  opacity: 1;
-}
-
 .weather-city::before {
   content: "📍";
   font-size: 8px !important; /* Mantiene su tamaño original de forma independiente */
@@ -2398,14 +2509,6 @@ body.theme-background {
 }
 
 /* Emojis del clima */
-.weather-emoji {
-  margin-right: 3px;
-  display: inline-block;
-  font-size: 1.1em;
-  vertical-align: middle;
-}
-
-/* Emojis optimizados en modo vertical */
 .weather-emoji {
   display: inline-flex;
   align-items: center;
@@ -2432,14 +2535,6 @@ body.theme-background {
   transition: flex-direction 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s;
 }
 
-/* Al pasar el mouse, los datos de humedad y viento se acomodan horizontalmente para optimizar espacio */
-.weather-widget-fixed:hover .weather-extra {
-  flex-direction: row;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-}
-
 .weather-humidity,
 .weather-wind {
   display: flex !important;
@@ -2449,174 +2544,12 @@ body.theme-background {
   gap: 2px;
 }
 
-/* Al pasar el mouse, hacemos más anchos los contenedores individuales en horizontal */
-.weather-widget-fixed:hover .weather-humidity,
-.weather-widget-fixed:hover .weather-wind {
-  width: auto;
-}
-
-/* Ocultamos los divisores, las unidades y cualquier elemento no necesario en vertical */
-/* Ocultamos la sección expandida, divisores, unidades y cualquier elemento no necesario en reposo */
+/* Ocultamos los divisores, las unidades, el pronóstico y cualquier elemento no necesario en reposo/vertical */
 .weather-expanded,
 .weather-divider,
 .weather-unit,
 .weather-details > span:not(.weather-temp):not(.weather-city):not(.weather-extra) {
   display: none !important;
-}
-
-/* Al pasar el mouse, volvemos a mostrar la unidad de velocidad */
-.weather-widget-fixed:hover .weather-unit {
-  display: inline !important;
-}
-
-/* ==========================================================================
-   ESTADO ABIERTO: CUANDO SE HACE CLICK (DASHBOARD COMPLETO)
-   ========================================================================== */
-.weather-widget-fixed.open,
-.weather-widget-fixed.open:hover {
-  width: 240px !important;
-  height: auto !important;
-  padding: 16px !important;
-  border-radius: 16px !important;
-  transform: none !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
-  cursor: default !important;
-}
-
-/* Cabecera en modo abierto: horizontal */
-.weather-widget-fixed.open .weather-summary,
-.weather-widget-fixed.open:hover .weather-summary {
-  flex-direction: row !important;
-  gap: 12px !important;
-  width: 100% !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-}
-
-.weather-widget-fixed.open .weather-details,
-.weather-widget-fixed.open:hover .weather-details {
-  align-items: flex-start !important;
-  justify-content: center !important;
-  text-align: left !important;
-  width: auto !important;
-}
-
-.weather-widget-fixed.open .weather-icon,
-.weather-widget-fixed.open:hover .weather-icon {
-  width: 40px !important;
-  height: 40px !important;
-  margin: 0 !important;
-}
-
-.weather-widget-fixed.open .weather-temp,
-.weather-widget-fixed.open:hover .weather-temp {
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  margin-bottom: 2px !important;
-  text-align: left !important;
-  display: inline-block !important;
-}
-
-/* Ciudad en modo abierto */
-.weather-widget-fixed.open .weather-city,
-.weather-widget-fixed.open:hover .weather-city {
-  display: block !important;
-  font-size: 10px !important;
-  max-width: 170px !important;
-  text-overflow: ellipsis !important;
-  opacity: 0.9 !important;
-  margin: 2px 0 0 0 !important;
-  text-align: left !important;
-}
-
-/* Emojis y métricas en modo abierto */
-.weather-widget-fixed.open .weather-extra,
-.weather-widget-fixed.open:hover .weather-extra {
-  flex-direction: row !important;
-  justify-content: flex-start !important;
-  gap: 12px !important;
-  border-top: none !important;
-  padding-top: 0 !important;
-  width: 100% !important;
-  margin: 6px 0 0 0 !important;
-  font-size: 10px !important;
-  opacity: 0.8 !important;
-}
-
-.weather-widget-fixed.open .weather-humidity,
-.weather-widget-fixed.open:hover .weather-humidity,
-.weather-widget-fixed.open .weather-wind,
-.weather-widget-fixed.open:hover .weather-wind {
-  width: auto !important;
-  justify-content: flex-start !important;
-}
-
-.weather-widget-fixed.open .weather-divider,
-.weather-widget-fixed.open:hover .weather-divider {
-  display: inline !important;
-}
-
-.weather-widget-fixed.open .weather-unit,
-.weather-widget-fixed.open:hover .weather-unit {
-  display: inline !important;
-}
-
-/* Pronóstico extendido en modo abierto */
-.weather-widget-fixed.open .weather-expanded {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-  margin-top: 14px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
-  padding-top: 12px !important;
-  width: 100% !important;
-  animation: fadeInSlide 0.4s ease-out;
-}
-
-.forecast-hourly {
-  display: flex !important;
-  gap: 12px !important;
-  overflow-x: auto !important;
-  padding-bottom: 8px !important;
-  scrollbar-width: none !important; /* Firefox */
-}
-
-.forecast-hourly::-webkit-scrollbar {
-  display: none !important;
-}
-
-.forecast-hourly > div {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  min-width: 38px !important;
-  font-size: 9px !important;
-  opacity: 0.9 !important;
-}
-
-.forecast-hourly img {
-  width: 24px !important;
-  height: 24px !important;
-}
-
-.forecast-daily {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-}
-
-.forecast-daily > div {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  font-size: 10px !important;
-  padding: 2px 0 !important;
-  opacity: 0.95 !important;
-}
-
-.forecast-daily img {
-  width: 24px !important;
-  height: 24px !important;
 }
 
 @keyframes fadeInSlide {

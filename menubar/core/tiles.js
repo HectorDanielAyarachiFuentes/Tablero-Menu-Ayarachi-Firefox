@@ -42,6 +42,33 @@ export function initTiles() {
     tilesEl.addEventListener('drop', handleTileDrop);
     tilesEl.addEventListener('dragend', handleTileDragEnd);
 
+    // Retraer el clima al pasar el mouse por encima de cualquier acceso directo que choque con él
+    tilesEl.addEventListener('mouseover', (e) => {
+        const tile = e.target.closest('.tile');
+        if (tile) {
+            const weatherEl = $('#weather');
+            if (weatherEl && (weatherEl.classList.contains('open') || weatherEl.matches(':hover'))) {
+                const tileRect = tile.getBoundingClientRect();
+                const weatherRect = weatherEl.getBoundingClientRect();
+                
+                // Comprobar colisión geométrica real entre la tarjeta del clima y el acceso
+                const collides = !(tileRect.right < weatherRect.left || 
+                                   tileRect.left > weatherRect.right || 
+                                   tileRect.bottom < weatherRect.top || 
+                                   tileRect.top > weatherRect.bottom);
+                                   
+                if (collides) {
+                    weatherEl.classList.remove('open');
+                    // Desactivar puntero temporalmente para romper el estado CSS :hover del clima
+                    weatherEl.style.pointerEvents = 'none';
+                    setTimeout(() => {
+                        weatherEl.style.pointerEvents = '';
+                    }, 800);
+                }
+            }
+        }
+    });
+
     $('#addTile').addEventListener('click', () => openModal());
 
     initContextMenu();
