@@ -381,6 +381,7 @@ function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null)
     const closeBtn = document.createElement('button');
     closeBtn.className = 'alert-modal-close';
     closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => overlay.remove());
     header.appendChild(closeBtn);
     
     modal.appendChild(header);
@@ -444,8 +445,6 @@ function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null)
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    const closeBtn = modal.querySelector('.alert-modal-close');
-    closeBtn.addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) overlay.remove();
     });
