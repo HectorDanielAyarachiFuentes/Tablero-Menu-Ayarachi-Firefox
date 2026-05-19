@@ -7,22 +7,10 @@ import { showSettingError } from '../menubar/components/ui.js';
 import { API_URLS } from '../menubar/core/config.js';
 
 export const WeatherManager = {
-    async init() {
+    init() {
         // Adjuntar listeners una sola vez
         $('#weatherCity').addEventListener('change', this.handleCityChange);
         $('#weather').addEventListener('click', this.handleWidgetClick);
-
-        // Listener para simular alertas meteorológicas
-        const simToggle = $('#weatherAlertSimulateToggle');
-        if (simToggle) {
-            const simulateState = (await storageGet(['weatherAlertSimulate'])).weatherAlertSimulate;
-            simToggle.checked = simulateState ?? false;
-            simToggle.addEventListener('change', (e) => {
-                saveAndSyncSetting({ weatherAlertSimulate: e.target.checked }).then(() => {
-                    WeatherManager.fetchAndRender();
-                });
-            });
-        }
 
         // Carga inicial
         this.fetchAndRender();
@@ -30,18 +18,17 @@ export const WeatherManager = {
     async fetchAndRender() {
         const weatherEl = $('#weather');
         const customCity = (await storageGet(['weatherCity'])).weatherCity;
-        const simulateAlert = (await storageGet(['weatherAlertSimulate'])).weatherAlertSimulate ?? false;
         
         const cachedWeather = await storageGet(['weather']);
         // Use cache if it exists, is less than 30 mins old, and matches the city setting
         if (cachedWeather.weather && (Date.now() - cachedWeather.weather.timestamp < 1800000) && cachedWeather.weather.city === (customCity || 'auto')) {
-            render(cachedWeather.weather.data, simulateAlert);
+            render(cachedWeather.weather.data);
             return;
         }
 
         try {
             const weatherData = customCity ? await fetchWeatherByCity(customCity) : await fetchWeatherByCoords();
-            render(weatherData, simulateAlert);
+            render(weatherData);
             storageSet({ weather: { data: weatherData, timestamp: Date.now(), city: customCity || 'auto' } });
         } catch (error) {
             console.error("WeatherManager Error:", error);
@@ -131,7 +118,7 @@ function fetchWeather(lat, lon) {
     return apiFetch(weatherUrl);
 }
 
-function render(data, simulateAlert = false) {
+function render(data) {
     if (!data || !data.current || !data.hourly || !data.daily) return;
 
         // Current weather
@@ -142,25 +129,19 @@ function render(data, simulateAlert = false) {
         const cityName = data.city_name ? `<span>${data.city_name}</span>` : '';
         const weatherEl = $('#weather');
 
-        // Determinar si hay alerta (real o simulada)
+        // Determinar si hay alerta basada en condiciones reales
         let alertData = null;
-        if (simulateAlert) {
+        const code = data.current.weather_code;
+        const wSpeed = data.current.wind_speed_10m;
+        
+        // Códigos WMO de tormentas, granizo, lluvias y nevadas severas, o viento extremo >= 50km/h
+        const isExtremeWeather = [99, 96, 95, 86, 82, 75, 67, 66, 65].includes(code) || wSpeed >= 50;
+        
+        if (isExtremeWeather) {
             alertData = {
                 type: 'danger',
-                message: 'Alerta de Tormenta Fuerte: Se esperan ráfagas intensas, granizo y actividad eléctrica. Evite circular por la vía pública.'
+                message: 'Aviso Meteorológico: Condiciones climáticas activas o significativas en tu región. Revisa el enlace oficial de abajo para obtener el pronóstico en tiempo real y detallado de tu localidad.'
             };
-        } else {
-            const code = data.current.weather_code;
-            const wSpeed = data.current.wind_speed_10m;
-            if (code === 99) alertData = { type: 'danger', message: 'Tormenta eléctrica con granizo severo' };
-            else if (code === 96) alertData = { type: 'warning', message: 'Tormenta eléctrica con granizo' };
-            else if (code === 95) alertData = { type: 'warning', message: 'Tormenta eléctrica fuerte' };
-            else if (code === 86) alertData = { type: 'warning', message: 'Nevada violenta' };
-            else if (code === 82) alertData = { type: 'danger', message: 'Chubascos de lluvia violentos' };
-            else if (code === 75) alertData = { type: 'warning', message: 'Nevada intensa con acumulación' };
-            else if (code === 67) alertData = { type: 'danger', message: 'Lluvia gélida extrema' };
-            else if (code === 66 || code === 65) alertData = { type: 'warning', message: 'Tormenta de lluvia helada' };
-            else if (wSpeed >= 50) alertData = { type: 'warning', message: `Viento extremo de ${Math.round(wSpeed)} km/h` };
         }
 
         if (alertData) {
