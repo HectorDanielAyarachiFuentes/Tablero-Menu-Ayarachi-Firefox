@@ -57,11 +57,17 @@ body.with-load-animations .tab-pane {
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  padding: 12px;
+  padding: 12px 90px;
   transition: filter .4s ease, background-color .3s;
   opacity: 1;
   transform: translateY(0);
   will-change: filter;
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 12px 20px;
+  }
 }
 
 /* Eliminado el estado oculto inicial de secciones */
