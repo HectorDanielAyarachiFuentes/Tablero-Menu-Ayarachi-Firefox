@@ -2306,52 +2306,329 @@ body.theme-background {
   background: rgba(var(--panel-bg-rgb), var(--panel-opacity));
   backdrop-filter: blur(var(--panel-blur));
   -webkit-backdrop-filter: blur(var(--panel-blur));
-  padding: 8px 12px;
-  border-radius: var(--panel-radius);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all .3s ease;
+  width: 48px;
+  padding: 12px 2px;
+  border-radius: 24px; /* Forma de píldora perfecta para hacer juego con el botón circular */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-light, rgba(255, 255, 255, 0.15)) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: var(--panel-text-color, #fff) !important; /* Garantiza visibilidad de textos en todo momento */
 }
 
+/* Efecto hover interactivo: se expande horizontalmente de forma espectacular */
 .weather-widget-fixed:hover {
-  transform: scale(1.05);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  width: 140px; /* Se abre más ancho para mostrar toda la info */
+  border-radius: 16px;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
 .weather-summary {
   display: flex;
+  flex-direction: column-reverse; /* Icono arriba, detalles abajo por defecto */
+  gap: 6px;
+  width: 100%;
   align-items: center;
-  gap: 8px;
-}
-
-.weather-temp {
-  font-size: 1.5em;
-  font-weight: 600;
-  color: var(--panel-text-color, #fff);
-}
-
-.weather-icon {
-  width: 40px;
-  height: 40px
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .weather-details {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   color: var(--panel-text-color, #fff);
+  line-height: 1.2;
 }
 
+.weather-icon {
+  width: 30px; /* Tamaño optimizado */
+  height: 30px;
+  margin: 0 auto;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.weather-temp {
+  font-size: 14px; /* Un poco más grande y legible */
+  font-weight: 700;
+  margin-bottom: 2px;
+  display: block;
+  text-align: center;
+  color: var(--panel-text-color, #fff);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ubicación (Ciudad) - Por defecto colapsada, solo muestra el pin */
+.weather-city {
+  display: block !important;
+  font-size: 0px; /* Tamaño cero para ocultar la palabra COMPLETAMENTE y no mostrar fragmentos */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  max-width: 14px; /* Oculta el texto y muestra solo el pin */
+  margin: 1px auto 6px auto;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip; /* Recorta limpio */
+  text-align: center;
+  width: 100%;
+  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+
+/* Al pasar el mouse, el nombre de la ciudad se desliza suavemente hacia afuera */
+.weather-widget-fixed:hover .weather-city {
+  font-size: 8px; /* Regresa a su tamaño legible en hover */
+  max-width: 120px;
+  text-overflow: ellipsis; /* Puntos suspensivos si sigue siendo demasiado largo para 120px */
+  opacity: 1;
+}
+
+.weather-city::before {
+  content: "📍";
+  font-size: 8px !important; /* Mantiene su tamaño original de forma independiente */
+  margin-right: 2px;
+  display: inline;
+}
+
+/* Emojis del clima */
+.weather-emoji {
+  margin-right: 3px;
+  display: inline-block;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+/* Emojis optimizados en modo vertical */
+.weather-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  width: 12px;
+  height: 12px;
+  margin-right: 2px;
+}
+
+/* Estilo para los datos de humedad y viento dentro del pill vertical */
 .weather-extra {
-  font-size: 0.8em;
-  opacity: 0.7
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.85;
+  border-top: 1px solid rgba(255, 255, 255, 0.15); /* Divisor más nítido y premium */
+  padding-top: 6px;
+  width: 85%;
+  margin: 0 auto;
+  transition: flex-direction 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s;
 }
 
-.weather-expanded {
-  display: none;
+/* Al pasar el mouse, los datos de humedad y viento se acomodan horizontalmente para optimizar espacio */
+.weather-widget-fixed:hover .weather-extra {
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
 }
 
-/* Ocultamos la expansión por ahora para este diseño */
+.weather-humidity,
+.weather-wind {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 2px;
+}
+
+/* Al pasar el mouse, hacemos más anchos los contenedores individuales en horizontal */
+.weather-widget-fixed:hover .weather-humidity,
+.weather-widget-fixed:hover .weather-wind {
+  width: auto;
+}
+
+/* Ocultamos los divisores, las unidades y cualquier elemento no necesario en vertical */
+/* Ocultamos la sección expandida, divisores, unidades y cualquier elemento no necesario en reposo */
+.weather-expanded,
+.weather-divider,
+.weather-unit,
+.weather-details > span:not(.weather-temp):not(.weather-city):not(.weather-extra) {
+  display: none !important;
+}
+
+/* Al pasar el mouse, volvemos a mostrar la unidad de velocidad */
+.weather-widget-fixed:hover .weather-unit {
+  display: inline !important;
+}
+
+/* ==========================================================================
+   ESTADO ABIERTO: CUANDO SE HACE CLICK (DASHBOARD COMPLETO)
+   ========================================================================== */
+.weather-widget-fixed.open,
+.weather-widget-fixed.open:hover {
+  width: 240px !important;
+  height: auto !important;
+  padding: 16px !important;
+  border-radius: 16px !important;
+  transform: none !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5) !important;
+  cursor: default !important;
+}
+
+/* Cabecera en modo abierto: horizontal */
+.weather-widget-fixed.open .weather-summary,
+.weather-widget-fixed.open:hover .weather-summary {
+  flex-direction: row !important;
+  gap: 12px !important;
+  width: 100% !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.weather-widget-fixed.open .weather-details,
+.weather-widget-fixed.open:hover .weather-details {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  width: auto !important;
+}
+
+.weather-widget-fixed.open .weather-icon,
+.weather-widget-fixed.open:hover .weather-icon {
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 !important;
+}
+
+.weather-widget-fixed.open .weather-temp,
+.weather-widget-fixed.open:hover .weather-temp {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  margin-bottom: 2px !important;
+  text-align: left !important;
+  display: inline-block !important;
+}
+
+/* Ciudad en modo abierto */
+.weather-widget-fixed.open .weather-city,
+.weather-widget-fixed.open:hover .weather-city {
+  display: block !important;
+  font-size: 10px !important;
+  max-width: 170px !important;
+  text-overflow: ellipsis !important;
+  opacity: 0.9 !important;
+  margin: 2px 0 0 0 !important;
+  text-align: left !important;
+}
+
+/* Emojis y métricas en modo abierto */
+.weather-widget-fixed.open .weather-extra,
+.weather-widget-fixed.open:hover .weather-extra {
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+  width: 100% !important;
+  margin: 6px 0 0 0 !important;
+  font-size: 10px !important;
+  opacity: 0.8 !important;
+}
+
+.weather-widget-fixed.open .weather-humidity,
+.weather-widget-fixed.open:hover .weather-humidity,
+.weather-widget-fixed.open .weather-wind,
+.weather-widget-fixed.open:hover .weather-wind {
+  width: auto !important;
+  justify-content: flex-start !important;
+}
+
+.weather-widget-fixed.open .weather-divider,
+.weather-widget-fixed.open:hover .weather-divider {
+  display: inline !important;
+}
+
+.weather-widget-fixed.open .weather-unit,
+.weather-widget-fixed.open:hover .weather-unit {
+  display: inline !important;
+}
+
+/* Pronóstico extendido en modo abierto */
+.weather-widget-fixed.open .weather-expanded {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-top: 14px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding-top: 12px !important;
+  width: 100% !important;
+  animation: fadeInSlide 0.4s ease-out;
+}
+
+.forecast-hourly {
+  display: flex !important;
+  gap: 12px !important;
+  overflow-x: auto !important;
+  padding-bottom: 8px !important;
+  scrollbar-width: none !important; /* Firefox */
+}
+
+.forecast-hourly::-webkit-scrollbar {
+  display: none !important;
+}
+
+.forecast-hourly > div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-width: 38px !important;
+  font-size: 9px !important;
+  opacity: 0.9 !important;
+}
+
+.forecast-hourly img {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.forecast-daily {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.forecast-daily > div {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 10px !important;
+  padding: 2px 0 !important;
+  opacity: 0.95 !important;
+}
+
+.forecast-daily img {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Floating Label Styles for Modal */
 .form-group {
@@ -2510,161 +2787,9 @@ input[type=range]::-moz-range-thumb {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Cuando el botón de volver arriba está visible, transformamos el clima en un pill vertical a la derecha */
+/* Cuando el botón de volver arriba está visible, desplazamos el clima hacia arriba */
 body.scroll-btn-visible .weather-widget-fixed {
-  bottom: 78px; /* Directamente sobre el botón flotante (20 + 48 + 10 spacing) */
-  right: 20px;
-  width: 48px;
-  padding: 12px 2px;
-  border-radius: 24px; /* Forma de píldora perfecta para hacer juego con el botón circular */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  border: 1px solid var(--border-light, rgba(255, 255, 255, 0.15)) !important;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Efecto hover interactivo: se expande horizontalmente de forma espectacular */
-body.scroll-btn-visible .weather-widget-fixed:hover {
-  width: 140px; /* Se abre más ancho para mostrar toda la info */
-  border-radius: 16px;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-}
-
-body.scroll-btn-visible .weather-summary {
-  flex-direction: column-reverse; /* Icono arriba, detalles abajo */
-  gap: 6px;
-  width: 100%;
-  align-items: center;
-}
-
-body.scroll-btn-visible .weather-details {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-body.scroll-btn-visible .weather-icon {
-  width: 30px; /* Tamaño optimizado */
-  height: 30px;
-  margin: 0 auto;
-}
-
-body.scroll-btn-visible .weather-temp {
-  font-size: 14px; /* Un poco más grande y legible */
-  font-weight: 700;
-  margin-bottom: 2px;
-  display: block;
-  text-align: center;
-}
-
-/* Ubicación (Ciudad) - Por defecto colapsada, solo muestra el pin */
-body.scroll-btn-visible .weather-city {
-  display: block !important;
-  font-size: 0px; /* Tamaño cero para ocultar la palabra COMPLETAMENTE y no mostrar fragmentos */
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  max-width: 14px; /* Oculta el texto y muestra solo el pin */
-  margin: 1px auto 6px auto;
-  opacity: 0.8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip; /* Recorta limpio */
-  text-align: center;
-  width: 100%;
-  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-}
-
-/* Al pasar el mouse, el nombre de la ciudad se desliza suavemente hacia afuera */
-body.scroll-btn-visible .weather-widget-fixed:hover .weather-city {
-  font-size: 8px; /* Regresa a su tamaño legible en hover */
-  max-width: 120px;
-  text-overflow: ellipsis; /* Puntos suspensivos si sigue siendo demasiado largo para 120px */
-  opacity: 1;
-}
-
-body.scroll-btn-visible .weather-city::before {
-  content: "📍";
-  font-size: 8px !important; /* Mantiene su tamaño original de forma independiente */
-  margin-right: 2px;
-  display: inline;
-}
-
-/* Emojis del clima */
-.weather-emoji {
-  margin-right: 3px;
-  display: inline-block;
-  font-size: 1.1em;
-  vertical-align: middle;
-}
-
-/* Emojis optimizados en modo vertical */
-body.scroll-btn-visible .weather-emoji {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  width: 12px;
-  height: 12px;
-  margin-right: 2px;
-}
-
-/* Estilo para los datos de humedad y viento dentro del pill vertical */
-body.scroll-btn-visible .weather-extra {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  font-weight: 600;
-  opacity: 0.85;
-  border-top: 1px solid rgba(255, 255, 255, 0.15); /* Divisor más nítido y premium */
-  padding-top: 6px;
-  width: 85%;
-  margin: 0 auto;
-  transition: flex-direction 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s;
-}
-
-/* Al pasar el mouse, los datos de humedad y viento se acomodan horizontalmente para optimizar espacio */
-body.scroll-btn-visible .weather-widget-fixed:hover .weather-extra {
-  flex-direction: row;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-}
-
-body.scroll-btn-visible .weather-humidity,
-body.scroll-btn-visible .weather-wind {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 2px;
-}
-
-/* Al pasar el mouse, hacemos más anchos los contenedores individuales en horizontal */
-body.scroll-btn-visible .weather-widget-fixed:hover .weather-humidity,
-body.scroll-btn-visible .weather-widget-fixed:hover .weather-wind {
-  width: auto;
-}
-
-/* Ocultamos los divisores, las unidades y cualquier elemento no necesario en vertical */
-body.scroll-btn-visible .weather-divider,
-body.scroll-btn-visible .weather-unit,
-body.scroll-btn-visible .weather-details > span:not(.weather-temp):not(.weather-city):not(.weather-extra) {
-  display: none !important;
-}
-
-/* Al pasar el mouse, volvemos a mostrar la unidad de velocidad */
-body.scroll-btn-visible .weather-widget-fixed:hover .weather-unit {
-  display: inline !important;
+  bottom: 78px;
 }
 
 .scroll-to-top-btn.visible {
