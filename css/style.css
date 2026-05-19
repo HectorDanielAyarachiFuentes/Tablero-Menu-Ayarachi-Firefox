@@ -2510,9 +2510,161 @@ input[type=range]::-moz-range-thumb {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Cuando el botón de volver arriba está visible, desplazamos el clima horizontalmente a la izquierda */
+/* Cuando el botón de volver arriba está visible, transformamos el clima en un pill vertical a la derecha */
 body.scroll-btn-visible .weather-widget-fixed {
-  right: 80px;
+  bottom: 78px; /* Directamente sobre el botón flotante (20 + 48 + 10 spacing) */
+  right: 20px;
+  width: 48px;
+  padding: 12px 2px;
+  border-radius: 24px; /* Forma de píldora perfecta para hacer juego con el botón circular */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-light, rgba(255, 255, 255, 0.15)) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Efecto hover interactivo: se expande horizontalmente de forma espectacular */
+body.scroll-btn-visible .weather-widget-fixed:hover {
+  width: 140px; /* Se abre más ancho para mostrar toda la info */
+  border-radius: 16px;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+body.scroll-btn-visible .weather-summary {
+  flex-direction: column-reverse; /* Icono arriba, detalles abajo */
+  gap: 6px;
+  width: 100%;
+  align-items: center;
+}
+
+body.scroll-btn-visible .weather-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+body.scroll-btn-visible .weather-icon {
+  width: 30px; /* Tamaño optimizado */
+  height: 30px;
+  margin: 0 auto;
+}
+
+body.scroll-btn-visible .weather-temp {
+  font-size: 14px; /* Un poco más grande y legible */
+  font-weight: 700;
+  margin-bottom: 2px;
+  display: block;
+  text-align: center;
+}
+
+/* Ubicación (Ciudad) - Por defecto colapsada, solo muestra el pin */
+body.scroll-btn-visible .weather-city {
+  display: block !important;
+  font-size: 0px; /* Tamaño cero para ocultar la palabra COMPLETAMENTE y no mostrar fragmentos */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  max-width: 14px; /* Oculta el texto y muestra solo el pin */
+  margin: 1px auto 6px auto;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip; /* Recorta limpio */
+  text-align: center;
+  width: 100%;
+  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+
+/* Al pasar el mouse, el nombre de la ciudad se desliza suavemente hacia afuera */
+body.scroll-btn-visible .weather-widget-fixed:hover .weather-city {
+  font-size: 8px; /* Regresa a su tamaño legible en hover */
+  max-width: 120px;
+  text-overflow: ellipsis; /* Puntos suspensivos si sigue siendo demasiado largo para 120px */
+  opacity: 1;
+}
+
+body.scroll-btn-visible .weather-city::before {
+  content: "📍";
+  font-size: 8px !important; /* Mantiene su tamaño original de forma independiente */
+  margin-right: 2px;
+  display: inline;
+}
+
+/* Emojis del clima */
+.weather-emoji {
+  margin-right: 3px;
+  display: inline-block;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+/* Emojis optimizados en modo vertical */
+body.scroll-btn-visible .weather-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  width: 12px;
+  height: 12px;
+  margin-right: 2px;
+}
+
+/* Estilo para los datos de humedad y viento dentro del pill vertical */
+body.scroll-btn-visible .weather-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.85;
+  border-top: 1px solid rgba(255, 255, 255, 0.15); /* Divisor más nítido y premium */
+  padding-top: 6px;
+  width: 85%;
+  margin: 0 auto;
+  transition: flex-direction 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s;
+}
+
+/* Al pasar el mouse, los datos de humedad y viento se acomodan horizontalmente para optimizar espacio */
+body.scroll-btn-visible .weather-widget-fixed:hover .weather-extra {
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+body.scroll-btn-visible .weather-humidity,
+body.scroll-btn-visible .weather-wind {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 2px;
+}
+
+/* Al pasar el mouse, hacemos más anchos los contenedores individuales en horizontal */
+body.scroll-btn-visible .weather-widget-fixed:hover .weather-humidity,
+body.scroll-btn-visible .weather-widget-fixed:hover .weather-wind {
+  width: auto;
+}
+
+/* Ocultamos los divisores, las unidades y cualquier elemento no necesario en vertical */
+body.scroll-btn-visible .weather-divider,
+body.scroll-btn-visible .weather-unit,
+body.scroll-btn-visible .weather-details > span:not(.weather-temp):not(.weather-city):not(.weather-extra) {
+  display: none !important;
+}
+
+/* Al pasar el mouse, volvemos a mostrar la unidad de velocidad */
+body.scroll-btn-visible .weather-widget-fixed:hover .weather-unit {
+  display: inline !important;
 }
 
 .scroll-to-top-btn.visible {

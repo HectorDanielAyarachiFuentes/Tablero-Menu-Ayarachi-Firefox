@@ -143,13 +143,29 @@ function render(data) {
 
         if (data.city_name) {
             const citySpan = document.createElement('span');
+            citySpan.className = 'weather-city';
             citySpan.textContent = data.city_name;
             details.appendChild(citySpan);
         }
 
         const extraSpan = document.createElement('span');
         extraSpan.className = 'weather-extra';
-        extraSpan.textContent = `H: ${humidity}% • V: ${wind} km/h`;
+
+        const humSpan = document.createElement('span');
+        humSpan.className = 'weather-humidity';
+        humSpan.innerHTML = `<span class="weather-emoji">💧</span>${humidity}%`;
+        extraSpan.appendChild(humSpan);
+
+        const dividerSpan = document.createElement('span');
+        dividerSpan.className = 'weather-divider';
+        dividerSpan.textContent = ' • ';
+        extraSpan.appendChild(dividerSpan);
+
+        const windSpan = document.createElement('span');
+        windSpan.className = 'weather-wind';
+        windSpan.innerHTML = `<span class="weather-emoji">💨</span>${Math.round(wind)}<span class="weather-unit"> km/h</span>`;
+        extraSpan.appendChild(windSpan);
+
         details.appendChild(extraSpan);
 
         summary.appendChild(details);
