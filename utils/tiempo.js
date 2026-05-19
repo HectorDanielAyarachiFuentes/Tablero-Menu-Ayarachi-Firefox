@@ -178,7 +178,13 @@ function render(data) {
 
         const humSpan = document.createElement('span');
         humSpan.className = 'weather-humidity';
-        humSpan.innerHTML = `<span class="weather-emoji">💧</span>${humidity}%`;
+        
+        const humEmoji = document.createElement('span');
+        humEmoji.className = 'weather-emoji';
+        humEmoji.textContent = '💧';
+        humSpan.appendChild(humEmoji);
+        
+        humSpan.appendChild(document.createTextNode(`${humidity}%`));
         extraSpan.appendChild(humSpan);
 
         const dividerSpan = document.createElement('span');
@@ -188,7 +194,19 @@ function render(data) {
 
         const windSpan = document.createElement('span');
         windSpan.className = 'weather-wind';
-        windSpan.innerHTML = `<span class="weather-emoji">💨</span>${Math.round(wind)}<span class="weather-unit"> km/h</span>`;
+        
+        const windEmoji = document.createElement('span');
+        windEmoji.className = 'weather-emoji';
+        windEmoji.textContent = '💨';
+        windSpan.appendChild(windEmoji);
+        
+        windSpan.appendChild(document.createTextNode(`${Math.round(wind)}`));
+        
+        const windUnit = document.createElement('span');
+        windUnit.className = 'weather-unit';
+        windUnit.textContent = ' km/h';
+        windSpan.appendChild(windUnit);
+        
         extraSpan.appendChild(windSpan);
 
         details.appendChild(extraSpan);
@@ -197,7 +215,16 @@ function render(data) {
         if (alertData) {
             const alertBanner = document.createElement('div');
             alertBanner.className = 'weather-alert-banner';
-            alertBanner.innerHTML = `<span class="alert-banner-icon">⚠️</span><span>Alerta</span>`;
+            
+            const alertIcon = document.createElement('span');
+            alertIcon.className = 'alert-banner-icon';
+            alertIcon.textContent = '⚠️';
+            alertBanner.appendChild(alertIcon);
+            
+            const alertText = document.createElement('span');
+            alertText.textContent = 'Alerta';
+            alertBanner.appendChild(alertText);
+            
             alertBanner.title = alertData.message;
             alertBanner.addEventListener('click', (ev) => {
                 ev.stopPropagation(); // Evita que se cierre o actúe el contenedor principal
@@ -336,31 +363,83 @@ function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null)
         weatherLink = `https://www.windy.com/?${lat},${lon},11`;
     }
 
-    modal.innerHTML = `
-        <header class="alert-modal-header">
-            <span class="alert-modal-icon">⚠️</span>
-            <h4>Alerta Meteorológica Oficial</h4>
-            <button class="alert-modal-close">&times;</button>
-        </header>
-        <div class="alert-modal-body">
-            <p class="alert-msg">${alertData.message}</p>
-            <div class="alert-recommendations">
-                <h5>Recomendaciones de Seguridad:</h5>
-                <ul>
-                    <li>Permanezca en interiores, en una zona segura de su hogar.</li>
-                    <li>Asegure objetos sueltos que puedan ser arrastrados por el viento.</li>
-                    <li>Desconecte electrodomésticos para protegerlos de variaciones eléctricas.</li>
-                    <li>Evite circular por la vía pública o estacionar bajo árboles/cables.</li>
-                </ul>
-            </div>
-            <div class="alert-more-info">
-                <p class="alert-more-info-text">Verifica este enlace del clima para tener más información. ¡Espero que estés bien! 😉</p>
-                <a href="${weatherLink}" target="_blank" rel="noopener noreferrer" class="alert-link-btn">
-                    <span>🌍 Ver clima de ${cityName || 'mi ubicación'}</span>
-                </a>
-            </div>
-        </div>
-    `;
+    modal.textContent = '';
+    
+    // Header
+    const header = document.createElement('header');
+    header.className = 'alert-modal-header';
+    
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'alert-modal-icon';
+    iconSpan.textContent = '⚠️';
+    header.appendChild(iconSpan);
+    
+    const titleH4 = document.createElement('h4');
+    titleH4.textContent = 'Alerta Meteorológica Oficial';
+    header.appendChild(titleH4);
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'alert-modal-close';
+    closeBtn.textContent = '×';
+    header.appendChild(closeBtn);
+    
+    modal.appendChild(header);
+    
+    // Body
+    const body = document.createElement('div');
+    body.className = 'alert-modal-body';
+    
+    const alertMsg = document.createElement('p');
+    alertMsg.className = 'alert-msg';
+    alertMsg.textContent = alertData.message;
+    body.appendChild(alertMsg);
+    
+    // Recommendations
+    const recsDiv = document.createElement('div');
+    recsDiv.className = 'alert-recommendations';
+    
+    const recsH5 = document.createElement('h5');
+    recsH5.textContent = 'Recomendaciones de Seguridad:';
+    recsDiv.appendChild(recsH5);
+    
+    const recsUl = document.createElement('ul');
+    const items = [
+        'Permanezca en interiores, en una zona segura de su hogar.',
+        'Asegure objetos sueltos que puedan ser arrastrados por el viento.',
+        'Desconecte electrodomésticos para protegerlos de variaciones eléctricas.',
+        'Evite circular por la vía pública o estacionar bajo árboles/cables.'
+    ];
+    items.forEach(text => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        recsUl.appendChild(li);
+    });
+    recsDiv.appendChild(recsUl);
+    body.appendChild(recsDiv);
+    
+    // More info
+    const moreInfoDiv = document.createElement('div');
+    moreInfoDiv.className = 'alert-more-info';
+    
+    const moreInfoText = document.createElement('p');
+    moreInfoText.className = 'alert-more-info-text';
+    moreInfoText.textContent = 'Verifica este enlace del clima para tener más información. ¡Espero que estés bien! 😉';
+    moreInfoDiv.appendChild(moreInfoText);
+    
+    const linkBtn = document.createElement('a');
+    linkBtn.href = weatherLink;
+    linkBtn.target = '_blank';
+    linkBtn.rel = 'noopener noreferrer';
+    linkBtn.className = 'alert-link-btn';
+    
+    const linkText = document.createElement('span');
+    linkText.textContent = `🌍 Ver clima de ${cityName || 'mi ubicación'}`;
+    linkBtn.appendChild(linkText);
+    
+    moreInfoDiv.appendChild(linkBtn);
+    body.appendChild(moreInfoDiv);
+    
+    modal.appendChild(body);
 
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
