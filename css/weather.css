@@ -1,0 +1,449 @@
+.forecast-day {
+  font-weight: 600;
+}
+
+.forecast-temp-range {
+  font-size: 0.9em;
+}
+
+.weather-widget-fixed {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10;
+  cursor: pointer;
+  background: rgba(var(--panel-bg-rgb), var(--panel-opacity));
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  width: 48px;
+  padding: 12px 2px;
+  border-radius: 24px; /* Forma de píldora perfecta para hacer juego con el botón circular */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-light, rgba(255, 255, 255, 0.15)) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: var(--panel-text-color, #fff) !important; /* Garantiza visibilidad de textos en todo momento */
+}
+
+/* Efecto hover interactivo: se expande horizontalmente de forma espectacular a la tarjeta de la segunda imagen */
+.weather-widget-fixed:hover,
+.weather-widget-fixed.open {
+  width: 220px !important;
+  height: auto !important;
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+  cursor: pointer !important;
+}
+
+/* Cabecera en modo horizontal: Icono a la derecha, detalles a la izquierda */
+.weather-widget-fixed:hover .weather-summary,
+.weather-widget-fixed.open .weather-summary {
+  flex-direction: row !important; /* Icono a la derecha, detalles a la izquierda */
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 12px !important;
+}
+
+.weather-widget-fixed:hover .weather-details,
+.weather-widget-fixed.open .weather-details {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  text-align: left !important;
+  width: auto !important;
+}
+
+.weather-widget-fixed:hover .weather-icon,
+.weather-widget-fixed.open .weather-icon {
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  order: 2 !important; /* Mueve el icono a la derecha */
+  opacity: 1 !important;
+}
+
+.weather-widget-fixed:hover .weather-temp,
+.weather-widget-fixed.open .weather-temp {
+  font-size: 26px !important; /* Temperatura grande y legible */
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+  margin-bottom: 2px !important;
+  text-align: left !important;
+  display: inline-block !important;
+}
+
+/* Ciudad en modo horizontal */
+.weather-widget-fixed:hover .weather-city,
+.weather-widget-fixed.open .weather-city {
+  display: block !important;
+  font-size: 13px !important; /* Texto un poco más grande */
+  font-weight: 400 !important;
+  max-width: 160px !important;
+  text-overflow: ellipsis !important;
+  opacity: 0.95 !important;
+  margin: 0 0 2px 0 !important;
+  text-align: left !important;
+  text-transform: capitalize !important;
+}
+
+/* Ocultamos el pin localizador en hover/open para que quede limpio */
+.weather-widget-fixed:hover .weather-city::before,
+.weather-widget-fixed.open .weather-city::before {
+  display: none !important;
+}
+
+/* Emojis y métricas en modo horizontal */
+.weather-widget-fixed:hover .weather-extra,
+.weather-widget-fixed.open .weather-extra {
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+  opacity: 0.75 !important;
+}
+
+.weather-widget-fixed:hover .weather-humidity,
+.weather-widget-fixed.open .weather-humidity,
+.weather-widget-fixed:hover .weather-wind,
+.weather-widget-fixed.open .weather-wind {
+  width: auto !important;
+  justify-content: flex-start !important;
+}
+
+/* Hilos de prefijo H: y V: en lugar de los emojis */
+.weather-widget-fixed:hover .weather-humidity .weather-emoji,
+.weather-widget-fixed.open .weather-humidity .weather-emoji,
+.weather-widget-fixed:hover .weather-wind .weather-emoji,
+.weather-widget-fixed.open .weather-wind .weather-emoji {
+  display: none !important;
+}
+
+.weather-widget-fixed:hover .weather-humidity::before,
+.weather-widget-fixed.open .weather-humidity::before {
+  content: "H: " !important;
+  font-weight: 600 !important;
+}
+
+.weather-widget-fixed:hover .weather-wind::before,
+.weather-widget-fixed.open .weather-wind::before {
+  content: "V: " !important;
+  font-weight: 600 !important;
+}
+
+.weather-widget-fixed:hover .weather-divider,
+.weather-widget-fixed.open .weather-divider {
+  display: inline !important;
+}
+
+.weather-widget-fixed:hover .weather-unit,
+.weather-widget-fixed.open .weather-unit {
+  display: inline !important;
+}
+
+/* Ocultamos el pronóstico extendido ya que la tarjeta horizontal limpia no lo lleva */
+.weather-widget-fixed:hover .weather-expanded,
+.weather-widget-fixed.open .weather-expanded {
+  display: none !important;
+}
+
+.weather-summary {
+  display: flex;
+  flex-direction: column-reverse; /* Icono arriba, detalles abajo por defecto */
+  gap: 6px;
+  width: 100%;
+  align-items: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.weather-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  color: var(--panel-text-color, #fff);
+  line-height: 1.2;
+}
+
+.weather-icon {
+  width: 30px; /* Tamaño optimizado */
+  height: 30px;
+  margin: 0 auto;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.weather-temp {
+  font-size: 14px; /* Un poco más grande y legible */
+  font-weight: 700;
+  margin-bottom: 2px;
+  display: block;
+  text-align: center;
+  color: var(--panel-text-color, #fff);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ubicación (Ciudad) - Por defecto colapsada, solo muestra el pin */
+.weather-city {
+  display: block !important;
+  font-size: 0px; /* Tamaño cero para ocultar la palabra COMPLETAMENTE y no mostrar fragmentos */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  max-width: 14px; /* Oculta el texto y muestra solo el pin */
+  margin: 1px auto 6px auto;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip; /* Recorta limpio */
+  text-align: center;
+  width: 100%;
+  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+
+.weather-city::before {
+  content: "📍";
+  font-size: 8px !important; /* Mantiene su tamaño original de forma independiente */
+  margin-right: 2px;
+  display: inline;
+}
+
+/* Emojis del clima */
+.weather-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  width: 12px;
+  height: 12px;
+  margin-right: 2px;
+}
+
+/* Estilo para los datos de humedad y viento dentro del pill vertical */
+.weather-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.85;
+  border-top: 1px solid rgba(255, 255, 255, 0.15); /* Divisor más nítido y premium */
+  padding-top: 6px;
+  width: 85%;
+  margin: 0 auto;
+  transition: flex-direction 0.4s cubic-bezier(0.4, 0, 0.2, 1), gap 0.4s;
+}
+
+.weather-humidity,
+.weather-wind {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 2px;
+}
+
+/* Ocultamos los divisores, las unidades, el pronóstico y cualquier elemento no necesario en reposo/vertical */
+.weather-expanded,
+.weather-divider,
+.weather-unit,
+.weather-details > span:not(.weather-temp):not(.weather-city):not(.weather-extra) {
+  display: none !important;
+}
+
+.weather-widget-fixed.alert-active {
+  animation: alert-pulse 2s infinite !important;
+  border: 1px solid rgba(255, 75, 75, 0.8) !important;
+}
+
+/* Banner de alerta interactivo dentro de la tarjeta (oculto en vertical) */
+.weather-alert-banner {
+  display: none !important;
+}
+
+.weather-widget-fixed:hover .weather-alert-banner,
+.weather-widget-fixed.open .weather-alert-banner {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 75, 75, 0.2) !important;
+  border: 1px solid rgba(255, 75, 75, 0.4) !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  color: #ff9a9a !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  margin-top: 4px !important;
+  cursor: pointer !important;
+  width: fit-content !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.2s ease !important;
+}
+
+.weather-widget-fixed:hover .weather-alert-banner:hover,
+.weather-widget-fixed.open .weather-alert-banner:hover {
+  background: rgba(255, 75, 75, 0.35) !important;
+  transform: scale(1.05) !important;
+}
+
+.alert-banner-icon {
+  font-size: 10px;
+}
+
+/* OVERLAY Y MODAL DE ALERTA DE CRISTAL GÉLIDO */
+.weather-alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: alertModalFadeIn 0.3s ease;
+}
+
+.weather-alert-modal {
+  background: rgba(25, 20, 20, 0.85);
+  border: 1px solid rgba(255, 75, 75, 0.4);
+  box-shadow: 0 24px 64px rgba(255, 75, 75, 0.25);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  padding: 24px;
+  color: #fff;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: alertModalSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 75, 75, 0.25);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.alert-modal-icon {
+  font-size: 24px;
+  animation: alertIconShake 1.5s infinite;
+}
+
+.alert-modal-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #ff5e5e;
+  letter-spacing: 0.5px;
+}
+
+.alert-modal-close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 28px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.alert-modal-close:hover {
+  color: #ff5e5e;
+}
+
+.alert-modal-body .alert-msg {
+  font-size: 13px;
+  line-height: 1.6;
+  background: rgba(255, 75, 75, 0.12);
+  border-left: 3px solid #ff4b4b;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 0 0 18px 0;
+}
+
+.alert-recommendations h5 {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.alert-recommendations ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.alert-recommendations li {
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+/* Sección de enlace a más información dentro del modal */
+.alert-more-info {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.alert-more-info-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.alert-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ff5e5e 0%, #ff2a2a 100%) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 15px rgba(255, 75, 75, 0.35) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.alert-link-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(255, 75, 75, 0.5) !important;
+  filter: brightness(1.1) !important;
+  color: #fff !important;
+}
+
+.alert-link-btn:active {
+  transform: translateY(0) !important;
+}

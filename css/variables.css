@@ -1,0 +1,32 @@
+:root {
+  /* Default Theme (Paisaje) - these will be overridden by JS */
+  --greeting-color: #FFFFFF;
+  --name-color: #FFFFFF;
+  --clock-color: #FFFFFF;
+  --date-color: #FFFFFF;
+
+  --greeting-font: 'Poppins', sans-serif;
+  --date-font: 'Poppins', sans-serif;
+
+  --panel-text-color: #ffffff;
+  --panel-text-secondary-color: rgba(255, 255, 255, 0.7);
+  --panel-bg: rgba(0, 0, 0, 0.2);
+  --accent-color: #a855f7;
+  --button-bg: rgba(255, 255, 255, 0.05);
+  --button-hover-bg: rgba(255, 255, 255, 0.1);
+  --panel-radius: 12px;
+
+  --panel-opacity: 0.1;
+  --panel-blur: 10px;
+
+  /* Firefox Modern Enhancements */
+  --border-light: color-mix(in srgb, var(--panel-text-color), transparent 85%);
+  --border-active: color-mix(in srgb, var(--accent-color), transparent 40%);
+  --hover-overlay: color-mix(in srgb, var(--accent-color), transparent 85%);
+  --shadow-accent: color-mix(in srgb, var(--accent-color), transparent 70%);
+
+  /* Firefox Glassmorphism 2.0 - Ultra Smooth */
+  --glass-bg: color-mix(in srgb, var(--panel-bg), transparent 10%);
+  --glass-border: color-mix(in srgb, var(--panel-text-color), transparent 80%);
+  --glass-highlight: color-mix(in srgb, var(--panel-text-color), transparent 95%);
+}

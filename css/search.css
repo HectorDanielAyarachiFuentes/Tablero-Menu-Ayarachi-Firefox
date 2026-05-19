@@ -1,0 +1,227 @@
+.search-section {
+  position: relative;
+  z-index: 10;
+}
+
+.search-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: min(980px, 96%);
+  background: var(--glass-bg);
+  border-radius: 50px;
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--panel-shadow, 0 0 0 transparent), inset 0 0 0 1px var(--glass-highlight);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color .3s ease, background-color .3s ease;
+  overflow: visible; /* Back to visible to show the dropdown */
+  z-index: 1;
+}
+
+.search-card:focus-within {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--glass-bg), white 5%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), inset 0 0 0 1px var(--accent-color);
+}
+
+.search-card input {
+  flex: 1;
+  padding: 12px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--panel-text-color);
+  font-size: 16px;
+  outline: none;
+}
+
+.search-card input::placeholder {
+  color: var(--panel-text-secondary-color);
+  opacity: 0.6;
+}
+
+.search-card select option {
+  color: black;
+  background: white;
+}
+
+.search-card button#searchGo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-color);
+  border: 0;
+  padding: 0 30px;
+  margin: 0;
+  border-radius: 0 50px 50px 0; /* Explicitly round the right side */
+  color: white;
+  cursor: pointer;
+  transition: all .2s;
+  align-self: stretch;
+}
+
+.search-card button:hover {
+  background-color: color-mix(in srgb, var(--accent-color), black 10%);
+}
+
+.search-card button svg {
+  width: 16px;
+  height: 16px
+}
+
+.privacy-btn {
+  background: transparent !important;
+  color: var(--panel-text-secondary-color) !important;
+  border: none !important;
+  opacity: 0.5;
+  width: 44px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.privacy-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.privacy-btn.active {
+  color: #2ecc71 !important;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.5));
+}
+
+.search-card.private-mode {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--glass-bg), #001100 10%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 30px rgba(46, 204, 113, 0.15);
+}
+
+.search-card.private-mode::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle), transparent 70%, #2ecc71 100%);
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: border-trace 3s linear infinite;
+  pointer-events: none;
+  z-index: 5; /* Above everything to see the trace */
+}
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.search-card.private-mode #searchInput::placeholder {
+  color: #2ecc71;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.search-card.private-mode .privacy-btn {
+  animation: pulse-shield 2s infinite;
+}
+
+.custom-select-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  border-right: 1px solid var(--border-light);
+}
+
+.custom-select-trigger {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 50px 0 0 50px;
+  transition: background-color .2s;
+  height: 100%;
+  color: var(--panel-text-color, #fff);
+}
+
+.custom-select-trigger:hover {
+  background-color: var(--hover-overlay);
+}
+
+.custom-select-trigger img {
+  width: 20px;
+  height: 20px;
+}
+
+.custom-select-trigger .arrow {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  transition: transform .2s;
+}
+
+.custom-select-wrapper.open .arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  background-color: color-mix(in srgb, var(--panel-bg), black 20%);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.custom-select-options .option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color .2s;
+  color: var(--panel-text-color);
+}
+
+.custom-select-options .option:hover {
+  background-color: var(--hover-overlay);
+}
+
+.custom-select-options .option img {
+  width: 18px;
+  height: 18px;
+}
+
+.custom-select-options .option:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Fix para el apilamiento (z-index) en la barra de búsqueda */
+.search-input-group {
+  flex: 1;
+  display: flex;
+  position: relative;
+  /* Crea un contexto de apilamiento inferior */
+  z-index: 1;
+}
+
+.search-card {
+  background-color: rgba(var(--panel-bg-rgb), var(--panel-opacity));
+  backdrop-filter: blur(var(--panel-blur));
+}
