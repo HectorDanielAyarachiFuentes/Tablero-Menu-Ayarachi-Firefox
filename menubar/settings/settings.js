@@ -66,16 +66,17 @@ export function initSettings(initialState) {
 
     // --- Lógica para la pestaña General (nuevas opciones de reloj y saludos) ---
     populateGreetingSelect();
-    storageGet(['use12HourFormat', 'showSeconds', 'greetingPreference', 'customGreetings', 'userName', 'weatherCity']).then(settings => {
+    storageGet(['use12HourFormat', 'showSeconds', 'greetingPreference', 'customGreetings', 'userName', 'weatherCity', 'weatherAlertSimulate']).then(settings => {
         $('#clockFormatToggle').checked = settings.use12HourFormat ?? false;
         $('#showSecondsToggle').checked = settings.showSeconds ?? false;
         $('#greetingSelect').value = settings.greetingPreference || 'random';
         $('#customGreetingsInput').value = settings.customGreetings || '';
         $('#customGreetingsContainer').hidden = $('#greetingSelect').value !== 'custom';
         
-        // Inicializar nombre y ciudad
+        // Inicializar nombre, ciudad y simulación de alerta
         if ($('#userName')) $('#userName').value = settings.userName || '';
         if ($('#weatherCity')) $('#weatherCity').value = settings.weatherCity || '';
+        if ($('#weatherAlertSimulateToggle')) $('#weatherAlertSimulateToggle').checked = settings.weatherAlertSimulate ?? false;
     });
 
     $('#clockFormatToggle').addEventListener('change', e => {

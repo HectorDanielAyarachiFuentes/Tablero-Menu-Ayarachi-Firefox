@@ -10,6 +10,7 @@ export const STORAGE_KEYS = [
   'bgUrl',
   'userName',
   'weatherCity',
+  'weatherAlertSimulate',
   'gradient',
   'panelBg',
   'panelOpacity',

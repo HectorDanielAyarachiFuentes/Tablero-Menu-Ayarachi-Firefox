@@ -7,10 +7,22 @@ import { showSettingError } from '../menubar/components/ui.js';
 import { API_URLS } from '../menubar/core/config.js';
 
 export const WeatherManager = {
-    init() {
+    async init() {
         // Adjuntar listeners una sola vez
         $('#weatherCity').addEventListener('change', this.handleCityChange);
         $('#weather').addEventListener('click', this.handleWidgetClick);
+
+        // Listener para simular alertas meteorológicas
+        const simToggle = $('#weatherAlertSimulateToggle');
+        if (simToggle) {
+            const simulateState = (await storageGet(['weatherAlertSimulate'])).weatherAlertSimulate;
+            simToggle.checked = simulateState ?? false;
+            simToggle.addEventListener('change', (e) => {
+                saveAndSyncSetting({ weatherAlertSimulate: e.target.checked }).then(() => {
+                    WeatherManager.fetchAndRender();
+                });
+            });
+        }
 
         // Carga inicial
         this.fetchAndRender();
@@ -18,17 +30,18 @@ export const WeatherManager = {
     async fetchAndRender() {
         const weatherEl = $('#weather');
         const customCity = (await storageGet(['weatherCity'])).weatherCity;
+        const simulateAlert = (await storageGet(['weatherAlertSimulate'])).weatherAlertSimulate ?? false;
         
         const cachedWeather = await storageGet(['weather']);
         // Use cache if it exists, is less than 30 mins old, and matches the city setting
         if (cachedWeather.weather && (Date.now() - cachedWeather.weather.timestamp < 1800000) && cachedWeather.weather.city === (customCity || 'auto')) {
-            render(cachedWeather.weather.data);
+            render(cachedWeather.weather.data, simulateAlert);
             return;
         }
 
         try {
             const weatherData = customCity ? await fetchWeatherByCity(customCity) : await fetchWeatherByCoords();
-            render(weatherData);
+            render(weatherData, simulateAlert);
             storageSet({ weather: { data: weatherData, timestamp: Date.now(), city: customCity || 'auto' } });
         } catch (error) {
             console.error("WeatherManager Error:", error);
@@ -82,6 +95,8 @@ async function fetchWeatherByCity(city) {
     }
     const { latitude, longitude, name } = geoData.results[0];
     const weatherData = await fetchWeather(latitude, longitude);
+    weatherData.latitude = latitude;
+    weatherData.longitude = longitude;
     weatherData.city_name = name; // Add city name to data
     return weatherData;
 }
@@ -96,6 +111,8 @@ async function fetchWeatherByCoords() {
                 try {
                     const { latitude, longitude } = pos.coords;
                     const weatherData = await fetchWeather(latitude, longitude);
+                    weatherData.latitude = latitude;
+                    weatherData.longitude = longitude;
                     resolve(weatherData);
                 } catch (error) {
                     reject(new Error('No se pudo obtener el clima.'));
@@ -114,7 +131,7 @@ function fetchWeather(lat, lon) {
     return apiFetch(weatherUrl);
 }
 
-function render(data) {
+function render(data, simulateAlert = false) {
     if (!data || !data.current || !data.hourly || !data.daily) return;
 
         // Current weather
@@ -124,6 +141,33 @@ function render(data) {
         const { description, icon } = getInterpretation(data.current.weather_code);
         const cityName = data.city_name ? `<span>${data.city_name}</span>` : '';
         const weatherEl = $('#weather');
+
+        // Determinar si hay alerta (real o simulada)
+        let alertData = null;
+        if (simulateAlert) {
+            alertData = {
+                type: 'danger',
+                message: 'Alerta de Tormenta Fuerte: Se esperan ráfagas intensas, granizo y actividad eléctrica. Evite circular por la vía pública.'
+            };
+        } else {
+            const code = data.current.weather_code;
+            const wSpeed = data.current.wind_speed_10m;
+            if (code === 99) alertData = { type: 'danger', message: 'Tormenta eléctrica con granizo severo' };
+            else if (code === 96) alertData = { type: 'warning', message: 'Tormenta eléctrica con granizo' };
+            else if (code === 95) alertData = { type: 'warning', message: 'Tormenta eléctrica fuerte' };
+            else if (code === 86) alertData = { type: 'warning', message: 'Nevada violenta' };
+            else if (code === 82) alertData = { type: 'danger', message: 'Chubascos de lluvia violentos' };
+            else if (code === 75) alertData = { type: 'warning', message: 'Nevada intensa con acumulación' };
+            else if (code === 67) alertData = { type: 'danger', message: 'Lluvia gélida extrema' };
+            else if (code === 66 || code === 65) alertData = { type: 'warning', message: 'Tormenta de lluvia helada' };
+            else if (wSpeed >= 50) alertData = { type: 'warning', message: `Viento extremo de ${Math.round(wSpeed)} km/h` };
+        }
+
+        if (alertData) {
+            weatherEl.classList.add('alert-active');
+        } else {
+            weatherEl.classList.remove('alert-active');
+        }
 
         // Hourly forecast (next 5 hours)
         const now = new Date();
@@ -167,6 +211,19 @@ function render(data) {
         extraSpan.appendChild(windSpan);
 
         details.appendChild(extraSpan);
+
+        // Si hay una alerta activa, renderizamos un banner de alerta interactivo
+        if (alertData) {
+            const alertBanner = document.createElement('div');
+            alertBanner.className = 'weather-alert-banner';
+            alertBanner.innerHTML = `<span class="alert-banner-icon">⚠️</span><span>Alerta</span>`;
+            alertBanner.title = alertData.message;
+            alertBanner.addEventListener('click', (ev) => {
+                ev.stopPropagation(); // Evita que se cierre o actúe el contenedor principal
+                showWeatherAlertModal(alertData, data.city_name, data.latitude, data.longitude);
+            });
+            details.appendChild(alertBanner);
+        }
 
         summary.appendChild(details);
 
@@ -277,4 +334,59 @@ function getInterpretation(code) {
         99: { description: 'Tormenta con granizo intenso', icon: '11d' }
     };
     return interpretations[code] || { description: 'Clima desconocido', icon: '50d' };
+}
+
+function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null) {
+    // Si ya existe un modal de alerta, lo eliminamos
+    const existing = document.querySelector('.weather-alert-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'weather-alert-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'weather-alert-modal';
+
+    // Construir enlace de clima según la ciudad o coordenadas
+    let weatherLink = 'https://www.google.com/search?q=clima';
+    if (cityName) {
+        weatherLink = `https://www.google.com/search?q=clima+${encodeURIComponent(cityName)}`;
+    } else if (lat && lon) {
+        weatherLink = `https://www.windy.com/?${lat},${lon},11`;
+    }
+
+    modal.innerHTML = `
+        <header class="alert-modal-header">
+            <span class="alert-modal-icon">⚠️</span>
+            <h4>Alerta Meteorológica Oficial</h4>
+            <button class="alert-modal-close">&times;</button>
+        </header>
+        <div class="alert-modal-body">
+            <p class="alert-msg">${alertData.message}</p>
+            <div class="alert-recommendations">
+                <h5>Recomendaciones de Seguridad:</h5>
+                <ul>
+                    <li>Permanezca en interiores, en una zona segura de su hogar.</li>
+                    <li>Asegure objetos sueltos que puedan ser arrastrados por el viento.</li>
+                    <li>Desconecte electrodomésticos para protegerlos de variaciones eléctricas.</li>
+                    <li>Evite circular por la vía pública o estacionar bajo árboles/cables.</li>
+                </ul>
+            </div>
+            <div class="alert-more-info">
+                <p class="alert-more-info-text">Verifica este enlace del clima para tener más información. ¡Espero que estés bien! 😉</p>
+                <a href="${weatherLink}" target="_blank" rel="noopener noreferrer" class="alert-link-btn">
+                    <span>🌍 Ver clima de ${cityName || 'mi ubicación'}</span>
+                </a>
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const closeBtn = modal.querySelector('.alert-modal-close');
+    closeBtn.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+    });
 }

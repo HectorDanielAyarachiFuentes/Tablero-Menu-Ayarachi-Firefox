@@ -2552,6 +2552,236 @@ body.theme-background {
   display: none !important;
 }
 
+/* ==========================================================================
+   ALERTAS METEOROLÓGICAS - EFECTOS Y CONTORNOS PREMIUM
+   ========================================================================== */
+
+/* Contorno rojo pulsante para el clima con alerta activa */
+@keyframes alert-pulse {
+  0% {
+    border-color: rgba(255, 75, 75, 0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0px rgba(255, 75, 75, 0);
+  }
+  50% {
+    border-color: rgba(255, 75, 75, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 75, 75, 0.8);
+  }
+  100% {
+    border-color: rgba(255, 75, 75, 0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0px rgba(255, 75, 75, 0);
+  }
+}
+
+.weather-widget-fixed.alert-active {
+  animation: alert-pulse 2s infinite !important;
+  border: 1px solid rgba(255, 75, 75, 0.8) !important;
+}
+
+/* Banner de alerta interactivo dentro de la tarjeta (oculto en vertical) */
+.weather-alert-banner {
+  display: none !important;
+}
+
+.weather-widget-fixed:hover .weather-alert-banner,
+.weather-widget-fixed.open .weather-alert-banner {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 75, 75, 0.2) !important;
+  border: 1px solid rgba(255, 75, 75, 0.4) !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  color: #ff9a9a !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  margin-top: 4px !important;
+  cursor: pointer !important;
+  width: fit-content !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.2s ease !important;
+}
+
+.weather-widget-fixed:hover .weather-alert-banner:hover,
+.weather-widget-fixed.open .weather-alert-banner:hover {
+  background: rgba(255, 75, 75, 0.35) !important;
+  transform: scale(1.05) !important;
+}
+
+.alert-banner-icon {
+  font-size: 10px;
+}
+
+/* OVERLAY Y MODAL DE ALERTA DE CRISTAL GÉLIDO */
+.weather-alert-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: alertModalFadeIn 0.3s ease;
+}
+
+.weather-alert-modal {
+  background: rgba(25, 20, 20, 0.85);
+  border: 1px solid rgba(255, 75, 75, 0.4);
+  box-shadow: 0 24px 64px rgba(255, 75, 75, 0.25);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  padding: 24px;
+  color: #fff;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: alertModalSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alert-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 75, 75, 0.25);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.alert-modal-icon {
+  font-size: 24px;
+  animation: alertIconShake 1.5s infinite;
+}
+
+.alert-modal-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #ff5e5e;
+  letter-spacing: 0.5px;
+}
+
+.alert-modal-close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 28px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.alert-modal-close:hover {
+  color: #ff5e5e;
+}
+
+.alert-modal-body .alert-msg {
+  font-size: 13px;
+  line-height: 1.6;
+  background: rgba(255, 75, 75, 0.12);
+  border-left: 3px solid #ff4b4b;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 0 0 18px 0;
+}
+
+.alert-recommendations h5 {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.alert-recommendations ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.alert-recommendations li {
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+/* Sección de enlace a más información dentro del modal */
+.alert-more-info {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.alert-more-info-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.alert-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ff5e5e 0%, #ff2a2a 100%) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 15px rgba(255, 75, 75, 0.35) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.alert-link-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(255, 75, 75, 0.5) !important;
+  filter: brightness(1.1) !important;
+  color: #fff !important;
+}
+
+.alert-link-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* Animaciones del modal y alerta */
+@keyframes alertModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes alertModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes alertIconShake {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(-8deg); }
+  20%, 40%, 60%, 80% { transform: rotate(8deg); }
+}
+
 @keyframes fadeInSlide {
   from {
     opacity: 0;
