@@ -53,9 +53,12 @@ export function initDoodleSettings(activeDoodleId) {
       } catch (e) { /* ignorar */ }
 
       await saveAndSyncSetting({
-        doodle: doodle.id
+        doodle: doodle.id,
+        syncFirefoxTheme: false
       });
       window.dispatchEvent(new CustomEvent('background-changed'));
+      const syncToggle = $('#syncFirefoxThemeToggle');
+      if (syncToggle) syncToggle.checked = false;
     });
 
     const doodleElement = button.querySelector('css-doodle');

@@ -346,10 +346,10 @@ export class PomodoroWidget {
         const body = this.mode === 'focus' ? 'Hora de tomar un descanso. ☕' : 'Hora de volver a enfocarse. 💪';
         if (!('Notification' in window)) return;
         if (Notification.permission === 'granted') {
-            new Notification(title, { body, icon: 'icons/icon128.png' });
+            new Notification(title, { body, icon: 'icons/icon.svg' });
         } else if (Notification.permission !== 'denied') {
             Notification.requestPermission().then(p => {
-                if (p === 'granted') new Notification(title, { body, icon: 'icons/icon128.png' });
+                if (p === 'granted') new Notification(title, { body, icon: 'icons/icon.svg' });
             });
         }
     }

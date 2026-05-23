@@ -112,7 +112,8 @@ export const storageSet = (obj) => {
       'greetingColor', 'nameColor', 'clockColor', 'dateColor',
       'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
       'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
-      'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds'
+      'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
+      'syncFirefoxTheme'
     ];
 
     // Obtenemos la caché actual o creamos una nueva

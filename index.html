@@ -56,10 +56,22 @@
   <script src="menubar/fast-loader.js" type="module"></script>
   <title>Tablero</title>
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-  <link rel="stylesheet" href="css/style.css">
+  <!-- Carga crítica en paralelo para eliminar cuello de botella de renderizado -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/search.css">
+  <link rel="stylesheet" href="css/tiles.css">
+  <link rel="stylesheet" href="css/panels.css">
+  <link rel="stylesheet" href="css/notes-doodle.css">
+  <link rel="stylesheet" href="css/weather.css">
+  <link rel="stylesheet" href="css/form-controls.css">
+  <link rel="stylesheet" href="css/context-menu.css">
 </head>
 
 <body class="loading">
+  <!-- Capa dedicada para el fondo animado con efecto de carga en "tandas" estilo videojuego -->
+  <div id="bg-layer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; opacity: 0; filter: blur(20px) grayscale(50%); transition: opacity 1.2s steps(6, end), filter 1.2s steps(6, end); pointer-events: none;"></div>
   <div class="wrap">
     <header class="header">
       <div class="brand-container">
@@ -454,6 +466,15 @@
               <div class="switch-container">
                 <label class="switch">
                   <input type="checkbox" id="randomBgToggle">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            <div class="field field-toggle">
+              <label for="syncFirefoxThemeToggle">Sincronizar con tema de Firefox</label>
+              <div class="switch-container">
+                <label class="switch">
+                  <input type="checkbox" id="syncFirefoxThemeToggle">
                   <span class="slider round"></span>
                 </label>
               </div>

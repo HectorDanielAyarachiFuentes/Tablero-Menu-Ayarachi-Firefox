@@ -18,6 +18,7 @@ window.GRADIENTS = GRADIENTS;
 import { WeatherManager } from '../utils/tiempo.js';
 import { loadDoodles, initDoodleSettings, updateDoodleSelectionUI } from './settings/doodles.js';
 import { DOODLES_LIST } from './settings/doodles-list.js';
+window.DOODLES_LIST = DOODLES_LIST;
 import { FileSystem } from './system/file-system.js';
 import { widgetsManager } from './widgets/widget-manager.js';
 import { initPremiumThemes } from './settings/themes-premium.js';
@@ -34,7 +35,7 @@ async function init() {
     'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
     'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-    'tiles', 'trash', 'socialMigrationDone'
+    'tiles', 'trash', 'socialMigrationDone', 'syncFirefoxTheme'
   ];
 
   const settings = await storageGet(criticalKeys);
@@ -88,26 +89,23 @@ async function init() {
   // Una vez tenemos los datos reales, volvemos a aplicar lo visual para mostrar los Tiles reales
   await BackgroundManager.apply(settings);
   renderTiles();
-
   // Escuchar cambios de fondo desde la configuración (evita dependencias circulares)
   window.addEventListener('background-changed', async () => {
     const currentSettings = await storageGet(null);
-    BackgroundManager.apply(currentSettings);
+    BackgroundManager.apply(currentSettings, true); // forceAsyncFetch = true para respuesta inmediata del usuario
     // Renderizar doodle si es necesario
     renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
+  });
 
-    // Actualizar el cache de localStorage para nuevas pestañas
-    try {
-      const zeroFlashCache = {};
-      const currentDoodle = DOODLES_LIST.find(d => d.id === currentSettings.doodle);
-      if (currentDoodle) {
-        zeroFlashCache.doodle = currentDoodle.id;
-        zeroFlashCache.doodleTemplate = currentDoodle.template;
-      } else {
-        zeroFlashCache.doodle = 'none';
+  // Escuchar mensajes desde el background script (como actualizaciones de tema de Firefox)
+  chrome.runtime.onMessage.addListener(async (message) => {
+    if (message.type === 'FIREFOX_THEME_UPDATED') {
+      console.log('Tablero received FIREFOX_THEME_UPDATED message, updating theme...');
+      const currentSettings = await storageGet(null);
+      if (currentSettings.syncFirefoxTheme) {
+        BackgroundManager.apply(currentSettings);
       }
-      localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
-    } catch (e) { /* ignorar */ }
+    }
   });
 
   /**
@@ -189,6 +187,7 @@ function initInteractionLogic(settings) {
     currentGradient: settings.gradient,
     currentBackgroundValue,
     randomBg: settings.randomBg,
+    syncFirefoxTheme: settings.syncFirefoxTheme,
     autoSync: settings.autoSync,
     bgDisplayMode: settings.bgDisplayMode,
     isCustomBg: !!(settings.bgData || settings.bgUrl)

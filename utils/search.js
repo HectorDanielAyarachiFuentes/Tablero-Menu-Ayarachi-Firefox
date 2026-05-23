@@ -32,7 +32,7 @@ export function initSearch() {
     const engineIcon = $('#selectedEngineIcon');
     if (engineIcon) {
         engineIcon.addEventListener('error', () => {
-            engineIcon.src = 'icons/icon16.png';
+            engineIcon.src = 'icons/icon.svg';
         }, { once: true });
     }
 
@@ -105,7 +105,7 @@ export async function renderFavoritesInSelect() {
         const domain = item.url ? new URL(item.url).hostname : `${item.value}.com`;
         const img = document.createElement('img');
         img.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=32`;
-        img.addEventListener('error', () => { img.src = 'icons/icon16.png'; }, { once: true });
+        img.addEventListener('error', () => { img.src = 'icons/icon.svg'; }, { once: true });
         img.alt = '';
         const span = document.createElement('span');
         span.textContent = item.text;

@@ -13,7 +13,7 @@ import { GRADIENTS } from '../utils/gradients.js';
       'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
       'activePremiumTheme', 'premiumThemeData',
       'doodle', 'bgData', 'bgUrl', 'gradient', 'bgDisplayMode',
-      'showSearch', 'showWeather', 'showDate'
+      'showSearch', 'showWeather', 'showDate', 'syncFirefoxTheme'
     ];
     
     const settings = await new Promise(resolve => chrome.storage.local.get(keys, resolve));
@@ -24,51 +24,8 @@ import { GRADIENTS } from '../utils/gradients.js';
     const bodyStyle = document.body.style;
 
     // 1. APLICAR TEMA (Fondo y Paneles)
-    if (settings.activePremiumTheme && settings.premiumThemeData) {
-      const theme = settings.premiumThemeData;
-      rootStyle.setProperty('background', theme.background.gradient, 'important');
-      rootStyle.setProperty('background-size', 'cover', 'important');
-      rootStyle.setProperty('background-attachment', 'fixed', 'important');
-      rootStyle.setProperty('background-position', 'center', 'important');
-      bodyStyle.setProperty('background', 'transparent', 'important');
-      document.body.classList.add('theme-background');
-
-      const pt = theme.panel;
-      rootStyle.setProperty('--panel-bg', settings.panelBg || pt.bg);
-      rootStyle.setProperty('--panel-opacity', settings.panelOpacity ?? pt.opacity);
-      rootStyle.setProperty('--panel-blur', `${settings.panelBlur ?? pt.blur}px`);
-      rootStyle.setProperty('--panel-radius', `${settings.panelRadius ?? pt.radius}px`);
-      
-      const colors = theme.colors;
-      rootStyle.setProperty('--panel-text-color', settings.panelTextColor || colors.text);
-      rootStyle.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || colors.textSecondary);
-      rootStyle.setProperty('--accent-color', settings.accentColor || colors.accent);
-      rootStyle.setProperty('--greeting-color', settings.greetingColor || colors.greeting);
-      rootStyle.setProperty('--name-color', settings.nameColor || colors.name);
-      rootStyle.setProperty('--clock-color', settings.clockColor || colors.clock);
-      rootStyle.setProperty('--date-color', settings.dateColor || colors.date);
-    } else if (settings.gradient) {
-        const gradId = settings.gradient;
-        const gradObj = GRADIENTS.find(g => g.id === gradId);
-        const resolvedBg = gradObj ? gradObj.gradient : (gradId.includes('gradient') ? gradId : 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)');
-        rootStyle.setProperty('background', resolvedBg, 'important');
-        rootStyle.setProperty('background-size', 'cover', 'important');
-        rootStyle.setProperty('background-attachment', 'fixed', 'important');
-        rootStyle.setProperty('background-position', 'center', 'important');
-        bodyStyle.setProperty('background', 'transparent', 'important');
-    } else if (settings.bgData || settings.bgUrl) {
-        rootStyle.setProperty('background', `url('${settings.bgData || settings.bgUrl}')`, 'important');
-        rootStyle.setProperty('background-size', 'cover', 'important');
-        rootStyle.setProperty('background-attachment', 'fixed', 'important');
-        rootStyle.setProperty('background-position', 'center', 'important');
-        bodyStyle.setProperty('background', 'transparent', 'important');
-    } else {
-        bodyStyle.setProperty('background', 'transparent', 'important');
-    }
-
-    if (settings.doodle && settings.doodle !== 'none') {
-        rootStyle.setProperty('background', 'transparent', 'important');
-        bodyStyle.setProperty('background', 'transparent', 'important');
+    if (window.BackgroundManager) {
+        await window.BackgroundManager.apply(settings);
     }
 
     // 2. RENDERIZAR SALUDO, RELOJ Y FECHA
@@ -83,11 +40,14 @@ import { GRADIENTS } from '../utils/gradients.js';
       else if (hour >= 12 && hour < 20) greetingText = 'Buenas tardes';
       else greetingText = 'Buenas noches';
       
-      greetingEl.textContent = greetingText;
-      if (settings.userName) {
-        const strong = document.createElement('strong');
-        strong.textContent = `, ${settings.userName}`;
-        greetingEl.appendChild(strong);
+      const targetHtml = settings.userName ? `${greetingText}<strong>, ${settings.userName}</strong>` : greetingText;
+      if (greetingEl.innerHTML !== targetHtml) {
+        greetingEl.textContent = greetingText;
+        if (settings.userName) {
+          const strong = document.createElement('strong');
+          strong.textContent = `, ${settings.userName}`;
+          greetingEl.appendChild(strong);
+        }
       }
     }
 

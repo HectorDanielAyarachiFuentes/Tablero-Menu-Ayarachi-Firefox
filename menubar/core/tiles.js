@@ -188,9 +188,27 @@ function loadMoreTiles() {
         oldSentinel.remove();
     }
 
-    // INTERCAMBIO ATÓMICO: Si es la primera carga, reemplazamos el snapshot de un golpe
+    // INTERCAMBIO INTELIGENTE: Para evitar el parpadeo de "recarga", si es la primera carga y
+    // el snapshot es igual a los datos reales, no destruimos el DOM.
     if (loadedCount === 0) {
-        tilesEl.replaceChildren(fragment);
+        const currentTileNodes = Array.from(tilesEl.children).filter(n => n.classList.contains('tile') && !n.classList.contains('tile-add'));
+        let isIdentical = false;
+        
+        if (currentTileNodes.length === nextBatch.length) {
+            isIdentical = currentTileNodes.every((node, i) => {
+                const titleEl = node.querySelector('.title');
+                return titleEl && titleEl.textContent === nextBatch[i].name;
+            });
+        }
+        
+        if (isIdentical) {
+            // Actualizar índices por seguridad pero no reemplazar los elementos del DOM
+            currentTileNodes.forEach((node, i) => {
+                node.dataset.idx = loadedCount + i;
+            });
+        } else {
+            tilesEl.replaceChildren(fragment);
+        }
     } else {
         tilesEl.appendChild(fragment);
     }

@@ -38,8 +38,10 @@ export function initSettings(initialState) {
         if (!url) return;
         const { bgDisplayMode: currentMode } = await storageGet(['bgDisplayMode']);
         const mode = currentMode || 'cover';
-        saveAndSyncSetting({ bgUrl: url, bgData: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, () => {
+        saveAndSyncSetting({ bgUrl: url, bgData: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null, syncFirefoxTheme: false }, () => {
             window.dispatchEvent(new CustomEvent('background-changed'));
+            const syncToggle = $('#syncFirefoxThemeToggle');
+            if (syncToggle) syncToggle.checked = false;
         });
     });
 
@@ -51,6 +53,40 @@ export function initSettings(initialState) {
     $('#randomBgToggle').addEventListener('change', (e) => { // CAMBIO: El texto de la etiqueta se cambió en el HTML
         storageSet({ randomBg: e.target.checked }).then(showSaveStatus);
     });
+
+    if ($('#syncFirefoxThemeToggle')) {
+        $('#syncFirefoxThemeToggle').checked = initialState.syncFirefoxTheme || false;
+        $('#syncFirefoxThemeToggle').addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const updateObj = { syncFirefoxTheme: isChecked };
+            if (isChecked) {
+                // Desactivar otros fondos para que el tema de Firefox tome control exclusivo
+                updateObj.doodle = 'none';
+                updateObj.gradient = null;
+                updateObj.bgUrl = null;
+                updateObj.bgData = null;
+                updateObj.activePremiumTheme = null;
+            }
+            saveAndSyncSetting(updateObj, () => {
+                window.dispatchEvent(new CustomEvent('background-changed'));
+                if (isChecked) {
+                    // Desmarcar visualmente gradientes y doodles activos en la interfaz
+                    $$('.gradient-btn.active').forEach(el => el.classList.remove('active'));
+                    $$('.doodle-item.active').forEach(el => el.classList.remove('active'));
+                    
+                    // Mostrar placeholder en vista previa del doodle
+                    const preview = $('#doodle-preview');
+                    if (preview) {
+                        preview.textContent = '';
+                        const span = document.createElement('span');
+                        span.className = 'placeholder-text';
+                        span.textContent = 'Selecciona un doodle para verlo aquí';
+                        preview.appendChild(span);
+                    }
+                }
+            });
+        });
+    }
 
     $$('#tab-fondo .sub-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchToBackgroundSubTab(btn.dataset.subtab));
@@ -338,9 +374,11 @@ function handleBgFileChange(e) {
         const { bgDisplayMode } = await storageGet(['bgDisplayMode']);
         const mode = bgDisplayMode || 'cover';
         // Guardamos y sincronizamos, asegurándonos de desactivar el doodle y el tema premium
-        saveAndSyncSetting({ bgData: e.target.result, bgUrl: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null }, () => {
+        saveAndSyncSetting({ bgData: e.target.result, bgUrl: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null, syncFirefoxTheme: false }, () => {
             window.dispatchEvent(new CustomEvent('background-changed'));
             $('#bgUrl').value = '';
+            const syncToggle = $('#syncFirefoxThemeToggle');
+            if (syncToggle) syncToggle.checked = false;
         });
     };
     reader.readAsDataURL(file);
@@ -356,8 +394,10 @@ function handleBgModeChange(e) {
 
 function handleBackgroundChange(e) {
     const gradientId = e.target.dataset.gradientId;
-    saveAndSyncSetting({ gradient: gradientId, bgUrl: null, bgData: null, doodle: 'none', activePremiumTheme: null }, () => {
+    saveAndSyncSetting({ gradient: gradientId, bgUrl: null, bgData: null, doodle: 'none', activePremiumTheme: null, syncFirefoxTheme: false }, () => {
         window.dispatchEvent(new CustomEvent('background-changed'));
+        const syncToggle = $('#syncFirefoxThemeToggle');
+        if (syncToggle) syncToggle.checked = false;
     });
     // Actualizamos el estado de la aplicación para que el hover no lo revierta al anterior.
     appState.currentGradient = gradientId;

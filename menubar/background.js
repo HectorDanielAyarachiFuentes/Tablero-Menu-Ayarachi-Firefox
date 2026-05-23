@@ -39,3 +39,37 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
   });
   console.log('Nuevo acceso guardado y mensaje de actualización enviado.');
 });
+
+/**
+ * Escucha peticiones de las pestañas de la extensión para acceder a APIs restringidas.
+ */
+if (typeof browser !== 'undefined' && browser.runtime) {
+  browser.runtime.onMessage.addListener((message, sender) => {
+    if (message.type === 'GET_FIREFOX_THEME') {
+      if (browser.theme) {
+        return browser.theme.getCurrent()
+          .then(theme => ({ success: true, theme }))
+          .catch(error => ({ success: false, error: error.message }));
+      } else {
+        return Promise.resolve({ success: false, error: 'browser.theme API no está disponible' });
+      }
+    }
+  });
+} else {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'GET_FIREFOX_THEME') {
+      sendResponse({ success: false, error: 'browser.theme API no está disponible en este navegador' });
+    }
+  });
+}
+
+// Escuchar actualizaciones en el tema del navegador Firefox
+if (typeof browser !== 'undefined' && browser.theme) {
+  browser.theme.onUpdated.addListener(async (updateInfo) => {
+    console.log('Firefox theme changed, notifying extension pages...');
+    chrome.runtime.sendMessage({ type: 'FIREFOX_THEME_UPDATED' }, (response) => {
+      // Evitar errores si no hay pestañas abiertas
+      if (chrome.runtime.lastError) { /* Silenciar */ }
+    });
+  });
+}

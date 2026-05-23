@@ -29,16 +29,8 @@
       }
     }
 
-    // 3. Aplicar color sólido de respaldo inmediatamente (Elimina el destello de carga)
-    root.setProperty('background-color', lastColor, 'important');
-
-    // 4. Aplicar el fondo completo (Imagen o Degradado)
-    if (lastBg) {
-      root.setProperty('background', lastBg, 'important');
-      root.setProperty('background-size', 'cover', 'important');
-      root.setProperty('background-attachment', 'fixed', 'important');
-      root.setProperty('background-position', 'center', 'important');
-    }
+    // 3. Aplicar color base oscuro fijo para unificar la transición (Evita el destello de colores disonantes)
+    root.setProperty('background-color', '#050505', 'important');
   } catch (e) {
     console.warn('Instant-bg error:', e);
   }

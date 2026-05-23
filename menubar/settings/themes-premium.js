@@ -615,6 +615,7 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
             premiumThemeData: theme,
             gradient: theme.background.gradient,
             bgType: 'premium',
+            syncFirefoxTheme: false,
             // Guardamos los valores individuales para que el usuario pueda "editarlos" y que persistan
             panelBg: theme.panel.bg,
             panelOpacity: theme.panel.opacity,
@@ -631,6 +632,8 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
             // Eliminamos doodle: 'none' para permitir persistencia si el usuario añade uno después
         });
         localStorage.setItem('lastPremiumGradient', theme.background.gradient);
+        const syncToggle = $('#syncFirefoxThemeToggle');
+        if (syncToggle) syncToggle.checked = false;
     }
 }
 

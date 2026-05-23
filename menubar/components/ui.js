@@ -124,6 +124,11 @@ export async function renderGreeting(name) {
     }
 
     const greetingEl = $('#header-greeting');
+    
+    // Verificación temprana para evitar saltos en el DOM
+    const targetHtml = name ? `${greetingText}<strong>, ${name}</strong>` : greetingText;
+    if (greetingEl.innerHTML === targetHtml) return;
+
     greetingEl.textContent = greetingText;
     if (name) {
         const strong = document.createElement('strong');

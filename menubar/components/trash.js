@@ -19,7 +19,7 @@ export function renderTrash() {
         const trashItemEl = document.createElement('div');
         trashItemEl.className = 'trash-item';
 
-        let iconSrc = 'icons/icon16.png';
+        let iconSrc = 'icons/icon.svg';
         if (item.type === 'note') {
             iconSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z'%3E%3C/path%3E%3Cpolyline points='15 3 15 8 20 8'%3E%3C/polyline%3E%3C/svg%3E";
         } else if (item.customIcon) {
