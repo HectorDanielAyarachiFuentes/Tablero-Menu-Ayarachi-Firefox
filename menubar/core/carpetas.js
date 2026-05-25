@@ -6,6 +6,26 @@ import { renderTiles, saveAndRender } from './tiles.js';
 
 let viewPath = []; // Private state for folder path
 
+// Helper para generar un icono con la letra inicial
+function getDynamicFallbackIcon(text) {
+    const letter = (text || '?').charAt(0).toUpperCase();
+    const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#9B59B6', '#3498DB',
+        '#E67E22', '#2ECC71', '#F1C40F', '#E74C3C', '#1ABC9C',
+        '#34495E', '#D35400', '#8E44AD', '#27AE60', '#2980B9'
+    ];
+    const charCode = letter.charCodeAt(0) || 0;
+    const colorIndex = charCode % colors.length;
+    const bgColor = colors[colorIndex];
+    
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+        <rect width="64" height="64" rx="12" fill="${bgColor}" />
+        <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="#FFFFFF" font-size="36" font-family="system-ui, -apple-system, sans-serif" font-weight="bold">${letter}</text>
+    </svg>`;
+    
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 export const FolderManager = {
 
     // Gets the array of tiles for the current folder view
@@ -60,7 +80,9 @@ export const FolderManager = {
             }
             node = linkNode;
 
-            const FALLBACK_ICON = 'images/Dulce-flamenco.png';
+            const fallbackText = tile.name || (tile.url ? new URL(tile.url).hostname.replace('www.', '') : '?');
+            const FALLBACK_ICON = getDynamicFallbackIcon(fallbackText);
+
             try {
                 const url = new URL(tile.url);
                 node.querySelector('.url').textContent = url.hostname.replace('www.', '');
@@ -69,7 +91,7 @@ export const FolderManager = {
                 if (url.hostname && url.hostname.includes('.') && url.protocol.startsWith('http')) {
                     thumbEl.src = `https://www.google.com/s2/favicons?sz=64&domain=${url.hostname}`;
                     thumbEl.onload = function () {
-                        // Google returns a 16×16 generic globe for unknown domains — show Dulce instead
+                        // Google returns a 16×16 generic globe for unknown domains — show dynamic SVG instead
                         if (this.naturalWidth <= 16 && this.naturalHeight <= 16) {
                             this.onload = null;
                             this.src = FALLBACK_ICON;
