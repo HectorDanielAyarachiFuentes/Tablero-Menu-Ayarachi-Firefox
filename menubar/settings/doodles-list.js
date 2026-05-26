@@ -4,53 +4,53 @@
 export const DOODLES_LIST = [
   {
     "id": "seda-galactica",
-    "name": "Seda Galáctica ✨",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #05070a;\n  overflow: hidden;\n}\n\n@size: 100%;\nbackground-image: @doodle(\n  @grid: 1x50 / 100% 100%;\n  :after {\n    content: '';\n    @size: 100vw 4px;\n    position: absolute;\n    left: -50%;\n    top: @r(-10%, 110%);\n    background: linear-gradient(to right, transparent, @p(#6a11cb, #2575fc, #ff00cc, #00d2ff), transparent);\n    filter: blur(@r(5px, 15px));\n    opacity: @r(0.2, 0.5);\n    transform: rotate(@r(-15deg, 15deg));\n    animation: silk-flow @r(15s, 30s) ease-in-out infinite alternate;\n    animation-delay: -@r(20s);\n  }\n);\n\n@keyframes silk-flow {\n  0% { transform: translateY(-30px) rotate(@r(-5deg, 5deg)) scaleX(1); }\n  100% { transform: translateY(30px) rotate(@r(-20deg, 20deg)) scaleX(1.3); }\n}"
+    "name": "Seda Galáctica ✨ (Optimizado)",
+    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #05070a;\n  overflow: hidden;\n}\n\n@size: 100%;\nbackground-image: @doodle(\n  @grid: 1x15 / 100% 100%;\n  :after {\n    content: '';\n    @size: 100vw 4px;\n    position: absolute;\n    left: -50%;\n    top: @r(-10%, 110%);\n    background: linear-gradient(to right, transparent, @p(#6a11cb, #2575fc, #ff00cc, #00d2ff), transparent);\n    filter: blur(8px);\n    opacity: @r(0.2, 0.5);\n    transform: rotate(@r(-15deg, 15deg));\n    animation: silk-flow @r(20s, 40s) ease-in-out infinite alternate;\n    animation-delay: -@r(20s);\n  }\n);\n\n@keyframes silk-flow {\n  0% { transform: translateY(-20px) rotate(@r(-5deg, 5deg)) scaleX(1); }\n  100% { transform: translateY(20px) rotate(@r(-15deg, 15deg)) scaleX(1.2); }\n}"
   },
   {
     "id": "aura-boreal",
-    "name": "Aura Boreal (Premium)",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #02040a;\n  overflow: hidden;\n}\nbackground: \n  radial-gradient(circle at @r(0%, 100%) @r(0%, 100%), @p(#00d2ff, #3a7bd5, #6a11cb, #2575fc, #ff00cc) 0%, transparent @r(40%, 80%)),\n  radial-gradient(circle at @r(0%, 100%) @r(0%, 100%), @p(#00f2fe, #4facfe, #43e97b, #fa709a) 0%, transparent @r(30%, 70%));\nfilter: blur(@r(60px, 100px));\nopacity: @r(0.3, 0.6);\nanimation: aura-move @r(20s, 45s) linear infinite alternate;\n@keyframes aura-move {\n  0% { transform: translate(-15%, -15%) scale(1.2) rotate(0deg); }\n  100% { transform: translate(15%, 15%) scale(1.6) rotate(20deg); }\n}"
+    "name": "Aura Boreal (Optimizado)",
+    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #02040a;\n  overflow: hidden;\n}\nbackground: \n  radial-gradient(circle at @r(0%, 100%) @r(0%, 100%), @p(#00d2ff, #3a7bd5, #6a11cb, #2575fc, #ff00cc) 0%, transparent @r(40%, 80%)),\n  radial-gradient(circle at @r(0%, 100%) @r(0%, 100%), @p(#00f2fe, #4facfe, #43e97b, #fa709a) 0%, transparent @r(30%, 70%));\nfilter: blur(40px);\nopacity: @r(0.2, 0.4);\nanimation: aura-move @r(30s, 50s) linear infinite alternate;\n@keyframes aura-move {\n  0% { transform: translate(-10%, -10%) scale(1.1) rotate(0deg); }\n  100% { transform: translate(10%, 10%) scale(1.3) rotate(10deg); }\n}"
   },
   {
     "id": "vortice-cuantico",
-    "name": "Vórtice Cuántico",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #080a0f;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  path*200 {\n    stroke: hsla(@calc(200 + @n), 80%, 70%, @r(0.2, 0.6));\n    stroke-width: @r(0.1, 0.4);\n    fill: none;\n    d: M @r(100) @r(100) Q @r(100) @r(100) @r(100) @r(100);\n    animation: spin @r(15s, 40s) linear infinite;\n  }\n);\n@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }"
+    "name": "Vórtice Cuántico (Optimizado)",
+    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #080a0f;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  path*50 {\n    stroke: hsla(@calc(200 + @n * 4), 80%, 70%, @r(0.3, 0.7));\n    stroke-width: @r(0.2, 0.6);\n    fill: none;\n    d: M @r(100) @r(100) Q @r(100) @r(100) @r(100) @r(100);\n    animation: spin @r(25s, 50s) linear infinite;\n  }\n);\n@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }"
   },
   {
     "id": "trazos-svg",
-    "name": "Constelaciones",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #05070a;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  line*200 {\n    draw: @r(5s, 15s);\n    opacity: @r(0.1, 0.4);\n    stroke: @p(#aeacfb, #ffffff, #4facfe);\n    stroke-width: .05;\n    x1: @r(100); y1: @r(100);\n    x2: @calc(@x1 + @r(-20, 20));\n    y2: @calc(@y1 + @r(-20, 20));\n  }\n  circle*120 {\n    r: @r(0.1, 0.4);\n    cx: @r(100); cy: @r(100);\n    fill: #fff;\n    animation: twinkle @r(2s, 6s) ease-in-out infinite alternate;\n  }\n);\n@keyframes twinkle { 0% { opacity: 0.2; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.5); } }"
+    "name": "Constelaciones (Optimizado)",
+    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #05070a;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  line*50 {\n    draw: @r(10s, 20s);\n    opacity: @r(0.1, 0.4);\n    stroke: @p(#aeacfb, #ffffff, #4facfe);\n    stroke-width: .08;\n    x1: @r(100); y1: @r(100);\n    x2: @calc(@x1 + @r(-20, 20));\n    y2: @calc(@y1 + @r(-20, 20));\n  }\n  circle*40 {\n    r: @r(0.2, 0.5);\n    cx: @r(100); cy: @r(100);\n    fill: #fff;\n    animation: twinkle @r(3s, 8s) ease-in-out infinite alternate;\n  }\n);\n@keyframes twinkle { 0% { opacity: 0.3; } 100% { opacity: 0.9; } }"
   },
   {
-    "id": "cristales-esmerilados",
-    "name": "Cristales Flotantes (Optimizado)",
-    "template": ":doodle {\n  @grid: 1x25 / 100vw 100vh;\n  overflow: hidden;\n}\n@size: @r(150px, 400px);\nbackground: rgba(255, 255, 255, @r(0.03, 0.1));\nfilter: blur(@r(2px, 8px));\nborder: 1px solid rgba(255, 255, 255, 0.05);\nborder-radius: @r(10px, 40px);\nposition: absolute;\nleft: @r(-20%, 120%);\ntop: @r(-20%, 120%);\nanimation: drift @r(20s, 60s) linear infinite;\n@keyframes drift {\n  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }\n  20% { opacity: 0.6; }\n  80% { opacity: 0.6; }\n  100% { transform: translate(@r(-400px, 400px), @r(-400px, 400px)) rotate(120deg); opacity: 0; }\n}"
+    "id": "bokeh-minimalista",
+    "name": "Bokeh Minimalista ✨",
+    "template": ":doodle {\n  @grid: 1x15 / 100vw 100vh;\n  background: #020408;\n  overflow: hidden;\n}\n@size: @r(150px, 400px);\nposition: absolute;\nleft: @r(-10%, 110%);\ntop: @r(-10%, 110%);\nbackground: radial-gradient(circle at center, @p(hsla(200, 100%, 70%, 0.15), hsla(280, 100%, 70%, 0.15), hsla(320, 100%, 70%, 0.15)) 0%, transparent 60%);\nopacity: @r(0.3, 0.8);\nanimation: float @r(20s, 40s) ease-in-out infinite alternate;\n@keyframes float {\n  0% { transform: translate(0, 0) scale(1); }\n  100% { transform: translate(@r(-100px, 100px), @r(-100px, 100px)) scale(@r(1.1, 1.4)); }\n}"
   },
   {
     "id": "lluvia-digital",
-    "name": "Lluvia Digital (Matrix)",
-    "template": ":doodle {\n  @grid: 1x40 / 100vw 100vh;\n}\n:after {\n  content: @p('01', '10', '11', '00', '><', '{}', '[]', '/*');\n  color: #2ecc71;\n  font-family: monospace;\n  font-size: @r(14px, 22px);\n  position: absolute;\n  left: @r(0%, 100%);\n  top: -10vh;\n  text-shadow: 0 0 10px #2ecc71;\n  animation: rain @r(2s, 8s) linear infinite;\n}\n@keyframes rain { to { transform: translateY(115vh); opacity: 0; } }"
+    "name": "Lluvia Digital (Optimizado)",
+    "template": ":doodle {\n  @grid: 1x20 / 100vw 100vh;\n}\n:after {\n  content: @p('01', '10', '11', '00', '><', '{}', '[]', '/*');\n  color: #2ecc71;\n  font-family: monospace;\n  font-size: @r(14px, 22px);\n  position: absolute;\n  left: @r(0%, 100%);\n  top: -10vh;\n  text-shadow: 0 0 5px #2ecc71;\n  animation: rain @r(4s, 10s) linear infinite;\n}\n@keyframes rain { to { transform: translateY(115vh); opacity: 0; } }"
   },
   {
-    "id": "lluvia-estrellas",
-    "name": "Lluvia de Estrellas",
-    "template": ":doodle {\n  @grid: 1x30 / 100vw 100vh;\n}\n@size: @r(2px, 4px) @r(150px, 450px);\nbackground: linear-gradient(180deg, hsla(0, 0%, 100%, @r(0.8, 1)), transparent);\nborder-radius: 50%;\nfilter: drop-shadow(0 0 10px #fff);\nposition: absolute;\nleft: @r(-10%, 110%);\ntop: -50vh;\ntransform: rotate(155deg);\nanimation: fall @r(3s, 10s) linear infinite;\n@keyframes fall {\n  from { transform: translateY(0) rotate(155deg); opacity: 1; }\n  to { transform: translateY(150vh) rotate(155deg); opacity: 0; }\n}"
+    "id": "marea-cosmica",
+    "name": "Marea Cósmica 🌊",
+    "template": ":doodle {\n  @grid: 1x3 / 100vw 100vh;\n  background: #050812;\n  overflow: hidden;\n}\n@size: 150vmax;\nposition: absolute;\nleft: 50%;\ntop: @p(60%, 65%, 70%);\nborder-radius: @p(42%, 44%, 46%);\nbackground: linear-gradient(hsla(@r(200, 250), 70%, 50%, 0.05), hsla(@r(250, 300), 70%, 50%, 0.15));\nanimation: wave @r(15s, 25s) linear infinite;\n@keyframes wave {\n  0% { transform: translateX(-50%) rotate(0deg); }\n  100% { transform: translateX(-50%) rotate(360deg); }\n}"
   },
   {
     "id": "celdas-organicas",
-    "name": "Celdas Orgánicas",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #0a0e14;\n  overflow: hidden;\n}\nbackground-image: @doodle(\n  @grid: 8 / 100% 100%;\n  background: hsla(@r(360), 70%, 60%, 0.1);\n  border-radius: @r(30%, 70%) @r(30%, 70%) @r(30%, 70%) @r(30%, 70%);\n  transform: scale(@r(1, 2)) translate(@r(-50%, 50%), @r(-50%, 50%));\n  filter: blur(@r(30px, 60px));\n  animation: flow @r(25s, 50s) ease-in-out infinite alternate;\n);\n@keyframes flow { to { transform: scale(@r(2, 3)) translate(@r(-30%, 30%), @r(-30%, 30%)) rotate(45deg); } }"
+    "name": "Celdas Orgánicas (Ultra Opt.)",
+    "template": ":doodle {\n  @grid: 1x5 / 100vw 100vh;\n  background: #0a0e14;\n  overflow: hidden;\n}\n@size: @r(50vw, 100vw);\nposition: absolute;\nleft: @r(-20%, 100%);\ntop: @r(-20%, 100%);\nbackground: radial-gradient(circle at center, hsla(@r(360), 70%, 60%, 0.15) 0%, transparent 60%);\nanimation: flow @r(30s, 60s) ease-in-out infinite alternate;\n@keyframes flow {\n  0% { transform: translate(0, 0) scale(1); }\n  100% { transform: translate(@r(-20vw, 20vw), @r(-20vh, 20vh)) scale(@r(1.2, 1.5)); }\n}"
   },
   {
     "id": "lineas-neon",
-    "name": "Grid Neón",
-    "template": ":doodle {\n  @grid: 20 / 100vw 100vh;\n}\nborder-left: 1px solid hsla(@r(200, 260), 70%, 60%, @r(0.1, 0.4));\nborder-top: 1px solid hsla(@r(200, 260), 70%, 60%, @r(0.1, 0.4));\n@random(.1) {\n  background: linear-gradient(hsla(@r(360), 80%, 70%, 0.4), transparent);\n  box-shadow: 0 0 15px hsla(@lr, 80%, 70%, 0.2);\n  animation: glow @r(3s, 6s) ease-in-out infinite alternate;\n}\n@keyframes glow { 0% { opacity: 0.3; } 100% { opacity: 1; } }"
+    "name": "Grid Neón (Optimizado)",
+    "template": ":doodle {\n  @grid: 10 / 100vw 100vh;\n}\nborder-left: 1px solid hsla(@r(200, 260), 70%, 60%, @r(0.1, 0.3));\nborder-top: 1px solid hsla(@r(200, 260), 70%, 60%, @r(0.1, 0.3));\n@random(.05) {\n  background: linear-gradient(hsla(@r(360), 80%, 70%, 0.3), transparent);\n  box-shadow: 0 0 10px hsla(@lr, 80%, 70%, 0.1);\n  animation: glow @r(4s, 8s) ease-in-out infinite alternate;\n}\n@keyframes glow { 0% { opacity: 0.4; } 100% { opacity: 0.8; } }"
   },
   {
     "id": "super-doodle-creativo",
-    "name": "Super Doodle (Héctor Edition)",
-    "template": ":doodle {\n  @grid: 10x8 / 100vw 100vh;\n}\n@size: @r(50px, 120px);\nposition: absolute;\nleft: @r(0%, 100%); top: @r(0%, 100%);\n@content: @p('🚀', '🪐', '👾', '🎨', '💡', '🤖', 'H', 'E', 'C', 'T', 'O', 'R');\nfont-size: @r(40px, 80px);\ncolor: @p(#ffbe0b, #fb5607, #ff006e, #8338ec, #3a86ff);\ntext-shadow: 0 0 20px rgba(255,255,255,0.3);\nanimation: bounce @r(4s, 8s) ease-in-out infinite;\n@keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-60px) rotate(@r(-20deg, 20deg)); } }\n:hover { transform: scale(1.6) rotate(15deg); z-index: 100; }"
+    "name": "Super Doodle (Héctor Edition Opt.)",
+    "template": ":doodle {\n  @grid: 8x5 / 100vw 100vh;\n}\n@size: @r(40px, 90px);\nposition: absolute;\nleft: @r(0%, 100%); top: @r(0%, 100%);\n@content: @p('🚀', '🪐', '👾', '🎨', '💡', '🤖', 'H', 'E', 'C', 'T', 'O', 'R');\nfont-size: @r(30px, 60px);\ncolor: @p(#ffbe0b, #fb5607, #ff006e, #8338ec, #3a86ff);\ntext-shadow: 0 0 10px rgba(255,255,255,0.2);\nanimation: bounce @r(6s, 12s) ease-in-out infinite;\n@keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-40px) rotate(@r(-10deg, 10deg)); } }\n:hover { transform: scale(1.4) rotate(10deg); z-index: 100; }"
   },
   {
     "id": "none",
