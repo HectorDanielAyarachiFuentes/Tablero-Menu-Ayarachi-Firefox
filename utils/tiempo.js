@@ -149,7 +149,6 @@ function fetchWeather(lat, lon) {
  */
 function getMoonPhase(date = new Date()) {
     // Edad de la luna en días (ciclo sinódico ≈ 29.53 días)
-    // Referencia: luna nueva conocida el 6 enero 2000 (J2000)
     const knownNewMoon = new Date('2000-01-06T18:14:00Z');
     const synodicMonth = 29.530588853;
     const msPerDay = 24 * 60 * 60 * 1000;
@@ -157,18 +156,18 @@ function getMoonPhase(date = new Date()) {
     const age = ((daysSinceKnown % synodicMonth) + synodicMonth) % synodicMonth;
     const illumination = (1 - Math.cos((2 * Math.PI * age) / synodicMonth)) / 2;
 
-    let name, emoji;
-    if (age < 1.85)        { name = 'Luna Nueva';        emoji = '🌑'; }
-    else if (age < 7.38)   { name = 'Creciente';         emoji = '🌒'; }
-    else if (age < 9.22)   { name = 'Cuarto Creciente';  emoji = '🌓'; }
-    else if (age < 14.77)  { name = 'Gibosa Creciente';  emoji = '🌔'; }
-    else if (age < 16.61)  { name = 'Luna Llena';        emoji = '🌕'; }
-    else if (age < 22.15)  { name = 'Gibosa Menguante';  emoji = '🌖'; }
-    else if (age < 23.99)  { name = 'Cuarto Menguante';  emoji = '🌗'; }
-    else if (age < 27.68)  { name = 'Menguante';         emoji = '🌘'; }
-    else                   { name = 'Luna Nueva';        emoji = '🌑'; }
+    let name, icon;
+    if (age < 1.85)        { name = 'Luna Nueva';        icon = 'moon-new-moon'; }
+    else if (age < 7.38)   { name = 'Creciente';         icon = 'moon-waxing-crescent'; }
+    else if (age < 9.22)   { name = 'Cuarto Creciente';  icon = 'moon-first-quarter'; }
+    else if (age < 14.77)  { name = 'Gibosa Creciente';  icon = 'moon-waxing-gibbous'; }
+    else if (age < 16.61)  { name = 'Luna Llena';        icon = 'moon-full-moon'; }
+    else if (age < 22.15)  { name = 'Gibosa Menguante';  icon = 'moon-waning-gibbous'; }
+    else if (age < 23.99)  { name = 'Cuarto Menguante';  icon = 'moon-last-quarter'; }
+    else if (age < 27.68)  { name = 'Menguante';         icon = 'moon-waning-crescent'; }
+    else                   { name = 'Luna Nueva';        icon = 'moon-new-moon'; }
 
-    return { name, emoji, illumination: Math.round(illumination * 100), age: Math.round(age) };
+    return { name, icon, illumination: Math.round(illumination * 100), age: Math.round(age) };
 }
 
 /**
@@ -188,22 +187,6 @@ function getIsDay(sunriseISO, sunsetISO) {
 function formatTime(isoString) {
     const d = new Date(isoString);
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-/**
- * Mapea la fase lunar al nombre de ícono Basmilius.
- * https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/{name}.svg
- */
-function getMoonIconName(age) {
-    if (age < 1.85)        return 'moon-new-moon';
-    else if (age < 7.38)   return 'moon-waxing-crescent';
-    else if (age < 9.22)   return 'moon-first-quarter';
-    else if (age < 14.77)  return 'moon-waxing-gibbous';
-    else if (age < 16.61)  return 'moon-full-moon';
-    else if (age < 22.15)  return 'moon-waning-gibbous';
-    else if (age < 23.99)  return 'moon-last-quarter';
-    else if (age < 27.68)  return 'moon-waning-crescent';
-    else                   return 'moon-new-moon';
 }
 
 function render(data) {
@@ -349,35 +332,74 @@ function render(data) {
             const sunMoonPanel = document.createElement('div');
             sunMoonPanel.className = 'sun-moon-panel';
 
-            // Barra de progreso del día
             const nowMs = Date.now();
-            const sunriseMs = new Date(todaySunrise).getTime();
-            const sunsetMs  = new Date(todaySunset).getTime();
-            const dayProgress = isDay
-                ? Math.min(100, Math.max(0, ((nowMs - sunriseMs) / (sunsetMs - sunriseMs)) * 100))
-                : (nowMs < sunriseMs ? 0 : 100);
+            let startMs, endMs, leftLabel, rightLabel, leftTimeMs, rightTimeMs, isNightArc;
+            
+            const sunrise0 = new Date(data.daily.sunrise[0]).getTime();
+            const sunset0  = new Date(data.daily.sunset[0]).getTime();
+            
+            if (isDay) {
+                // Es de día: El arco muestra el progreso del sol de Amanecer a Atardecer
+                startMs = sunrise0;
+                endMs = sunset0;
+                leftLabel = 'Amanecer';
+                rightLabel = 'Atardecer';
+                leftTimeMs = sunrise0;
+                rightTimeMs = sunset0;
+                isNightArc = false;
+            } else {
+                // Es de noche: El arco muestra el progreso de la luna de Atardecer a Amanecer
+                isNightArc = true;
+                leftLabel = 'Atardecer';
+                rightLabel = 'Amanecer';
+                
+                if (nowMs < sunrise0) {
+                    // Madrugada (ej: 2 AM). La noche empezó ayer en el sunset.
+                    startMs = sunset0 - (24 * 60 * 60 * 1000);
+                    endMs = sunrise0;
+                    leftTimeMs = startMs;
+                    rightTimeMs = sunrise0;
+                } else {
+                    // Noche (ej: 10 PM). La noche empezó hoy en el sunset, termina mañana al sunrise.
+                    const sunrise1 = new Date(data.daily.sunrise[1]).getTime();
+                    startMs = sunset0;
+                    endMs = sunrise1;
+                    leftTimeMs = sunset0;
+                    rightTimeMs = sunrise1;
+                }
+            }
+            
+            const arcProgress = Math.min(100, Math.max(0, ((nowMs - startMs) / (endMs - startMs)) * 100));
+            const leftIcon = isNightArc ? '🌇' : '🌅';
+            const rightIcon = isNightArc ? '🌅' : '🌇';
 
             sunMoonPanel.innerHTML = `
 <div class="sun-moon-row">
   <div class="sun-info">
-    <span class="sun-icon-sm">🌅</span>
-    <div><div class="sun-label">Amanecer</div><div class="sun-time">${formatTime(todaySunrise)}</div></div>
+    <span class="sun-icon-sm" style="font-size: 24px;">${leftIcon}</span>
+    <div><div class="sun-label">${leftLabel}</div><div class="sun-time">${formatTime(leftTimeMs)}</div></div>
   </div>
   <div class="day-arc-wrap">
     <div class="day-arc-track">
-      <div class="day-arc-fill" style="width:${dayProgress}%"></div>
-      <div class="day-arc-cursor" style="left:${dayProgress}%">${isDay ? '☀️' : moonPhase.emoji}</div>
+      <div class="day-arc-fill" style="width:${arcProgress}%"></div>
+      <div class="day-arc-cursor" style="left:${arcProgress}%">
+        <img src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${isDay ? 'clear-day' : moonPhase.icon}.svg" style="width:20px;height:20px; transform:translate(-50%, -50%);" />
+      </div>
     </div>
-    <div class="day-arc-labels"><span>☀️</span><span>${isDay ? 'Día' : 'Noche'}</span><span>🌙</span></div>
+    <div class="day-arc-labels">
+      <img src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/clear-day.svg" style="width:16px;height:16px;" />
+      <span>${isDay ? 'Día' : 'Noche'}</span>
+      <img src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/clear-night.svg" style="width:16px;height:16px;" />
+    </div>
   </div>
   <div class="sun-info">
-    <span class="sun-icon-sm">🌇</span>
-    <div><div class="sun-label">Atardecer</div><div class="sun-time">${formatTime(todaySunset)}</div></div>
+    <span class="sun-icon-sm" style="font-size: 24px;">${rightIcon}</span>
+    <div><div class="sun-label">${rightLabel}</div><div class="sun-time">${formatTime(rightTimeMs)}</div></div>
   </div>
 </div>
-<div class="moon-phase-row">
-  <span class="moon-phase-emoji">${moonPhase.emoji}</span>
-  <div class="moon-phase-info">
+<div class="moon-phase-row" style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 10px;">
+  <img src="https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${moonPhase.icon}.svg" style="width:36px;height:36px;margin-right:12px;" />
+  <div class="moon-phase-info" style="text-align: left;">
     <div class="moon-phase-name">${moonPhase.name}</div>
     <div class="moon-phase-sub">${moonPhase.illumination}% iluminada · día ${moonPhase.age}</div>
   </div>
