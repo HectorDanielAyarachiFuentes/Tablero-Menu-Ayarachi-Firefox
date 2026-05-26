@@ -2,7 +2,7 @@
  * Gestiona la obtención y renderizado de la información del clima.
  * Puede obtener el clima por geolocalización o por una ciudad especificada por el usuario.
  */
-import { $, storageGet, storageSet, saveAndSyncSetting } from '../menubar/core/utils.js';
+import { $, storageGet, storageSet, saveAndSyncSetting, setHTML } from '../menubar/core/utils.js';
 import { showSettingError } from '../menubar/components/ui.js';
 import { API_URLS } from '../menubar/core/config.js';
 
@@ -374,7 +374,7 @@ function render(data) {
             const leftIcon = isNightArc ? '🌇' : '🌅';
             const rightIcon = isNightArc ? '🌅' : '🌇';
 
-            sunMoonPanel.innerHTML = `
+            setHTML(sunMoonPanel, `
 <div class="sun-moon-row">
   <div class="sun-info">
     <span class="sun-icon-sm" style="font-size: 24px;">${leftIcon}</span>
@@ -395,7 +395,7 @@ function render(data) {
   </div>
   <div class="sun-info">
     <span class="sun-icon-sm" style="font-size: 24px;">${rightIcon}</span>
-    <div><div class="sun-label">${rightLabel}</div><div class="sun-time">${formatTime(rightTimeMs)}</div></div>
+    <div><div class="sun-label">${rightLabel}</div><span class="right-label" style="opacity:0.6;">${formatTime(rightTimeMs)}</span></div>
   </div>
 </div>
 <div class="moon-phase-row" style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 10px;">
@@ -404,7 +404,7 @@ function render(data) {
     <div class="moon-phase-name">${moonPhase.name}</div>
     <div class="moon-phase-sub">${moonPhase.illumination}% iluminada · día ${moonPhase.age}</div>
   </div>
-</div>`;
+</div>`);
             expanded.appendChild(sunMoonPanel);
         }
 
