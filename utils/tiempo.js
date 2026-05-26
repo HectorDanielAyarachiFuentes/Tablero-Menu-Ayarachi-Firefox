@@ -48,6 +48,7 @@ export const WeatherManager = {
             const errSpan = document.createElement('span');
             errSpan.textContent = error.message;
             weatherEl.appendChild(errSpan);
+            weatherEl.classList.add('loaded');
         }
     },
     handleCityChange(e) {
@@ -471,6 +472,10 @@ function render(data) {
 
         weatherEl.appendChild(summary);
         weatherEl.appendChild(expanded);
+
+        requestAnimationFrame(() => {
+            weatherEl.classList.add('loaded');
+        });
 }
 
 function getInterpretation(code, isDay = true) {

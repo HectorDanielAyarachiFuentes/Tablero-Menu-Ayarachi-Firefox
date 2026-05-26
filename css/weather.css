@@ -162,6 +162,13 @@
   color: var(--panel-text-color, #fff) !important; /* Garantiza visibilidad de textos en todo momento */
 }
 
+/* Ocultar inicialmente hasta que los datos del clima carguen de forma armónica */
+.weather-widget-fixed:not(.loaded) {
+  opacity: 0 !important;
+  transform: translateY(20px) scale(0.95) !important;
+  pointer-events: none !important;
+}
+
 /* Efecto hover interactivo: se expande horizontalmente */
 .weather-widget-fixed.summary-open:not(.open) {
   width: 220px !important;
