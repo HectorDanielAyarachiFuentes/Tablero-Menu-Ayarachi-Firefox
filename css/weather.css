@@ -6,6 +6,139 @@
   font-size: 0.9em;
 }
 
+/* ===== SOL Y LUNA ===== */
+
+
+
+/* Bordes de color según día/noche */
+.weather-widget-fixed.is-daytime {
+  border-color: rgba(255, 215, 0, 0.2) !important;
+}
+.weather-widget-fixed.is-nighttime {
+  border-color: rgba(150, 180, 255, 0.2) !important;
+}
+
+
+
+/* ===== PANEL SOL/LUNA EN MODO EXPANDIDO ===== */
+.sun-moon-panel {
+  padding: 10px 0 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sun-moon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sun-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.sun-icon-sm {
+  font-size: 14px;
+}
+
+.sun-label {
+  font-size: 8px;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.sun-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFD700;
+  line-height: 1.2;
+}
+
+/* Barra de progreso del día (arco lineal) */
+.day-arc-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.day-arc-track {
+  position: relative;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: visible;
+}
+
+.day-arc-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FF8C00, #FFD700);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.is-nighttime .day-arc-fill {
+  background: linear-gradient(90deg, #4a6fa5, #a8c0f0);
+}
+
+.day-arc-cursor {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+  transition: left 0.6s ease;
+}
+
+.day-arc-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7px;
+  opacity: 0.45;
+  padding: 0 2px;
+}
+
+/* Fila de fase lunar */
+.moon-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 0 0;
+}
+
+.moon-phase-emoji {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.moon-phase-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.moon-phase-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(200, 220, 255, 0.95);
+}
+
+.moon-phase-sub {
+  font-size: 8px;
+  opacity: 0.55;
+}
+
 .weather-widget-fixed {
   position: fixed;
   bottom: 20px;
@@ -29,9 +162,8 @@
   color: var(--panel-text-color, #fff) !important; /* Garantiza visibilidad de textos en todo momento */
 }
 
-/* Efecto hover interactivo: se expande horizontalmente de forma espectacular a la tarjeta de la segunda imagen */
-.weather-widget-fixed:hover,
-.weather-widget-fixed.open {
+/* Efecto hover interactivo: se expande horizontalmente */
+.weather-widget-fixed.summary-open:not(.open) {
   width: 220px !important;
   height: auto !important;
   padding: 10px 14px !important;
@@ -41,8 +173,20 @@
   cursor: pointer !important;
 }
 
+/* Modo open (clic): más ancho para mostrar el panel completo */
+.weather-widget-fixed.open {
+  width: 260px !important;
+  height: auto !important;
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+  cursor: pointer !important;
+}
+
+
 /* Cabecera en modo horizontal: Icono a la derecha, detalles a la izquierda */
-.weather-widget-fixed:hover .weather-summary,
+.weather-widget-fixed.summary-open .weather-summary,
 .weather-widget-fixed.open .weather-summary {
   flex-direction: row !important; /* Icono a la derecha, detalles a la izquierda */
   justify-content: space-between !important;
@@ -51,7 +195,7 @@
   gap: 12px !important;
 }
 
-.weather-widget-fixed:hover .weather-details,
+.weather-widget-fixed.summary-open .weather-details,
 .weather-widget-fixed.open .weather-details {
   align-items: flex-start !important;
   justify-content: center !important;
@@ -59,7 +203,7 @@
   width: auto !important;
 }
 
-.weather-widget-fixed:hover .weather-icon,
+.weather-widget-fixed.summary-open .weather-icon,
 .weather-widget-fixed.open .weather-icon {
   width: 44px !important;
   height: 44px !important;
@@ -68,7 +212,7 @@
   opacity: 1 !important;
 }
 
-.weather-widget-fixed:hover .weather-temp,
+.weather-widget-fixed.summary-open .weather-temp,
 .weather-widget-fixed.open .weather-temp {
   font-size: 26px !important; /* Temperatura grande y legible */
   font-weight: 700 !important;
@@ -79,7 +223,7 @@
 }
 
 /* Ciudad en modo horizontal */
-.weather-widget-fixed:hover .weather-city,
+.weather-widget-fixed.summary-open .weather-city,
 .weather-widget-fixed.open .weather-city {
   display: block !important;
   font-size: 13px !important; /* Texto un poco más grande */
@@ -93,13 +237,13 @@
 }
 
 /* Ocultamos el pin localizador en hover/open para que quede limpio */
-.weather-widget-fixed:hover .weather-city::before,
+.weather-widget-fixed.summary-open .weather-city::before,
 .weather-widget-fixed.open .weather-city::before {
   display: none !important;
 }
 
 /* Emojis y métricas en modo horizontal */
-.weather-widget-fixed:hover .weather-extra,
+.weather-widget-fixed.summary-open .weather-extra,
 .weather-widget-fixed.open .weather-extra {
   flex-direction: row !important;
   justify-content: flex-start !important;
@@ -112,49 +256,129 @@
   opacity: 0.75 !important;
 }
 
-.weather-widget-fixed:hover .weather-humidity,
+.weather-widget-fixed.summary-open .weather-humidity,
 .weather-widget-fixed.open .weather-humidity,
-.weather-widget-fixed:hover .weather-wind,
+.weather-widget-fixed.summary-open .weather-wind,
 .weather-widget-fixed.open .weather-wind {
   width: auto !important;
   justify-content: flex-start !important;
 }
 
 /* Hilos de prefijo H: y V: en lugar de los emojis */
-.weather-widget-fixed:hover .weather-humidity .weather-emoji,
+.weather-widget-fixed.summary-open .weather-humidity .weather-emoji,
 .weather-widget-fixed.open .weather-humidity .weather-emoji,
-.weather-widget-fixed:hover .weather-wind .weather-emoji,
+.weather-widget-fixed.summary-open .weather-wind .weather-emoji,
 .weather-widget-fixed.open .weather-wind .weather-emoji {
   display: none !important;
 }
 
-.weather-widget-fixed:hover .weather-humidity::before,
+.weather-widget-fixed.summary-open .weather-humidity::before,
 .weather-widget-fixed.open .weather-humidity::before {
   content: "H: " !important;
   font-weight: 600 !important;
 }
 
-.weather-widget-fixed:hover .weather-wind::before,
+.weather-widget-fixed.summary-open .weather-wind::before,
 .weather-widget-fixed.open .weather-wind::before {
   content: "V: " !important;
   font-weight: 600 !important;
 }
 
-.weather-widget-fixed:hover .weather-divider,
+.weather-widget-fixed.summary-open .weather-divider,
 .weather-widget-fixed.open .weather-divider {
   display: inline !important;
 }
 
-.weather-widget-fixed:hover .weather-unit,
+.weather-widget-fixed.summary-open .weather-unit,
 .weather-widget-fixed.open .weather-unit {
   display: inline !important;
 }
 
-/* Ocultamos el pronóstico extendido ya que la tarjeta horizontal limpia no lo lleva */
-.weather-widget-fixed:hover .weather-expanded,
-.weather-widget-fixed.open .weather-expanded {
+/* Ocultamos el pronóstico extendido en hover rápido (solo tarjeta horizontal limpia) */
+.weather-widget-fixed.summary-open:not(.open) .weather-expanded {
   display: none !important;
 }
+
+/* En modo open (clic) sí mostramos el panel expandido debajo */
+.weather-widget-fixed.open .weather-expanded {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+/* --- PRONÓSTICO POR HORAS --- */
+.forecast-hourly {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.forecast-hourly > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.forecast-time {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.forecast-hourly img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.forecast-temp {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* --- PRONÓSTICO DIARIO --- */
+.forecast-daily {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 0 0 0;
+  gap: 8px;
+}
+
+.forecast-daily > div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.forecast-day {
+  font-size: 12px;
+  width: 35px;
+  text-align: left;
+}
+
+.forecast-daily img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.forecast-temp-range {
+  font-size: 12px;
+  opacity: 0.9;
+  width: 45px;
+  text-align: right;
+}
+
 
 .weather-summary {
   display: flex;
@@ -271,7 +495,7 @@
   display: none !important;
 }
 
-.weather-widget-fixed:hover .weather-alert-banner,
+.weather-widget-fixed.summary-open .weather-alert-banner,
 .weather-widget-fixed.open .weather-alert-banner {
   display: flex !important;
   align-items: center;
@@ -291,7 +515,7 @@
   transition: all 0.2s ease !important;
 }
 
-.weather-widget-fixed:hover .weather-alert-banner:hover,
+.weather-widget-fixed.summary-open .weather-alert-banner:hover,
 .weather-widget-fixed.open .weather-alert-banner:hover {
   background: rgba(255, 75, 75, 0.35) !important;
   transform: scale(1.05) !important;

@@ -10,7 +10,16 @@ export const WeatherManager = {
     init() {
         // Adjuntar listeners una sola vez
         $('#weatherCity').addEventListener('change', this.handleCityChange);
-        $('#weather').addEventListener('click', this.handleWidgetClick);
+        
+        const weatherEl = $('#weather');
+        weatherEl.addEventListener('click', this.handleWidgetClick);
+        
+        // Cerrar si se hace clic fuera del widget
+        document.addEventListener('click', (e) => {
+            if (!weatherEl.contains(e.target)) {
+                weatherEl.classList.remove('open', 'summary-open');
+            }
+        });
 
         // Carga inicial
         this.fetchAndRender();
@@ -20,11 +29,14 @@ export const WeatherManager = {
         const customCity = (await storageGet(['weatherCity'])).weatherCity;
         
         const cachedWeather = await storageGet(['weather']);
-        // Use cache if it exists, is less than 30 mins old, and matches the city setting
-        if (cachedWeather.weather && (Date.now() - cachedWeather.weather.timestamp < 1800000) && cachedWeather.weather.city === (customCity || 'auto')) {
+        // Use cache if it exists, is less than 30 mins old, matches the city setting,
+        // and has sunrise/sunset data (invalidate old caches without that info)
+        const hasSunData = cachedWeather.weather?.data?.daily?.sunrise;
+        if (cachedWeather.weather && hasSunData && (Date.now() - cachedWeather.weather.timestamp < 1800000) && cachedWeather.weather.city === (customCity || 'auto')) {
             render(cachedWeather.weather.data);
             return;
         }
+
 
         try {
             const weatherData = customCity ? await fetchWeatherByCity(customCity) : await fetchWeatherByCoords();
@@ -59,8 +71,21 @@ export const WeatherManager = {
         });
     },
     handleWidgetClick(e) {
-        if (e.target.closest('.weather-summary')) {
-            $('#weather').classList.toggle('open');
+        // Evitar que el clic en el banner de alerta modifique el estado del widget
+        if (e.target.closest('.weather-alert-banner')) return;
+
+        const weatherEl = $('#weather');
+        
+        if (weatherEl.classList.contains('open')) {
+            // Tercer clic (o clic estando full open): Cerrar completamente
+            weatherEl.classList.remove('open', 'summary-open');
+        } else if (weatherEl.classList.contains('summary-open')) {
+            // Segundo clic (desde summary): Abrir full
+            weatherEl.classList.add('open');
+            weatherEl.classList.remove('summary-open');
+        } else {
+            // Primer clic (desde cerrado): Abrir summary
+            weatherEl.classList.add('summary-open');
         }
     }
 };
@@ -114,19 +139,88 @@ async function fetchWeatherByCoords() {
 }
 
 function fetchWeather(lat, lon) {
-    const weatherUrl = `${API_URLS.WEATHER}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=6`;
+    const weatherUrl = `${API_URLS.WEATHER}?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=6`;
     return apiFetch(weatherUrl);
+}
+
+/**
+ * Calcula la fase lunar para una fecha dada.
+ * Retorna un objeto con: name (nombre), emoji (emoji), illumination (0-1), age (días).
+ */
+function getMoonPhase(date = new Date()) {
+    // Edad de la luna en días (ciclo sinódico ≈ 29.53 días)
+    // Referencia: luna nueva conocida el 6 enero 2000 (J2000)
+    const knownNewMoon = new Date('2000-01-06T18:14:00Z');
+    const synodicMonth = 29.530588853;
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysSinceKnown = (date - knownNewMoon) / msPerDay;
+    const age = ((daysSinceKnown % synodicMonth) + synodicMonth) % synodicMonth;
+    const illumination = (1 - Math.cos((2 * Math.PI * age) / synodicMonth)) / 2;
+
+    let name, emoji;
+    if (age < 1.85)        { name = 'Luna Nueva';        emoji = '🌑'; }
+    else if (age < 7.38)   { name = 'Creciente';         emoji = '🌒'; }
+    else if (age < 9.22)   { name = 'Cuarto Creciente';  emoji = '🌓'; }
+    else if (age < 14.77)  { name = 'Gibosa Creciente';  emoji = '🌔'; }
+    else if (age < 16.61)  { name = 'Luna Llena';        emoji = '🌕'; }
+    else if (age < 22.15)  { name = 'Gibosa Menguante';  emoji = '🌖'; }
+    else if (age < 23.99)  { name = 'Cuarto Menguante';  emoji = '🌗'; }
+    else if (age < 27.68)  { name = 'Menguante';         emoji = '🌘'; }
+    else                   { name = 'Luna Nueva';        emoji = '🌑'; }
+
+    return { name, emoji, illumination: Math.round(illumination * 100), age: Math.round(age) };
+}
+
+/**
+ * Determina si actualmente es de día basándose en sunrise/sunset reales.
+ * Retorna true si es de día, false si es de noche.
+ */
+function getIsDay(sunriseISO, sunsetISO) {
+    const now = Date.now();
+    const sunrise = new Date(sunriseISO).getTime();
+    const sunset = new Date(sunsetISO).getTime();
+    return now >= sunrise && now < sunset;
+}
+
+/**
+ * Formatea una hora ISO a HH:MM local.
+ */
+function formatTime(isoString) {
+    const d = new Date(isoString);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Mapea la fase lunar al nombre de ícono Basmilius.
+ * https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/{name}.svg
+ */
+function getMoonIconName(age) {
+    if (age < 1.85)        return 'moon-new-moon';
+    else if (age < 7.38)   return 'moon-waxing-crescent';
+    else if (age < 9.22)   return 'moon-first-quarter';
+    else if (age < 14.77)  return 'moon-waxing-gibbous';
+    else if (age < 16.61)  return 'moon-full-moon';
+    else if (age < 22.15)  return 'moon-waning-gibbous';
+    else if (age < 23.99)  return 'moon-last-quarter';
+    else if (age < 27.68)  return 'moon-waning-crescent';
+    else                   return 'moon-new-moon';
 }
 
 function render(data) {
     if (!data || !data.current || !data.hourly || !data.daily) return;
 
+
+        // --- Sol y Luna (calculados primero para usarlos en getInterpretation) ---
+        const todaySunrise = data.daily.sunrise ? data.daily.sunrise[0] : null;
+        const todaySunset  = data.daily.sunset  ? data.daily.sunset[0]  : null;
+        const isDay = todaySunrise && todaySunset ? getIsDay(todaySunrise, todaySunset) : (new Date().getHours() >= 6 && new Date().getHours() < 20);
+        const moonPhase = getMoonPhase(new Date());
+
         // Current weather
         const temp = Math.round(data.current.temperature_2m);
         const humidity = data.current.relative_humidity_2m;
         const wind = data.current.wind_speed_10m.toFixed(1);
-        const { description, icon } = getInterpretation(data.current.weather_code);
-        const cityName = data.city_name ? `<span>${data.city_name}</span>` : '';
+        const { description, icon } = getInterpretation(data.current.weather_code, isDay);
         const weatherEl = $('#weather');
 
         // Determinar si hay alerta basada en condiciones reales
@@ -150,6 +244,10 @@ function render(data) {
             weatherEl.classList.remove('alert-active');
         }
 
+        // Marcar en el widget si es de día o noche para estilos
+        weatherEl.classList.toggle('is-daytime', isDay);
+        weatherEl.classList.toggle('is-nighttime', !isDay);
+
         // Hourly forecast (next 5 hours)
         const now = new Date();
         const currentHourIndex = data.hourly.time.findIndex(t => new Date(t) > now);
@@ -161,6 +259,8 @@ function render(data) {
         const details = document.createElement('div');
         details.className = 'weather-details';
 
+        // Ícono y datos de temp/ciudad/extra (sin sky-icon separado: el ícono de clima
+        // ya muestra luna de noche con las variantes 01n/02n/etc. de OWM)
         const tempSpan = document.createElement('span');
         tempSpan.className = 'weather-temp';
         tempSpan.textContent = `${temp}°C`;
@@ -211,29 +311,29 @@ function render(data) {
 
         details.appendChild(extraSpan);
 
-        // Si hay una alerta activa, renderizamos un banner de alerta interactivo
+        // Banner de alerta meteorológica (si hay condiciones extremas)
         if (alertData) {
             const alertBanner = document.createElement('div');
             alertBanner.className = 'weather-alert-banner';
-            
             const alertIcon = document.createElement('span');
             alertIcon.className = 'alert-banner-icon';
             alertIcon.textContent = '⚠️';
             alertBanner.appendChild(alertIcon);
-            
             const alertText = document.createElement('span');
             alertText.textContent = 'Alerta';
             alertBanner.appendChild(alertText);
-            
             alertBanner.title = alertData.message;
             alertBanner.addEventListener('click', (ev) => {
-                ev.stopPropagation(); // Evita que se cierre o actúe el contenedor principal
+                ev.stopPropagation();
                 showWeatherAlertModal(alertData, data.city_name, data.latitude, data.longitude);
             });
             details.appendChild(alertBanner);
         }
 
+        // El weather-icon ya muestra luna/nubes+luna de noche — no necesitamos sky-icon separado
         summary.appendChild(details);
+
+
 
         const iconImg = document.createElement('img');
         iconImg.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
@@ -244,6 +344,47 @@ function render(data) {
         const expanded = document.createElement('div');
         expanded.className = 'weather-expanded';
 
+        // --- Panel Sol/Luna en modo expandido ---
+        if (todaySunrise && todaySunset) {
+            const sunMoonPanel = document.createElement('div');
+            sunMoonPanel.className = 'sun-moon-panel';
+
+            // Barra de progreso del día
+            const nowMs = Date.now();
+            const sunriseMs = new Date(todaySunrise).getTime();
+            const sunsetMs  = new Date(todaySunset).getTime();
+            const dayProgress = isDay
+                ? Math.min(100, Math.max(0, ((nowMs - sunriseMs) / (sunsetMs - sunriseMs)) * 100))
+                : (nowMs < sunriseMs ? 0 : 100);
+
+            sunMoonPanel.innerHTML = `
+<div class="sun-moon-row">
+  <div class="sun-info">
+    <span class="sun-icon-sm">🌅</span>
+    <div><div class="sun-label">Amanecer</div><div class="sun-time">${formatTime(todaySunrise)}</div></div>
+  </div>
+  <div class="day-arc-wrap">
+    <div class="day-arc-track">
+      <div class="day-arc-fill" style="width:${dayProgress}%"></div>
+      <div class="day-arc-cursor" style="left:${dayProgress}%">${isDay ? '☀️' : moonPhase.emoji}</div>
+    </div>
+    <div class="day-arc-labels"><span>☀️</span><span>${isDay ? 'Día' : 'Noche'}</span><span>🌙</span></div>
+  </div>
+  <div class="sun-info">
+    <span class="sun-icon-sm">🌇</span>
+    <div><div class="sun-label">Atardecer</div><div class="sun-time">${formatTime(todaySunset)}</div></div>
+  </div>
+</div>
+<div class="moon-phase-row">
+  <span class="moon-phase-emoji">${moonPhase.emoji}</span>
+  <div class="moon-phase-info">
+    <div class="moon-phase-name">${moonPhase.name}</div>
+    <div class="moon-phase-sub">${moonPhase.illumination}% iluminada · día ${moonPhase.age}</div>
+  </div>
+</div>`;
+            expanded.appendChild(sunMoonPanel);
+        }
+
         const hourlyDiv = document.createElement('div');
         hourlyDiv.className = 'forecast-hourly';
         
@@ -252,7 +393,7 @@ function render(data) {
             const hourIndex = currentHourIndex + i;
             const hourTime = new Date(data.hourly.time[hourIndex]);
             const hourTemp = Math.round(data.hourly.temperature_2m[hourIndex]);
-            const { icon: hourIcon } = getInterpretation(data.hourly.weather_code[hourIndex]);
+            const { icon: hourIcon } = getInterpretation(data.hourly.weather_code[hourIndex], isDay);
 
             const hDiv = document.createElement('div');
             const hTime = document.createElement('div');
@@ -280,7 +421,7 @@ function render(data) {
         for (let i = 1; i < 6; i++) {
             const dayDate = new Date(data.daily.time[i]);
             const dayName = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(dayDate);
-            const { icon: dayIcon } = getInterpretation(data.daily.weather_code[i]);
+            const { icon: dayIcon } = getInterpretation(data.daily.weather_code[i]); // daily siempre usa día
             const tempMax = Math.round(data.daily.temperature_2m_max[i]);
             const tempMin = Math.round(data.daily.temperature_2m_min[i]);
 
@@ -310,7 +451,7 @@ function render(data) {
         weatherEl.appendChild(expanded);
 }
 
-function getInterpretation(code) {
+function getInterpretation(code, isDay = true) {
     const interpretations = {
         0: { description: 'Despejado', icon: '01d' },
         1: { description: 'Principalmente despejado', icon: '02d' },
@@ -341,7 +482,12 @@ function getInterpretation(code) {
         96: { description: 'Tormenta con granizo', icon: '11d' },
         99: { description: 'Tormenta con granizo intenso', icon: '11d' }
     };
-    return interpretations[code] || { description: 'Clima desconocido', icon: '50d' };
+    const result = interpretations[code] || { description: 'Clima desconocido', icon: '50d' };
+    // Usar variante nocturna cuando corresponde (OWM tiene 01n-04n, 09n-11n, 13n, 50n)
+    if (!isDay) {
+        result.icon = result.icon.replace('d', 'n');
+    }
+    return result;
 }
 
 function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null) {
