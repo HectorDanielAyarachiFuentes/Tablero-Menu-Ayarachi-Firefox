@@ -67,11 +67,26 @@ export const WeatherManager = {
             errSpan.className = 'weather-error-msg';
             
             let userFriendlyMsg = "No se pudo cargar el clima.";
-            if (error.message.includes("NetworkError") || error.message.includes("Failed to fetch") || error.message.includes("Error de red")) {
-                userFriendlyMsg = "Servicio meteorológico inactivo (Error 502).";
-            } else if (error.message === "Ciudad no encontrada.") {
+            let isServerOrNetworkError = false;
+
+            const errStr = error.message || "";
+            if (
+                errStr.includes("NetworkError") || 
+                errStr.includes("Failed to fetch") || 
+                errStr.includes("Error de red") ||
+                errStr.includes("Gateway") ||
+                errStr.includes("Time-out") ||
+                errStr.includes("Timeout") ||
+                errStr.includes("502") ||
+                errStr.includes("503") ||
+                errStr.includes("504") ||
+                errStr.includes("petición")
+            ) {
+                userFriendlyMsg = "Servicio meteorológico inactivo.";
+                isServerOrNetworkError = true;
+            } else if (errStr === "Ciudad no encontrada.") {
                 userFriendlyMsg = "Ciudad no encontrada.";
-            } else if (error.message.includes("ubicación") || error.message.includes("Geolocalización")) {
+            } else if (errStr.includes("ubicación") || errStr.includes("Geolocalización")) {
                 userFriendlyMsg = "Sin acceso a ubicación.";
             }
 
@@ -82,7 +97,7 @@ export const WeatherManager = {
             errSpan.appendChild(iconSpan);
             errContainer.appendChild(errSpan);
             
-            if (userFriendlyMsg.includes("502")) {
+            if (isServerOrNetworkError) {
                 const subMsg = document.createElement('span');
                 subMsg.style.fontSize = '9px';
                 subMsg.style.opacity = '0.8';
