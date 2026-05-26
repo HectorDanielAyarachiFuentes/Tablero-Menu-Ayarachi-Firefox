@@ -40,15 +40,79 @@ export const WeatherManager = {
 
         try {
             const weatherData = customCity ? await fetchWeatherByCity(customCity) : await fetchWeatherByCoords();
+            // ¡El clima volvió! Limpiamos cualquier error silenciado
+            localStorage.removeItem('weatherErrorDismissed');
+            weatherEl.style.display = '';
+            
             render(weatherData);
             storageSet({ weather: { data: weatherData, timestamp: Date.now(), city: customCity || 'auto' } });
         } catch (error) {
             console.error("WeatherManager Error:", error);
+            
+            // Si el usuario ya cerró el error, lo ocultamos silenciosamente en nuevas pestañas
+            // Seguirá intentando por debajo y volverá a mostrarse cuando la API funcione (arriba)
+            if (localStorage.getItem('weatherErrorDismissed') === 'true') {
+                weatherEl.style.display = 'none';
+                return;
+            }
+
             weatherEl.textContent = '';
+            const errContainer = document.createElement('div');
+            errContainer.style.display = 'flex';
+            errContainer.style.flexDirection = 'column';
+            errContainer.style.alignItems = 'center';
+            errContainer.style.gap = '6px';
+
             const errSpan = document.createElement('span');
-            errSpan.textContent = error.message;
-            weatherEl.appendChild(errSpan);
-            weatherEl.classList.add('loaded');
+            errSpan.className = 'weather-error-msg';
+            
+            let userFriendlyMsg = "No se pudo cargar el clima.";
+            if (error.message.includes("NetworkError") || error.message.includes("Failed to fetch") || error.message.includes("Error de red")) {
+                userFriendlyMsg = "Servicio meteorológico inactivo (Error 502).";
+            } else if (error.message === "Ciudad no encontrada.") {
+                userFriendlyMsg = "Ciudad no encontrada.";
+            } else if (error.message.includes("ubicación") || error.message.includes("Geolocalización")) {
+                userFriendlyMsg = "Sin acceso a ubicación.";
+            }
+
+            errSpan.textContent = userFriendlyMsg;
+            // Add a small icon for the error
+            const iconSpan = document.createElement('span');
+            iconSpan.textContent = ' ⚠️';
+            errSpan.appendChild(iconSpan);
+            errContainer.appendChild(errSpan);
+            
+            if (userFriendlyMsg.includes("502")) {
+                const subMsg = document.createElement('span');
+                subMsg.style.fontSize = '9px';
+                subMsg.style.opacity = '0.8';
+                subMsg.style.textAlign = 'center';
+                subMsg.textContent = "Volveré de forma automática cuando esté listo.";
+                errContainer.appendChild(subMsg);
+            }
+
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Cerrar';
+            closeBtn.style.marginTop = '2px';
+            closeBtn.style.padding = '4px 12px';
+            closeBtn.style.border = '1px solid rgba(255,255,255,0.2)';
+            closeBtn.style.borderRadius = '12px';
+            closeBtn.style.background = 'rgba(0,0,0,0.2)';
+            closeBtn.style.color = '#fff';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.fontSize = '10px';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                weatherEl.style.display = 'none';
+                // Silenciar el error en nuevas pestañas hasta que el servicio regrese
+                localStorage.setItem('weatherErrorDismissed', 'true');
+            });
+            closeBtn.addEventListener('mouseover', () => closeBtn.style.background = 'rgba(255,255,255,0.1)');
+            closeBtn.addEventListener('mouseout', () => closeBtn.style.background = 'rgba(0,0,0,0.2)');
+            errContainer.appendChild(closeBtn);
+            
+            weatherEl.appendChild(errContainer);
+            weatherEl.classList.add('loaded', 'has-error');
         }
     },
     handleCityChange(e) {

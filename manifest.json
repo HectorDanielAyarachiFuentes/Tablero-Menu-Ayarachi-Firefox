@@ -40,6 +40,11 @@
     "theme"
   ],
 
+  "host_permissions": [
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*"
+  ],
+
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: https://* https://www.google.com https://google.com https://t3.gstatic.com blob: moz-extension:;"
   },
