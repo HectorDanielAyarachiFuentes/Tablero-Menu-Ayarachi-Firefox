@@ -15,7 +15,6 @@ import { initDoodleSettings } from '../settings/doodles.js';
 
 export function initUI() {
     updateClock();
-    setInterval(updateClock, 1000);
 
     $('#openSettings').addEventListener('click', () => toggleSettings(true));
     $('#closeSettings').addEventListener('click', () => toggleSettings(false));
@@ -137,6 +136,7 @@ export async function renderGreeting(name) {
     }
 }
 
+let clockTimer = null;
 export async function updateClock() {
   const now = new Date();
   // Obtenemos la configuración del reloj desde el storage.
@@ -163,6 +163,11 @@ export async function updateClock() {
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   const formattedDate = new Intl.DateTimeFormat('es-ES', dateOptions).format(now);
   $('#date').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+  
+  if (clockTimer) clearTimeout(clockTimer);
+  // Optimización de rendimiento: Si no se muestran segundos, el reloj solo "despierta" cada minuto.
+  const delay = showSeconds ? 1000 : (60000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
+  clockTimer = setTimeout(updateClock, delay);
 }
 
 export function updateActiveThemeButton(theme) {

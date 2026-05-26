@@ -51,6 +51,23 @@ let saveDebounceTimer;
 let syncBuffer = {};
 let syncTimer = null;
 
+/**
+ * Throttle function to limit how often a function can execute.
+ * Uses requestAnimationFrame for optimal performance with DOM/layout operations.
+ */
+export const throttle = (callback, limit) => {
+    let waiting = false;
+    return function() {
+        if (!waiting) {
+            callback.apply(this, arguments);
+            waiting = true;
+            setTimeout(() => {
+                waiting = false;
+            }, limit);
+        }
+    }
+};
+
 // storage helpers supporting chrome.storage.sync or fallback to localStorage
 export const storageGet = (keys, useCache = false) => new Promise(resolve => {
   if (window.chrome && chrome.storage?.local) {

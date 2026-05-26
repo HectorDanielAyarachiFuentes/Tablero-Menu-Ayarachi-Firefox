@@ -34,6 +34,7 @@
   text-decoration: none;
   color: var(--panel-text-color);
   outline: none;
+  will-change: transform, background-color, box-shadow;
 }
 
 a.tile {

@@ -3,7 +3,7 @@
  * Se encarga del estado principal (tiles, trash), la renderización de la cuadrícula,
  * y la lógica de arrastrar y soltar (drag and drop) en la vista principal.
  */
-import { $, $$, storageSet, storageGet } from './utils.js';
+import { $, $$, storageSet, storageGet, throttle } from './utils.js';
 import { FolderManager } from './carpetas.js';
 import { renderFavoritesInSelect } from '../../utils/search.js';
 import { showSaveStatus } from '../components/ui.js';
@@ -43,7 +43,8 @@ export function initTiles() {
     tilesEl.addEventListener('dragend', handleTileDragEnd);
 
     // Retraer el clima al pasar el mouse por encima de cualquier acceso directo que choque con él
-    tilesEl.addEventListener('mouseover', (e) => {
+    // Se usa 'throttle' para limitar los cálculos de colisión (reflows por getBoundingClientRect)
+    tilesEl.addEventListener('mouseover', throttle((e) => {
         const tile = e.target.closest('.tile');
         if (tile) {
             const weatherEl = $('#weather');
@@ -67,7 +68,7 @@ export function initTiles() {
                 }
             }
         }
-    });
+    }, 100));
 
     $('#addTile').addEventListener('click', () => openModal());
 
@@ -79,8 +80,8 @@ export function initTiles() {
     // Inicializar observador para scroll infinito
     initInfiniteScroll();
 
-    // Fallback: Listener de scroll tradicional (por si falla el observador)
-    window.addEventListener('scroll', () => {
+    // Fallback: Listener de scroll tradicional (por si falla el observador), optimizado
+    window.addEventListener('scroll', throttle(() => {
         if (loadedCount > 0 && !isLoading) {
             const scrollPos = window.innerHeight + window.scrollY;
             const threshold = document.documentElement.scrollHeight - 600;
@@ -88,7 +89,7 @@ export function initTiles() {
                 loadMoreTiles();
             }
         }
-    }, { passive: true });
+    }, 150), { passive: true });
 }
 
 function initInfiniteScroll() {
