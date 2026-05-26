@@ -18,9 +18,9 @@ export const DOODLES_LIST = [
     "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #080a0f;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  path*50 {\n    stroke: hsla(@calc(200 + @n * 4), 80%, 70%, @r(0.3, 0.7));\n    stroke-width: @r(0.2, 0.6);\n    fill: none;\n    d: M @r(100) @r(100) Q @r(100) @r(100) @r(100) @r(100);\n    animation: spin @r(25s, 50s) linear infinite;\n  }\n);\n@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }"
   },
   {
-    "id": "trazos-svg",
-    "name": "Constelaciones (Optimizado)",
-    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #05070a;\n}\n@content: @svg(\n  viewBox: 0 0 100 100;\n  preserveAspectRatio: none;\n  line*50 {\n    draw: @r(10s, 20s);\n    opacity: @r(0.1, 0.4);\n    stroke: @p(#aeacfb, #ffffff, #4facfe);\n    stroke-width: .08;\n    x1: @r(100); y1: @r(100);\n    x2: @calc(@x1 + @r(-20, 20));\n    y2: @calc(@y1 + @r(-20, 20));\n  }\n  circle*40 {\n    r: @r(0.2, 0.5);\n    cx: @r(100); cy: @r(100);\n    fill: #fff;\n    animation: twinkle @r(3s, 8s) ease-in-out infinite alternate;\n  }\n);\n@keyframes twinkle { 0% { opacity: 0.3; } 100% { opacity: 0.9; } }"
+    "id": "seda-wiphala",
+    "name": "Seda Wiphala 🌈",
+    "template": ":doodle {\n  @grid: 1 / 100vw 100vh;\n  background: #030408;\n  overflow: hidden;\n}\n@size: 100%;\nbackground-image: @doodle(\n  @grid: 1x14 / 100% 100%;\n  :after {\n    content: '';\n    @size: 150vw @r(40px, 120px);\n    position: absolute;\n    left: -25%;\n    top: @r(-10%, 110%);\n    background: radial-gradient(ellipse at center, @p(#e63946, #f26419, #f6aa1c, #ffffff, #2a9d8f, #3a86ff, #7209b7) 0%, transparent 60%);\n    opacity: @r(0.3, 0.7);\n    mix-blend-mode: screen;\n    transform: rotate(@r(-20deg, 20deg));\n    animation: silk-flow @r(15s, 35s) ease-in-out infinite alternate;\n    animation-delay: -@r(20s);\n  }\n);\n@keyframes silk-flow {\n  0% { transform: translateY(-40px) rotate(@r(-10deg, 10deg)) scaleX(0.9); }\n  100% { transform: translateY(40px) rotate(@r(-25deg, 25deg)) scaleX(1.3); }\n}"
   },
   {
     "id": "bokeh-minimalista",
