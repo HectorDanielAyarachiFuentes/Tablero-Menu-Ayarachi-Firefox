@@ -274,13 +274,13 @@
 
 .weather-widget-fixed.summary-open .weather-humidity::before,
 .weather-widget-fixed.open .weather-humidity::before {
-  content: "H: " !important;
+  content: "💧 H: " !important;
   font-weight: 600 !important;
 }
 
 .weather-widget-fixed.summary-open .weather-wind::before,
 .weather-widget-fixed.open .weather-wind::before {
-  content: "V: " !important;
+  content: "💨 V: " !important;
   font-weight: 600 !important;
 }
 
