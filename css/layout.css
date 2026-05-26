@@ -147,7 +147,13 @@ body.no-scroll {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   box-shadow: var(--panel-shadow, 0 4px 15px rgba(0, 0, 0, 0.2));
   margin-left: 5px;
+  animation: alertModalSlideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
+
+.controls button:nth-child(1) { animation-delay: 0.1s; }
+.controls button:nth-child(2) { animation-delay: 0.15s; }
+.controls button:nth-child(3) { animation-delay: 0.2s; }
+.controls button:nth-child(4) { animation-delay: 0.25s; }
 
 #openNotes:hover, #openSettings:hover {
   background: var(--hover-overlay) !important;
