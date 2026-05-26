@@ -336,7 +336,7 @@ function render(data) {
 
 
         const iconImg = document.createElement('img');
-        iconImg.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+        iconImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${icon}.svg`;
         iconImg.alt = description;
         iconImg.className = 'weather-icon';
         summary.appendChild(iconImg);
@@ -402,7 +402,7 @@ function render(data) {
             hDiv.appendChild(hTime);
 
             const hImg = document.createElement('img');
-            hImg.src = `https://openweathermap.org/img/wn/${hourIcon}.png`;
+            hImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${hourIcon}.svg`;
             hImg.alt = '';
             hDiv.appendChild(hImg);
 
@@ -432,7 +432,7 @@ function render(data) {
             dDiv.appendChild(dName);
 
             const dImg = document.createElement('img');
-            dImg.src = `https://openweathermap.org/img/wn/${dayIcon}.png`;
+            dImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${dayIcon}.svg`;
             dImg.alt = '';
             dDiv.appendChild(dImg);
 
@@ -453,41 +453,36 @@ function render(data) {
 
 function getInterpretation(code, isDay = true) {
     const interpretations = {
-        0: { description: 'Despejado', icon: '01d' },
-        1: { description: 'Principalmente despejado', icon: '02d' },
-        2: { description: 'Parcialmente nublado', icon: '03d' },
-        3: { description: 'Nublado', icon: '04d' },
-        45: { description: 'Niebla', icon: '50d' },
-        48: { description: 'Niebla densa', icon: '50d' },
-        51: { description: 'Llovizna ligera', icon: '09d' },
-        53: { description: 'Llovizna', icon: '09d' },
-        55: { description: 'Llovizna densa', icon: '09d' },
-        56: { description: 'Llovizna helada', icon: '09d' },
-        57: { description: 'Llovizna helada densa', icon: '09d' },
-        61: { description: 'Lluvia ligera', icon: '10d' },
-        63: { description: 'Lluvia', icon: '10d' },
-        65: { description: 'Lluvia intensa', icon: '10d' },
-        66: { description: 'Lluvia helada', icon: '13d' },
-        67: { description: 'Lluvia helada intensa', icon: '13d' },
-        71: { description: 'Nieve ligera', icon: '13d' },
-        73: { description: 'Nieve', icon: '13d' },
-        75: { description: 'Nieve intensa', icon: '13d' },
-        77: { description: 'Granos de nieve', icon: '13d' },
-        80: { description: 'Chubascos ligeros', icon: '09d' },
-        81: { description: 'Chubascos', icon: '09d' },
-        82: { description: 'Chubascos violentos', icon: '09d' },
-        85: { description: 'Chubascos de nieve', icon: '13d' },
-        86: { description: 'Chubascos de nieve intensos', icon: '13d' },
-        95: { description: 'Tormenta', icon: '11d' },
-        96: { description: 'Tormenta con granizo', icon: '11d' },
-        99: { description: 'Tormenta con granizo intenso', icon: '11d' }
+        0: { description: 'Despejado', icon: isDay ? 'clear-day' : 'clear-night' },
+        1: { description: 'Principalmente despejado', icon: isDay ? 'partly-cloudy-day' : 'partly-cloudy-night' },
+        2: { description: 'Parcialmente nublado', icon: isDay ? 'partly-cloudy-day' : 'partly-cloudy-night' },
+        3: { description: 'Nublado', icon: isDay ? 'overcast-day' : 'overcast-night' },
+        45: { description: 'Niebla', icon: isDay ? 'fog-day' : 'fog-night' },
+        48: { description: 'Niebla densa', icon: isDay ? 'fog-day' : 'fog-night' },
+        51: { description: 'Llovizna ligera', icon: 'drizzle' },
+        53: { description: 'Llovizna', icon: 'drizzle' },
+        55: { description: 'Llovizna densa', icon: 'drizzle' },
+        56: { description: 'Llovizna helada', icon: 'sleet' },
+        57: { description: 'Llovizna helada densa', icon: 'sleet' },
+        61: { description: 'Lluvia ligera', icon: 'rain' },
+        63: { description: 'Lluvia', icon: 'rain' },
+        65: { description: 'Lluvia intensa', icon: 'extreme-rain' },
+        66: { description: 'Lluvia helada', icon: 'sleet' },
+        67: { description: 'Lluvia helada intensa', icon: 'sleet' },
+        71: { description: 'Nieve ligera', icon: 'snow' },
+        73: { description: 'Nieve', icon: 'snow' },
+        75: { description: 'Nieve intensa', icon: 'extreme-snow' },
+        77: { description: 'Granos de nieve', icon: 'hail' },
+        80: { description: 'Chubascos ligeros', icon: 'drizzle' },
+        81: { description: 'Chubascos', icon: 'rain' },
+        82: { description: 'Chubascos violentos', icon: 'extreme-rain' },
+        85: { description: 'Chubascos de nieve', icon: 'snow' },
+        86: { description: 'Chubascos de nieve intensos', icon: 'extreme-snow' },
+        95: { description: 'Tormenta', icon: 'thunderstorms' },
+        96: { description: 'Tormenta con granizo', icon: 'thunderstorms-rain' },
+        99: { description: 'Tormenta con granizo intenso', icon: 'thunderstorms-extreme-rain' }
     };
-    const result = interpretations[code] || { description: 'Clima desconocido', icon: '50d' };
-    // Usar variante nocturna cuando corresponde (OWM tiene 01n-04n, 09n-11n, 13n, 50n)
-    if (!isDay) {
-        result.icon = result.icon.replace('d', 'n');
-    }
-    return result;
+    return interpretations[code] || { description: 'Clima desconocido', icon: isDay ? 'partly-cloudy-day' : 'partly-cloudy-night' };
 }
 
 function showWeatherAlertModal(alertData, cityName = '', lat = null, lon = null) {
