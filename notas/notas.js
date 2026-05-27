@@ -17,7 +17,9 @@ export async function initNotesComponent() {
     // Load HTML
     const response = await fetch('notas/notas.html');
     const html = await response.text();
-    document.body.insertAdjacentHTML('beforeend', html);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    Array.from(doc.body.children).forEach(child => document.body.appendChild(child));
     
     // Bind events
     $('#addNote')?.addEventListener('click', () => openModal(null, 'note'));
