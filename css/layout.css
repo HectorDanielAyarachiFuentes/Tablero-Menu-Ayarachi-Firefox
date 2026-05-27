@@ -4,6 +4,10 @@
 
 html {
   background-color: #050505;
+  scrollbar-width: none; /* Ocultar barra de desplazamiento en Firefox */
+}
+html::-webkit-scrollbar {
+  display: none; /* Ocultar barra de desplazamiento en Chrome/Safari */
 }
 
 body::before {
