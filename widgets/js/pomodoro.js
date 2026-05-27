@@ -32,140 +32,44 @@ export class PomodoroWidget {
 
     render() {
         this.container.textContent = '';
+        
+        const template = document.getElementById('pomodoro-template');
+        if (!template) {
+            console.error('No se encontró el template de Pomodoro');
+            return;
+        }
+        
+        const clone = template.content.cloneNode(true);
+        this.container.appendChild(clone);
+        
+        // Inicializar los valores de los inputs
+        const focusInput = this.container.querySelector('#pomo-focus-input');
+        const breakInput = this.container.querySelector('#pomo-break-input');
+        if (focusInput) focusInput.value = this.config.focusTime;
+        if (breakInput) breakInput.value = this.config.breakTime;
+        
+        // Actualizar el tiempo en pantalla
+        const timeDiv = this.container.querySelector('#pomo-time');
+        if (timeDiv) timeDiv.textContent = this.formatTime(this.timeLeft);
+        
+        // Actualizar el modo
+        const labelDiv = this.container.querySelector('#pomo-mode-label');
+        if (labelDiv) labelDiv.textContent = this.mode === 'focus' ? 'FOCO' : 'DESCANSO';
+        
+        // Actualizar la clase active en el switch
+        const focusBtn = this.container.querySelector('.pomodoro-mode-btn[data-mode="focus"]');
+        const breakBtn = this.container.querySelector('.pomodoro-mode-btn[data-mode="short-break"]');
+        if (this.mode === 'focus') {
+            if (focusBtn) focusBtn.classList.add('active');
+            if (breakBtn) breakBtn.classList.remove('active');
+        } else {
+            if (focusBtn) focusBtn.classList.remove('active');
+            if (breakBtn) breakBtn.classList.add('active');
+        }
 
-        const title = document.createElement('div');
-        title.className = 'widget-title';
-        const titleIcon = document.createElement('span');
-        titleIcon.className = 'widget-title-icon';
-        setSVG(titleIcon, '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>');
-        title.appendChild(titleIcon);
-        const titleText = document.createTextNode(' Pomodoro');
-        title.appendChild(titleText);
-        
-        const settingsBtn = document.createElement('button');
-        settingsBtn.className = 'pomo-settings-icon-btn';
-        settingsBtn.id = 'pomo-settings-toggle';
-        settingsBtn.title = 'Configuración';
-        setSVG(settingsBtn, '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>');
-        title.appendChild(settingsBtn);
-        this.container.appendChild(title);
-
-        const configPanel = document.createElement('div');
-        configPanel.className = 'pomo-config-panel';
-        configPanel.id = 'pomo-config-panel';
-
-        const createConfigRow = (label, field, val, max) => {
-            const row = document.createElement('div');
-            row.className = 'pomo-config-row';
-            const lbl = document.createElement('label');
-            lbl.textContent = label;
-            row.appendChild(lbl);
-            
-            const stepper = document.createElement('div');
-            stepper.className = 'pomo-config-stepper';
-            
-            const minusBtn = document.createElement('button');
-            minusBtn.className = 'pomo-step-btn';
-            minusBtn.dataset.field = field;
-            minusBtn.dataset.dir = '-1';
-            minusBtn.textContent = '−';
-            
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.className = 'pomodoro-input';
-            input.id = field === 'focusTime' ? 'pomo-focus-input' : 'pomo-break-input';
-            input.value = val;
-            input.min = '1';
-            input.max = max;
-            
-            const plusBtn = document.createElement('button');
-            plusBtn.className = 'pomo-step-btn';
-            plusBtn.dataset.field = field;
-            plusBtn.dataset.dir = '1';
-            plusBtn.textContent = '+';
-            
-            stepper.appendChild(minusBtn);
-            stepper.appendChild(input);
-            stepper.appendChild(plusBtn);
-            row.appendChild(stepper);
-            
-            const unit = document.createElement('span');
-            unit.className = 'pomo-config-unit';
-            unit.textContent = 'min';
-            row.appendChild(unit);
-            return row;
-        };
-
-        configPanel.appendChild(createConfigRow('Focus', 'focusTime', this.config.focusTime, '60'));
-        configPanel.appendChild(createConfigRow('Descanso', 'breakTime', this.config.breakTime, '30'));
-        this.container.appendChild(configPanel);
-
-        const modeSwitch = document.createElement('div');
-        modeSwitch.className = 'pomodoro-mode-switch';
-        
-        const focusBtn = document.createElement('button');
-        focusBtn.className = 'pomodoro-mode-btn active';
-        focusBtn.dataset.mode = 'focus';
-        focusBtn.textContent = 'Focus';
-        
-        const breakBtn = document.createElement('button');
-        breakBtn.className = 'pomodoro-mode-btn';
-        breakBtn.dataset.mode = 'short-break';
-        breakBtn.textContent = 'Descanso';
-        
-        modeSwitch.appendChild(focusBtn);
-        modeSwitch.appendChild(breakBtn);
-        this.container.appendChild(modeSwitch);
-
-        const ringContainer = document.createElement('div');
-        ringContainer.className = 'pomo-ring-container';
-        ringContainer.className = 'pomo-ring-container';
-        ringContainer.id = 'pomo-ring-container';
-        setHTML(ringContainer, `
-            <svg class="pomo-ring-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                <circle class="pomo-ring-bg" cx="60" cy="60" r="52"/>
-                <circle class="pomo-ring-progress" id="pomo-ring-progress" cx="60" cy="60" r="52"/>
-            </svg>
-        `);
-        const ringInner = document.createElement('div');
-        ringInner.className = 'pomo-ring-inner';
-        
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'pomodoro-time';
-        timeDiv.id = 'pomo-time';
-        timeDiv.textContent = this.formatTime(this.timeLeft);
-        
-        const labelDiv = document.createElement('div');
-        labelDiv.className = 'pomo-mode-label';
-        labelDiv.id = 'pomo-mode-label';
-        labelDiv.textContent = this.mode === 'focus' ? 'FOCO' : 'DESCANSO';
-        
-        ringInner.appendChild(timeDiv);
-        ringInner.appendChild(labelDiv);
-        ringContainer.appendChild(ringInner);
-        this.container.appendChild(ringContainer);
-
-        const controls = document.createElement('div');
-        controls.className = 'pomodoro-controls';
-        
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'pomodoro-btn';
-        toggleBtn.id = 'pomo-toggle';
-        toggleBtn.title = 'Iniciar/Pausar';
-        setSVG(toggleBtn, '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>');
-        
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'pomodoro-btn pomodoro-btn-reset';
-        resetBtn.id = 'pomo-reset';
-        resetBtn.title = 'Reiniciar';
-        setSVG(resetBtn, '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"></path><path d="M3 5v7h7"></path></svg>');
-        
-        controls.appendChild(toggleBtn);
-        controls.appendChild(resetBtn);
-        this.container.appendChild(controls);
-
-        this.updateRing();
         this.bindEvents();
+        this.updatePlayPauseIcon();
+        this.updateRing();
     }
 
     bindEvents() {
@@ -231,7 +135,7 @@ export class PomodoroWidget {
     start() {
         if (this.isRunning) return;
         this.isRunning = true;
-        this.updateToggleButton(true);
+        this.updatePlayPauseIcon();
         this.container.querySelector('#pomo-ring-container')?.classList.add('running');
 
         this.timerId = setInterval(() => {
@@ -249,7 +153,7 @@ export class PomodoroWidget {
     pause() {
         this.isRunning = false;
         clearInterval(this.timerId);
-        this.updateToggleButton(false);
+        this.updatePlayPauseIcon();
         this.container.querySelector('#pomo-ring-container')?.classList.remove('running');
     }
 
@@ -291,13 +195,19 @@ export class PomodoroWidget {
         ring.style.strokeDashoffset = `${offset}`;
     }
 
-    updateToggleButton(running) {
-        const btn = this.container.querySelector('#pomo-toggle');
-        if (!btn) return;
-        if (running) {
-            setSVG(btn, '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>');
-        } else {
-            setSVG(btn, '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>');
+    updatePlayPauseIcon() {
+        const running = this.isRunning;
+        const playIcon = this.container.querySelector('.pomo-icon-play');
+        const pauseIcon = this.container.querySelector('.pomo-icon-pause');
+        
+        if (playIcon && pauseIcon) {
+            if (running) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
         }
     }
 
