@@ -9,7 +9,7 @@ import { updateActiveGradientButton, showSaveStatus, updateDataTabUI, renderGree
 import { updateSliderValueSpans, updatePanelRgb } from './settings-panels.js';
 // BackgroundManager ahora es global
 import { tiles, trash, setTiles, setTrash, saveAndRender, renderTiles } from '../core/tiles.js';
-import { renderNotes } from '../components/notes.js';
+import { renderNotes } from '../../notas/notas.js';
 import { renderTrash } from '../components/trash.js';
 import { GRADIENTS, DEFAULT_GRADIENT_COLORS } from '../../utils/gradients.js';
 import { FileSystem } from '../system/file-system.js';

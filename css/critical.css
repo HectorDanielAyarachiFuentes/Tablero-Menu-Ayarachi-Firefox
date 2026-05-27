@@ -1,0 +1,39 @@
+/* Estilo crítico para eliminar destellos de carga (Permitido por CSP) */
+html {
+  background-color: #050505 !important;
+  color-scheme: dark !important;
+}
+
+body {
+  background: transparent !important;
+  margin: 0;
+}
+
+/* Prevenir destello de colores de acento (ej. morado #a855f7) */
+:root {
+  --accent-color: #050505;
+}
+
+.wrap {
+  opacity: 1;
+}
+
+#doodle-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+#doodle-background.ready {
+  opacity: 1;
+}
+
+/* Evitar que se vea el código del doodle antes de que se active el componente */
+css-doodle:not(:defined) {
+  display: none;
+}

@@ -8,7 +8,7 @@ import { STORAGE_KEYS } from './core/config.js';
 import { initUI, renderGreeting, updateActiveThemeButton, updateActiveGradientButton, updateDataTabUI, toggleSettings, switchToTab } from './components/ui.js';
 import { updateSliderValueSpans, updatePanelRgb } from './settings/settings-panels.js';
 import { initTiles, renderTiles, tiles, setTiles, setTrash } from './core/tiles.js';
-import { renderNotes } from './components/notes.js';
+import { initNotesComponent } from '../../notas/notas.js';
 import { renderEditor } from './settings/editor.js';
 import { renderTrash } from './components/trash.js';
 import { initSearch, renderFavoritesInSelect } from '../utils/search.js';
@@ -201,7 +201,7 @@ async function initHeavySystems(settings) {
   WeatherManager.init();
 
   renderEditor();
-  renderNotes();
+  initNotesComponent();
   renderTrash();
   renderFavoritesInSelect();
 

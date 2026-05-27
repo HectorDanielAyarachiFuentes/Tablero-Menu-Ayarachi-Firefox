@@ -50,3 +50,17 @@ if (document.readyState === 'loading') {
 } else {
     manager.init();
 }
+
+// Sincronizar variables CSS dinámicas desde el documento padre
+function syncStyles() {
+    if (window.parent && window.parent !== window) {
+        const parentStyles = window.parent.document.documentElement.style.cssText;
+        document.documentElement.style.cssText = parentStyles;
+    }
+}
+// Ejecutar inmediatamente y cuando haya cambios en el padre
+syncStyles();
+if (window.parent && window.parent !== window) {
+    const observer = new MutationObserver(syncStyles);
+    observer.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['style'] });
+}

@@ -713,6 +713,54 @@
     .widgets-sidebar {
         width: 100%;
         right: -100%;
-        padding: 20px;
-    }
+}
+
+/* Base styles specifically for the iframe environment */
+html {
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+html, body {
+    background: transparent !important;
+}
+body {
+    margin: 0;
+    padding: 40px 30px;
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    /* Ocultar barra de desplazamiento */
+    scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+}
+
+/* Widgets Container Layout inside iframe */
+#widgets-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Adjustments for the widget manager running isolated */
+.widgets-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.widgets-header h2 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
 }

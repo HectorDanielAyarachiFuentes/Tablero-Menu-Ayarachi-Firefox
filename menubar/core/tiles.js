@@ -12,7 +12,7 @@ import { initContextMenu, showContextMenu } from '../components/context-menu.js'
 import { renderTrash } from '../components/trash.js';
 import { initModal, openModal } from '../components/modal.js';
 import { initEditor, renderEditor } from '../settings/editor.js';
-import { initNotes, renderNotes } from '../components/notes.js';
+import { renderNotes } from '../../notas/notas.js';
 
 export let tiles = [];
 export let trash = [];
@@ -75,7 +75,6 @@ export function initTiles() {
     initContextMenu();
     initModal();
     initEditor();
-    initNotes();
 
     // Inicializar observador para scroll infinito
     initInfiniteScroll();

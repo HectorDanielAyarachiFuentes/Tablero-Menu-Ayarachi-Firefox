@@ -18,8 +18,7 @@ export function initUI() {
 
     $('#openSettings').addEventListener('click', () => toggleSettings(true));
     $('#closeSettings').addEventListener('click', () => toggleSettings(false));
-    $('#openNotes').addEventListener('click', () => toggleNotesPanel(true));
-    $('#closeNotes').addEventListener('click', () => toggleNotesPanel(false));
+    $('#openNotes')?.addEventListener('click', () => toggleNotesPanel(true));
 
     document.addEventListener('click', (e) => {
         if (e.target === $('#overlay')) {
