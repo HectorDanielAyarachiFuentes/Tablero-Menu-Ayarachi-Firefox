@@ -47,12 +47,12 @@ export function renderNotes() {
         svg.setAttribute('viewBox', '0 0 24 24');
         svg.setAttribute('fill', 'none');
         svg.setAttribute('stroke', 'currentColor');
-        svg.setAttribute('stroke-width', '1.5');
+        svg.setAttribute('stroke-width', '1');
         svg.setAttribute('stroke-linecap', 'round');
         svg.setAttribute('stroke-linejoin', 'round');
         
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', 'M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z');
+        path.setAttribute('d', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z');
         
         const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
         polyline.setAttribute('points', '14 2 14 8 20 8');
@@ -63,8 +63,8 @@ export function renderNotes() {
         const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line2.setAttribute('x1', '16'); line2.setAttribute('y1', '17'); line2.setAttribute('x2', '8'); line2.setAttribute('y2', '17');
         
-        const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line3.setAttribute('x1', '10'); line3.setAttribute('y1', '9'); line3.setAttribute('x2', '8'); line3.setAttribute('y2', '9');
+        const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        line3.setAttribute('points', '10 9 9 9 8 9');
         
         svg.appendChild(path);
         svg.appendChild(polyline);

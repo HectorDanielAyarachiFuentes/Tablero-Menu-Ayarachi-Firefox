@@ -175,14 +175,11 @@
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   color: #fff !important;
-  font-size: 22px !important;
-  font-weight: 700 !important;
   width: 38px !important;
   height: 38px !important;
   border-radius: 12px !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
