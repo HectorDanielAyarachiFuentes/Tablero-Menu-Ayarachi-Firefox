@@ -104,14 +104,7 @@ function initInfiniteScroll() {
 }
 
 export function saveAndRender() {
-    const dataToSave = { tiles, trash };
-    storageSet(dataToSave).then(async () => {
-        const { autoSync } = await storageGet(['autoSync']);
-        if (autoSync) {
-            await FileSystem.saveDataToFile(dataToSave);
-        }
-        showSaveStatus();
-    });
+    saveTilesQuietly().then(() => showSaveStatus());
 
     renderFavoritesInSelect();
     renderTiles();
@@ -122,6 +115,18 @@ export function saveAndRender() {
     renderNotes();
     renderTrash();
 }
+
+export function saveTilesQuietly() {
+    const dataToSave = { tiles, trash };
+    return storageSet(dataToSave).then(async () => {
+        const { autoSync } = await storageGet(['autoSync']);
+        if (autoSync) {
+            await FileSystem.saveDataToFile(dataToSave);
+        }
+    });
+}
+
+
 
 export function renderTiles() {
     const tilesEl = $('#tiles');

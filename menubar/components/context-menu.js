@@ -96,8 +96,31 @@ function handleContextMenuClick(e) {
         case 'open-tab': window.open(tile.url); break;
         case 'open-window': window.open(tile.url, '_blank', 'noopener,noreferrer'); break;
         case 'open-private': chrome.windows?.create({ url: tile.url, incognito: true }); break;
+        case 'use-letter':
+            const fallbackText = tile.name || (tile.url ? new URL(tile.url).hostname.replace('www.', '') : '?');
+            const letter = (fallbackText || '?').charAt(0).toUpperCase();
+            
+            let fallbackUrl = '';
+            if (/^[A-Z]$/.test(letter)) {
+                fallbackUrl = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.getURL(`abecedario/${letter.toLowerCase()}.svg`) : `abecedario/${letter.toLowerCase()}.svg`;
+            } else {
+                // Generar canvas simple si no es A-Z
+                const canvas = document.createElement('canvas');
+                canvas.width = 64; canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#3498DB';
+                ctx.beginPath(); ctx.roundRect(0, 0, 64, 64, 12); ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 36px system-ui, sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(letter, 32, 34);
+                fallbackUrl = canvas.toDataURL('image/png');
+            }
+            
+            tile.customIcon = fallbackUrl;
+            saveAndRender();
+            break;
         case 'edit':
-            // Para carpetas, necesitamos el índice global, no el de la vista actual.
             const globalIndex = tiles.findIndex(t => t === tile);
             openModal(globalIndex);
             break;

@@ -2,7 +2,7 @@
  * Gestiona la lógica de navegación y renderizado de carpetas.
  * Mantiene el estado de la ruta actual y proporciona métodos para navegar dentro y fuera de las carpetas.
  */
-import { renderTiles, saveAndRender } from './tiles.js';
+import { renderTiles, saveAndRender, saveTilesQuietly } from './tiles.js';
 
 let viewPath = []; // Private state for folder path
 
@@ -118,6 +118,8 @@ export const FolderManager = {
                 if (!this.dataset.fallbackLoaded) {
                     this.dataset.fallbackLoaded = 'true';
                     this.src = FALLBACK_ICON;
+                    tile.customIcon = FALLBACK_ICON;
+                    saveTilesQuietly();
                 }
             };
 
@@ -142,21 +144,29 @@ export const FolderManager = {
                             if (imgLoader.naturalWidth <= 16 && imgLoader.naturalHeight <= 16) {
                                 thumbEl.dataset.fallbackLoaded = 'true';
                                 thumbEl.src = FALLBACK_ICON;
+                                tile.customIcon = FALLBACK_ICON;
+                                saveTilesQuietly();
                             }
                         };
                         imgLoader.onerror = function() {
                             thumbEl.dataset.fallbackLoaded = 'true';
                             thumbEl.src = FALLBACK_ICON;
+                            tile.customIcon = FALLBACK_ICON;
+                            saveTilesQuietly();
                         };
                         imgLoader.src = targetSrc;
                         
                     } else {
                         thumbEl.dataset.fallbackLoaded = 'true';
                         thumbEl.src = FALLBACK_ICON;
+                        tile.customIcon = FALLBACK_ICON;
+                        saveTilesQuietly();
                     }
                 } catch (e) {
                     thumbEl.dataset.fallbackLoaded = 'true';
                     thumbEl.src = FALLBACK_ICON;
+                    tile.customIcon = FALLBACK_ICON;
+                    saveTilesQuietly();
                 }
             }
         }
