@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es" style="background-color: transparent; color-scheme: dark;">
+<head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="dark">
+    <title>Widgets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="css/widgets.css">
+    <style>
+        /* Base styles specifically for the iframe environment */
+        html {
+            box-sizing: border-box;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        html, body {
+            background: transparent !important;
+        }
+        body {
+            margin: 0;
+            padding: 40px 30px;
+            font-family: 'Poppins', sans-serif;
+            color: #fff;
+            /* Ocultar barra de desplazamiento */
+            scrollbar-width: none;
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+            width: 0;
+        }
+
+        /* Widgets Container Layout inside iframe */
+        #widgets-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Adjustments for the widget manager running isolated */
+        .widgets-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .widgets-header h2 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="widgets-header">
+        <h2>Widgets</h2>
+    </div>
+    <div id="widgets-container"></div>
+    
+    <script type="module" src="js/widget-manager.js"></script>
+    <script>
+        // Sincronizar variables CSS dinámicas desde el documento padre
+        function syncStyles() {
+            if (window.parent && window.parent !== window) {
+                const parentStyles = window.parent.document.documentElement.style.cssText;
+                document.documentElement.style.cssText = parentStyles;
+            }
+        }
+        // Ejecutar inmediatamente y cuando haya cambios en el padre
+        syncStyles();
+        if (window.parent && window.parent !== window) {
+            const observer = new MutationObserver(syncStyles);
+            observer.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['style'] });
+        }
+    </script>
+</body>
+</html>

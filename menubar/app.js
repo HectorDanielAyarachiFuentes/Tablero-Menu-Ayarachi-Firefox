@@ -20,8 +20,8 @@ import { loadDoodles, initDoodleSettings, updateDoodleSelectionUI } from './sett
 import { DOODLES_LIST } from './settings/doodles-list.js';
 window.DOODLES_LIST = DOODLES_LIST;
 import { FileSystem } from './system/file-system.js';
-import { widgetsManager } from './widgets/widget-manager.js';
 import { initPremiumThemes } from './settings/themes-premium.js';
+import { initWidgetsSidebar } from './widgets-integration.js';
 // BackgroundManager ahora es global
 
 let currentBackgroundValue = '';
@@ -197,7 +197,7 @@ function initInteractionLogic(settings) {
 
 async function initHeavySystems(settings) {
   await initPremiumThemes();
-  widgetsManager.init();
+  initWidgetsSidebar();
   WeatherManager.init();
 
   renderEditor();
@@ -212,7 +212,7 @@ async function initHeavySystems(settings) {
 
 
 function loadNonCriticalCSS() {
-  ['css/widgets.css', 'css/themes-premium.css', 'css/drag-drop-safe.css'].forEach(file => {
+  ['css/themes-premium.css', 'css/drag-drop-safe.css'].forEach(file => {
     const link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = file;
     document.head.appendChild(link);

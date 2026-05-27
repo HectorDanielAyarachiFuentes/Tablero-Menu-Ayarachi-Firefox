@@ -1,0 +1,52 @@
+/**
+ * Sistema de Widgets - Manager Aislado
+ * Gestiona la carga y visualización de widgets dentro de widgets.html
+ */
+import { PomodoroWidget } from './pomodoro.js';
+import { TodoWidget } from './todo.js';
+import { CalendarWidget } from './calendar.js';
+import { QuotesWidget } from './quotes.js';
+
+class WidgetsManager {
+    constructor() {
+        this.container = document.getElementById('widgets-container');
+    }
+
+    init() {
+        this.loadWidgets();
+    }
+
+    loadWidgets() {
+        // Pomodoro
+        const pomoEl = this.createWidgetContainer('pomodoro-widget');
+        new PomodoroWidget(pomoEl);
+
+        // To-Do
+        const todoEl = this.createWidgetContainer('todo-widget');
+        new TodoWidget(todoEl);
+
+        // Calendario
+        const calEl = this.createWidgetContainer('calendar-widget');
+        new CalendarWidget(calEl);
+
+        // Frases
+        const quoteEl = this.createWidgetContainer('quotes-widget');
+        new QuotesWidget(quoteEl);
+    }
+
+    createWidgetContainer(id) {
+        const widget = document.createElement('div');
+        widget.className = 'widget-card';
+        widget.id = id;
+        this.container.appendChild(widget);
+        return widget;
+    }
+}
+
+// Inicializar automáticamente
+const manager = new WidgetsManager();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => manager.init());
+} else {
+    manager.init();
+}
