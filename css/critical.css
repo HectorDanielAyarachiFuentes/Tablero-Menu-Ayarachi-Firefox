@@ -37,3 +37,12 @@ body {
 css-doodle:not(:defined) {
   display: none;
 }
+
+/* Ocultar elementos diferidos para evitar flash (FOUC) durante la carga inicial */
+body.loading #settings,
+body.loading #modal,
+body.loading #overlay,
+body.loading #contextMenu,
+body.loading .weather-widget-fixed {
+  display: none !important;
+}

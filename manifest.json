@@ -46,7 +46,7 @@
   ],
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: https://* https://www.google.com https://google.com https://t3.gstatic.com blob: moz-extension:;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://* https://www.google.com https://google.com https://t3.gstatic.com blob: moz-extension:;"
   },
 
   "web_accessible_resources": [

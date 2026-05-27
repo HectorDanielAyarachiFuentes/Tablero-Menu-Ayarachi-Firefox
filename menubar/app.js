@@ -59,8 +59,6 @@ async function init() {
 
   localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
 
-  await BackgroundManager.apply(settings);
-
   // REVELADO INSTANTÁNEO: El contenido ya es visible por CSS
   // Proceder con la carga de datos sin esperas visuales
 
@@ -158,6 +156,9 @@ async function init() {
   setTimeout(() => {
     initHeavySystems(settings);
     loadNonCriticalCSS();
+    
+    // Remover clase de carga para permitir interacciones en UI diferida
+    document.body.classList.remove('loading');
   }, 500);
 
   // Fase 4: Sincronización (Solo restaurar si el storage local está vacío)
@@ -212,7 +213,7 @@ async function initHeavySystems(settings) {
 
 
 function loadNonCriticalCSS() {
-  ['css/themes-premium.css', 'css/drag-drop-safe.css'].forEach(file => {
+  ['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop-safe.css'].forEach(file => {
     const link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = file;
     document.head.appendChild(link);
