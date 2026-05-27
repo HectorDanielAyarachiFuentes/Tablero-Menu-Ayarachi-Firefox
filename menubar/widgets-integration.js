@@ -19,7 +19,7 @@ export function initWidgetsSidebar() {
         left: '30px',
         width: '48px',
         height: '48px',
-        background: 'var(--panel-bg)',
+        background: 'rgba(var(--panel-bg-rgb), var(--panel-opacity))',
         backdropFilter: 'blur(var(--panel-blur))',
         WebkitBackdropFilter: 'blur(var(--panel-blur))',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -48,12 +48,11 @@ export function initWidgetsSidebar() {
         if(!isOpen) toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
     });
     toggleBtn.addEventListener('mouseleave', () => {
-        if(!isOpen) toggleBtn.style.background = 'var(--panel-bg)';
+        if(!isOpen) toggleBtn.style.background = 'rgba(var(--panel-bg-rgb), var(--panel-opacity))';
     });
 
     document.body.appendChild(toggleBtn);
 
-    // Crear Sidebar Container
     sidebar = document.createElement('aside');
     sidebar.id = 'widgets-sidebar-container';
     Object.assign(sidebar.style, {
@@ -62,7 +61,7 @@ export function initWidgetsSidebar() {
         right: '-420px',
         width: '380px',
         height: '100vh',
-        background: 'var(--panel-bg)',
+        background: 'rgba(var(--panel-bg-rgb), var(--panel-opacity))',
         backdropFilter: 'blur(var(--panel-blur))',
         WebkitBackdropFilter: 'blur(var(--panel-blur))',
         borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
@@ -85,12 +84,13 @@ export function initWidgetsSidebar() {
             iframe.style.height = '100%';
             iframe.style.border = 'none';
             iframe.style.background = 'transparent';
+            iframe.setAttribute('allowtransparency', 'true');
             sidebar.appendChild(iframe);
             iframeLoaded = true;
         }
 
         sidebar.style.right = isOpen ? '0' : '-420px';
-        toggleBtn.style.background = isOpen ? 'var(--accent-color)' : 'var(--panel-bg)';
+        toggleBtn.style.background = isOpen ? 'var(--accent-color)' : 'rgba(var(--panel-bg-rgb), var(--panel-opacity))';
         toggleBtn.style.color = isOpen ? '#fff' : 'var(--panel-text-color)';
         toggleBtn.style.borderColor = isOpen ? 'transparent' : 'rgba(255, 255, 255, 0.1)';
     };

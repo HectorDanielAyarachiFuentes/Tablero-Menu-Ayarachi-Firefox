@@ -56,6 +56,9 @@ function syncStyles() {
     if (window.parent && window.parent !== window) {
         const parentStyles = window.parent.document.documentElement.style.cssText;
         document.documentElement.style.cssText = parentStyles;
+        // Fuerza el fondo transparente en el iframe para que no copie el fondo del index.html
+        document.documentElement.style.setProperty('background', 'transparent', 'important');
+        document.documentElement.style.setProperty('background-color', 'transparent', 'important');
     }
 }
 // Ejecutar inmediatamente y cuando haya cambios en el padre
