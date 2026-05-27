@@ -284,6 +284,8 @@
     text-align: center;
     width: 36px;
     font-size: 0.9rem;
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .pomodoro-input:focus {
