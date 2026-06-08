@@ -31,10 +31,58 @@ export function showContextMenu(button, index) {
     favOption.classList.toggle('is-fav', !!tileData.favorite);
 
     const isFolder = tileData.type === 'folder';
+    const isInsideFolder = !FolderManager.isRootView();
+
     contextMenu.querySelector('[data-action="favorite"]').parentElement.hidden = isFolder;
     contextMenu.querySelector('[data-action="open-tab"]').parentElement.hidden = isFolder;
     contextMenu.querySelector('[data-action="open-window"]').parentElement.hidden = isFolder;
     contextMenu.querySelector('[data-action="open-private"]').parentElement.hidden = isFolder;
+    contextMenu.querySelector('[data-action="use-letter"]').parentElement.hidden = isFolder;
+
+    const moveOutBtn = contextMenu.querySelector('[data-action="move-out"]')?.parentElement;
+    if (moveOutBtn) moveOutBtn.hidden = !isInsideFolder;
+
+    const emptyFolderBtn = contextMenu.querySelector('[data-action="empty-folder"]')?.parentElement;
+    if (emptyFolderBtn) emptyFolderBtn.hidden = !(isFolder && tileData.children && tileData.children.length > 0);
+
+    const extractSingleMenu = document.getElementById('extract-single-menu');
+    const extractSubmenuList = document.getElementById('extract-submenu-list');
+    
+    if (extractSingleMenu && extractSubmenuList) {
+        if (isFolder && tileData.children && tileData.children.length > 0) {
+            extractSingleMenu.hidden = false;
+            extractSubmenuList.innerHTML = '';
+            tileData.children.forEach((child, i) => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.dataset.action = 'extract-single';
+                btn.dataset.childIndex = i;
+                
+                // Generar icono para el submenu usando la misma logica simplificada
+                let iconSrc = child.customIcon;
+                if (!iconSrc) {
+                    if (child.type === 'link') {
+                        try {
+                            const urlObj = new URL(child.url);
+                            iconSrc = `https://www.google.com/s2/favicons?sz=64&domain=${urlObj.hostname}`;
+                        } catch (e) {
+                            // Sin getDynamicFallbackIcon porque no estamos exportándolo, usamos la inicial
+                            const letter = (child.name || child.url || '?').charAt(0).toUpperCase();
+                            iconSrc = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23666" rx="12"/><text x="50%" y="50%" font-family="sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">${letter}</text></svg>`;
+                        }
+                    } else if (child.type === 'folder') {
+                        iconSrc = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"%3E%3C/path%3E%3C/svg%3E';
+                    }
+                }
+                
+                btn.innerHTML = `<img src="${iconSrc}" width="16" height="16" style="margin-right:8px; border-radius:4px; object-fit:contain;"> <span>${child.name}</span>`;
+                li.appendChild(btn);
+                extractSubmenuList.appendChild(li);
+            });
+        } else {
+            extractSingleMenu.hidden = true;
+        }
+    }
 
     const rect = button.getBoundingClientRect();
     
@@ -119,6 +167,45 @@ function handleContextMenuClick(e) {
             
             tile.customIcon = fallbackUrl;
             saveAndRender();
+            break;
+        case 'extract-single': {
+            const childIdx = Number(targetButton.dataset.childIndex);
+            if (tile.type === 'folder' && tile.children && childIdx >= 0 && childIdx < tile.children.length) {
+                const itemToMove = tile.children.splice(childIdx, 1)[0];
+                const path = FolderManager.getCurrentPath();
+                let parentList = tiles;
+                for (const idx of path) {
+                    parentList = parentList[idx].children;
+                }
+                parentList.push(itemToMove);
+                saveAndRender();
+            }
+            break;
+        }
+        case 'move-out':
+            if (!FolderManager.isRootView()) {
+                const itemToMove = currentTiles.splice(activeMenuIndex, 1)[0];
+                const path = FolderManager.getCurrentPath();
+                const parentPath = path.slice(0, -1);
+                let parentList = tiles;
+                for (const idx of parentPath) {
+                    parentList = parentList[idx].children;
+                }
+                parentList.unshift(itemToMove);
+                saveAndRender();
+            }
+            break;
+        case 'empty-folder':
+            if (tile.type === 'folder' && tile.children && tile.children.length > 0) {
+                const itemsToMove = tile.children.splice(0, tile.children.length);
+                const path = FolderManager.getCurrentPath();
+                let parentList = tiles;
+                for (const idx of path) {
+                    parentList = parentList[idx].children;
+                }
+                parentList.push(...itemsToMove);
+                saveAndRender();
+            }
             break;
         case 'edit':
             const globalIndex = tiles.findIndex(t => t === tile);

@@ -75,10 +75,46 @@ export const FolderManager = {
         if (tile.type === 'folder') {
             node.classList.add('folder');
             node.querySelector('.url').textContent = `${tile.children.length} elemento(s)`;
+            
+            // Render 2x2 mini icons grid (reemplazar img por div porque img no soporta innerHTML)
+            const imgThumb = node.querySelector('.thumb');
+            const thumbEl = document.createElement('div');
+            thumbEl.className = imgThumb.className;
+            imgThumb.parentNode.replaceChild(thumbEl, imgThumb);
+            if (tile.children && tile.children.length > 0) {
+                const maxIcons = Math.min(tile.children.length, 4);
+                let iconsHTML = '';
+                for (let i = 0; i < maxIcons; i++) {
+                    const child = tile.children[i];
+                    let iconSrc = child.customIcon;
+                    if (!iconSrc) {
+                        if (child.type === 'link') {
+                            try {
+                                const urlObj = new URL(child.url);
+                                iconSrc = `https://www.google.com/s2/favicons?sz=64&domain=${urlObj.hostname}`;
+                            } catch (e) {
+                                iconSrc = getDynamicFallbackIcon(child.name || child.url);
+                            }
+                        } else if (child.type === 'folder') {
+                            // Si hay una carpeta anidada, usamos un ícono genérico
+                            iconSrc = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"%3E%3C/path%3E%3C/svg%3E';
+                        }
+                    }
+                    if (iconSrc) {
+                        iconsHTML += `<img class="mini-icon" src="${iconSrc}" alt="" loading="lazy" />`;
+                    }
+                }
+                thumbEl.innerHTML = `<div class="folder-grid">${iconsHTML}</div>`;
+                thumbEl.style.backgroundImage = 'none'; // Disable the default SVG folder background
+                thumbEl.style.padding = '4px'; // Remove the large padding used for the SVG so the grid fits
+            }
+
             node.setAttribute('aria-label', `${tile.name}, carpeta`);
             node.removeAttribute('target');
             node.removeAttribute('rel');
             node.addEventListener('click', (e) => {
+                // Si el clic fue en el botón "more-btn", no navegamos
+                if (e.target.closest('.more-btn')) return;
                 e.preventDefault();
                 viewPath.push(index);
                 renderTiles(); // Assumes renderTiles is a global function

@@ -306,6 +306,7 @@ let dragOffsetX = 0;            // Offset del cursor dentro del tile
 let dragOffsetY = 0;
 let dragFromIndex = -1;         // Índice original del tile arrastrado
 let folderDropTarget = null;    // Referencia al tile carpeta sobre el que estamos
+let backBtnDropTarget = null;   // Referencia al botón Atrás si estamos sobre él
 let isDragging = false;
 let cachedTilesContainer = null; // Cache del contenedor
 let cachedTileRects = [];       // Posiciones cacheadas de los tiles
@@ -412,13 +413,31 @@ function dragAnimationLoop() {
     const gy = lastMouseY - dragOffsetY;
     dragGhost.style.transform = `translate3d(${gx}px, ${gy}px, 0) rotate(2deg) scale(1.04)`;
 
-    // 2. Detectar carpeta bajo el cursor
+    // 2. Detectar drop targets bajo el cursor (botón Atrás y carpetas)
     const elementBelow = document.elementFromPoint(lastMouseX, lastMouseY);
+    
+    // --- Botón Atrás ---
+    const backBtnBelow = elementBelow?.closest?.('#backBtn');
+    if (backBtnDropTarget && backBtnDropTarget !== backBtnBelow) {
+        backBtnDropTarget.classList.remove('drag-over-back');
+        backBtnDropTarget = null;
+        dragPlaceholder.style.display = ''; // Restaurar placeholder
+    }
+    if (backBtnBelow && !FolderManager.isRootView()) {
+        backBtnDropTarget = backBtnBelow;
+        backBtnBelow.classList.add('drag-over-back');
+        dragPlaceholder.style.display = 'none'; // Ocultar placeholder
+        rafId = requestAnimationFrame(dragAnimationLoop);
+        return;
+    }
+
+    // --- Carpetas y Links ---
     const tileBelow = elementBelow?.closest?.('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)');
 
     if (folderDropTarget && folderDropTarget !== tileBelow) {
         folderDropTarget.classList.remove('drag-over-folder');
         folderDropTarget = null;
+        dragPlaceholder.style.display = ''; // Restaurar placeholder
     }
 
     if (tileBelow) {
@@ -426,13 +445,34 @@ function dragAnimationLoop() {
         const currentTiles = FolderManager.getTilesForCurrentView(tiles);
         const tileData = currentTiles[tileIdx];
 
-        if (tileData && tileData.type === 'folder') {
-            folderDropTarget = tileBelow;
-            tileBelow.classList.add('drag-over-folder');
-            rafId = requestAnimationFrame(dragAnimationLoop);
-            return;
+        if (tileData) {
+            let isDropTarget = false;
+            
+            if (tileData.type === 'folder') {
+                isDropTarget = true; // Carpetas siempre aceptan drops
+            } else if (tileData.type === 'link') {
+                // Para crear carpeta sobre un link, debemos estar cerca del centro
+                const rect = tileBelow.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                // Si estamos en un radio de ~35px del centro
+                if (Math.hypot(lastMouseX - cx, lastMouseY - cy) < 35) {
+                    isDropTarget = true;
+                }
+            }
+
+            if (isDropTarget) {
+                folderDropTarget = tileBelow;
+                tileBelow.classList.add('drag-over-folder');
+                dragPlaceholder.style.display = 'none'; // Ocultar placeholder
+                rafId = requestAnimationFrame(dragAnimationLoop);
+                return;
+            }
         }
     }
+
+    // Asegurar que el placeholder sea visible si no estamos sobre un target
+    dragPlaceholder.style.display = '';
 
     // 3. Encontrar tile más cercano usando cache (sin reflow)
     let closestEntry = null;
@@ -498,17 +538,57 @@ function handleTileDrop(e) {
     const currentTileList = FolderManager.getTilesForCurrentView(tiles);
     const fromIndex = dragFromIndex;
 
-    // Caso 1: Soltar sobre una carpeta
-    if (folderDropTarget) {
-        const folderIdx = Number(folderDropTarget.dataset.idx);
-        const folderData = currentTileList[folderIdx];
+    // Caso 1: Soltar sobre el botón Atrás (mover elemento al padre)
+    if (backBtnDropTarget && !FolderManager.isRootView()) {
+        const item = currentTileList.splice(fromIndex, 1)[0];
         
-        if (folderData && folderData.type === 'folder') {
+        // Obtener la ruta de la carpeta padre
+        const path = FolderManager.getCurrentPath();
+        const parentPath = path.slice(0, -1);
+        
+        // Navegar desde la raíz para obtener la lista de tiles del padre
+        let parentList = tiles;
+        for (const idx of parentPath) {
+            parentList = parentList[idx].children;
+        }
+        
+        // Añadir el item a la carpeta padre
+        parentList.unshift(item);
+        
+        cleanupDrag();
+        saveAndRender();
+        return;
+    }
+
+    // Caso 2: Soltar sobre una carpeta o link (para crear carpeta)
+    if (folderDropTarget) {
+        const targetIdx = Number(folderDropTarget.dataset.idx);
+        const targetData = currentTileList[targetIdx];
+        
+        if (targetData) {
+            // Extraer el tile arrastrado
             const item = currentTileList.splice(fromIndex, 1)[0];
-            if (!folderData.children) folderData.children = [];
-            folderData.children.unshift(item);
+            
+            // Recalcular índice del objetivo porque hicimos splice() antes
+            const newTargetIdx = fromIndex < targetIdx ? targetIdx - 1 : targetIdx;
+            
+            if (targetData.type === 'folder') {
+                // Añadir a carpeta existente
+                const folderRef = currentTileList[newTargetIdx];
+                if (!folderRef.children) folderRef.children = [];
+                folderRef.children.unshift(item);
+            } else if (targetData.type === 'link') {
+                // Crear nueva carpeta combinando ambos
+                const linkRef = currentTileList[newTargetIdx];
+                currentTileList[newTargetIdx] = {
+                    type: 'folder',
+                    name: 'Nueva Carpeta',
+                    children: [item, linkRef]
+                };
+            }
+            
             cleanupDrag();
-            saveAndRender(); // Necesita re-render completo porque el tile desaparece
+            saveAndRender(); // Necesita re-render completo
             return;
         }
     }
