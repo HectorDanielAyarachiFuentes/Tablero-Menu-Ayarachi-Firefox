@@ -46,3 +46,61 @@ body.loading #contextMenu,
 body.loading .weather-widget-fixed {
   display: none !important;
 }
+
+/* 
+ * ANTI-FLASH CRÍTICO: Ocultar el panel de configuración, modal y overlay ANTES de que
+ * panels.css cargue (panels.css se carga de forma diferida ~500ms después).
+ * Sin esto, estos elementos aparecen brevemente visibles en su posición normal.
+ */
+#settings {
+  position: fixed;
+  visibility: hidden;
+  transform: translateX(calc(100% + 40px));
+  pointer-events: none;
+}
+
+#settings[aria-hidden="false"] {
+  visibility: visible;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+#modal {
+  position: fixed;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#modal[aria-hidden="false"] {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#overlay[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#contextMenu {
+  position: fixed;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#contextMenu:not([hidden]) {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
