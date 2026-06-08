@@ -34,55 +34,49 @@ async function handleSyncBookmarks() {
 
     try {
         const bookmarkTreeNodes = await new Promise(resolve => chrome.bookmarks.getTree(resolve));
-        const bookmarksToSync = [];
-        
-        function processNodes(nodes) {
-            for (const node of nodes) {
-                if (node.url) {
-                    // Ignorar URLs internas de Chrome
-                    if (!node.url.startsWith('chrome://') && !node.url.startsWith('about:')) {
-                        bookmarksToSync.push({ name: node.title, url: node.url });
-                    }
-                }
-                if (node.children) {
-                    processNodes(node.children);
-                }
-            }
-        }
-        
-        processNodes(bookmarkTreeNodes);
-        
-        if (bookmarksToSync.length === 0) {
+        const rootNode = bookmarkTreeNodes[0];
+        if (!rootNode || !rootNode.children) {
             alert('No se encontraron marcadores válidos para sincronizar.');
             return;
         }
 
-        const existingUrls = new Set();
-        function collectUrls(items) {
-            items.forEach(item => {
-                if (item.url) existingUrls.add(item.url);
-                if (item.children) collectUrls(item.children);
-            });
-        }
-        collectUrls(tiles);
-
-        let addedCount = 0;
-        bookmarksToSync.forEach(bm => {
-            if (!existingUrls.has(bm.url)) {
-                tiles.push({
-                    type: 'link',
-                    name: bm.name || 'Sin título',
-                    url: bm.url,
-                    icon: ''
-                });
-                addedCount++;
+        const rootChildren = rootNode.children;
+        const itemsToMerge = [];
+        
+        for (const node of rootChildren) {
+            // Identificar la barra de marcadores (normalmente id: "1" o por texto alternativo)
+            const isBookmarksBar = node.id === '1' || 
+                                   node.title.toLowerCase().includes('bar') || 
+                                   node.title.toLowerCase().includes('toolbar') ||
+                                   node.title.toLowerCase().includes('barra');
+            
+            if (isBookmarksBar) {
+                // Los hijos de la barra de marcadores se importan directamente en la raíz para acceso inmediato
+                if (node.children) {
+                    const mappedChildren = mapChromeNodes(node.children);
+                    itemsToMerge.push(...mappedChildren);
+                }
+            } else {
+                // Otras carpetas raíz se importan como carpetas normales en la raíz
+                const mappedFolder = mapChromeNode(node);
+                if (mappedFolder) {
+                    itemsToMerge.push(mappedFolder);
+                }
             }
-        });
+        }
+
+        if (itemsToMerge.length === 0) {
+            alert('No se encontraron marcadores válidos para sincronizar.');
+            return;
+        }
+
+        // Fusión profunda de marcadores en el array actual
+        const { addedCount } = mergeTileLists(tiles, itemsToMerge);
 
         if (addedCount > 0) {
             saveAndRender();
             renderEditor();
-            alert(`¡Sincronización completada! Se añadieron ${addedCount} nuevos accesos de tus marcadores.`);
+            alert(`¡Sincronización completada! Se añadieron ${addedCount} nuevos accesos de tus marcadores manteniendo la estructura de carpetas.`);
         } else {
             alert('Todos tus marcadores ya están presentes en el tablero.');
         }
@@ -90,6 +84,89 @@ async function handleSyncBookmarks() {
         console.error('Error al sincronizar marcadores:', error);
         alert('Hubo un error al intentar sincronizar los marcadores.');
     }
+}
+
+// Mapea un nodo de marcadores del navegador a nuestra estructura de tiles
+function mapChromeNode(node) {
+    if (node.url) {
+        // Ignorar URLs internas del navegador
+        if (!node.url.startsWith('chrome://') && !node.url.startsWith('about:')) {
+            return {
+                type: 'link',
+                name: node.title || 'Sin título',
+                url: node.url,
+                icon: ''
+            };
+        }
+        return null;
+    }
+    if (node.children) {
+        const mappedChildren = mapChromeNodes(node.children);
+        if (mappedChildren.length > 0) {
+            return {
+                type: 'folder',
+                name: node.title || 'Nueva Carpeta',
+                children: mappedChildren
+            };
+        }
+    }
+    return null;
+}
+
+// Mapea una lista de nodos de marcadores
+function mapChromeNodes(nodes) {
+    const result = [];
+    for (const node of nodes) {
+        const mapped = mapChromeNode(node);
+        if (mapped) {
+            result.push(mapped);
+        }
+    }
+    return result;
+}
+
+// Realiza una fusión profunda de tiles (enlaces y carpetas) evitando duplicados
+function mergeTileLists(targetList, sourceList) {
+    let addedCount = 0;
+    
+    for (const sourceItem of sourceList) {
+        if (sourceItem.type === 'link') {
+            // Comprobar si la URL ya existe en el nivel actual del targetList
+            const exists = targetList.some(item => item.type === 'link' && item.url === sourceItem.url);
+            if (!exists) {
+                targetList.push(sourceItem);
+                addedCount++;
+            }
+        } else if (sourceItem.type === 'folder') {
+            // Comprobar si una carpeta con el mismo nombre ya existe en el nivel actual
+            const existingFolder = targetList.find(item => item.type === 'folder' && item.name === sourceItem.name);
+            if (existingFolder) {
+                // Fusionar los hijos recursivamente
+                if (!existingFolder.children) existingFolder.children = [];
+                const mergeResult = mergeTileLists(existingFolder.children, sourceItem.children || []);
+                addedCount += mergeResult.addedCount;
+            } else {
+                // La carpeta no existe en este nivel, se añade completa
+                targetList.push(sourceItem);
+                
+                // Contar todos los enlaces contenidos en esta nueva carpeta
+                function countLinksInFolder(folder) {
+                    let count = 0;
+                    for (const child of folder.children || []) {
+                        if (child.type === 'link') {
+                            count++;
+                        } else if (child.type === 'folder') {
+                            count += countLinksInFolder(child);
+                        }
+                    }
+                    return count;
+                }
+                addedCount += countLinksInFolder(sourceItem);
+            }
+        }
+    }
+    
+    return { addedCount };
 }
 
 export function renderEditor() {

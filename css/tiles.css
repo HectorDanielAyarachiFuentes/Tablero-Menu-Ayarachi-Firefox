@@ -4,26 +4,20 @@
 
 .tiles {
   display: grid;
-  /* Max 4 columnas, centrado - estilo Opera Speed Dial */
-  grid-template-columns: repeat(4, 1fr);
+  /* Auto-fill columns dynamically to prevent stretching and handle multiple synced bookmarks elegantly */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
   width: 100%;
-  max-width: 960px;
+  max-width: 1400px;
   margin: 6px auto 0;
   perspective: 800px;
 }
 
-/* Tablet: 3 columnas */
-@media (max-width: 900px) {
-  .tiles {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 /* Móvil: 2 columnas */
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .tiles {
-    grid-template-columns: repeat(2, 1fr)
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 }
 
@@ -44,6 +38,10 @@
   color: var(--panel-text-color);
   outline: none;
   will-change: transform, background-color, box-shadow;
+  /* Limit tile width to prevent them from stretching too much on wider screens */
+  max-width: 280px;
+  width: 100%;
+  justify-self: center;
 }
 
 a.tile {
