@@ -297,6 +297,7 @@ function handleTileClick(e) {
 
 // =========================================================
 // DRAG & DROP ESTILO OPERA - Sistema con placeholder gap
+// Optimizado para rendimiento: GPU compositor + rAF
 // =========================================================
 
 let dragGhost = null;           // Clon flotante que sigue al cursor
@@ -304,21 +305,13 @@ let dragPlaceholder = null;     // Espacio vacío en el grid
 let dragOffsetX = 0;            // Offset del cursor dentro del tile
 let dragOffsetY = 0;
 let dragFromIndex = -1;         // Índice original del tile arrastrado
-let currentPlaceholderIndex = -1; // Posición actual del placeholder en el DOM
 let folderDropTarget = null;    // Referencia al tile carpeta sobre el que estamos
 let isDragging = false;
-
-// Función throttle local para limitar cálculos de posición
-function dragThrottle(fn, ms) {
-    let lastCall = 0;
-    return function(...args) {
-        const now = Date.now();
-        if (now - lastCall >= ms) {
-            lastCall = now;
-            fn.apply(this, args);
-        }
-    };
-}
+let cachedTilesContainer = null; // Cache del contenedor
+let cachedTileRects = [];       // Posiciones cacheadas de los tiles
+let rafId = 0;                  // ID del requestAnimationFrame activo
+let lastMouseX = 0;             // Última posición conocida del mouse
+let lastMouseY = 0;
 
 function handleTileDragStart(e) {
     const tile = e.target.closest('.tile:not(.tile-add):not(.drag-placeholder)');
@@ -327,8 +320,9 @@ function handleTileDragStart(e) {
     isDragging = true;
     dragTileSrcEl = tile;
     dragFromIndex = Number(tile.dataset.idx);
+    cachedTilesContainer = $('#tiles');
 
-    // Usar una imagen de drag transparente (1x1px) para ocultar el fantasma nativo
+    // Imagen de drag transparente (1x1px) para ocultar el fantasma nativo
     const emptyImg = new Image();
     emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     e.dataTransfer.setDragImage(emptyImg, 0, 0);
@@ -340,34 +334,40 @@ function handleTileDragStart(e) {
     dragOffsetX = e.clientX - rect.left;
     dragOffsetY = e.clientY - rect.top;
 
-    // Crear el clon fantasma flotante
+    // Crear el clon fantasma flotante (GPU-optimizado)
     createDragGhost(tile, e.clientX, e.clientY);
 
     // Crear el placeholder del mismo tamaño
     createPlaceholder(tile);
 
-    // Marcar el tile como arrastrado y activar modo drag en el contenedor
-    requestAnimationFrame(() => {
-        tile.classList.add('dragging');
-        $('#tiles').classList.add('dragging-active');
-    });
+    // Marcar el tile como arrastrado
+    tile.classList.add('dragging');
+    cachedTilesContainer.classList.add('dragging-active');
 
-    currentPlaceholderIndex = dragFromIndex;
+    // Cachear posiciones de tiles DESPUÉS de que el dragging tile se oculte
+    requestAnimationFrame(() => {
+        cacheTilePositions();
+    });
 }
 
 function createDragGhost(tile, x, y) {
-    // Remover ghost anterior si existe
     dragGhost?.remove();
 
     dragGhost = tile.cloneNode(true);
     dragGhost.className = 'tile drag-ghost';
-    // Copiar estilos computados relevantes
+
     const computedStyle = getComputedStyle(tile);
-    dragGhost.style.width = computedStyle.width;
-    dragGhost.style.height = computedStyle.height;
-    dragGhost.style.left = (x - dragOffsetX) + 'px';
-    dragGhost.style.top = (y - dragOffsetY) + 'px';
-    dragGhost.style.background = computedStyle.background || 'var(--glass-bg)';
+    dragGhost.style.cssText = `
+        position: fixed;
+        left: 0; top: 0;
+        width: ${computedStyle.width};
+        height: ${computedStyle.height};
+        background: ${computedStyle.background || 'var(--glass-bg)'};
+        pointer-events: none;
+        z-index: 9999;
+        will-change: transform;
+        transform: translate3d(${x - dragOffsetX}px, ${y - dragOffsetY}px, 0) rotate(2deg) scale(1.04);
+    `;
 
     document.body.appendChild(dragGhost);
 }
@@ -377,7 +377,6 @@ function createPlaceholder(tile) {
 
     dragPlaceholder = document.createElement('div');
     dragPlaceholder.className = 'drag-placeholder';
-    // Mismo tamaño que el tile
     const computedStyle = getComputedStyle(tile);
     dragPlaceholder.style.minHeight = computedStyle.height;
 
@@ -385,72 +384,97 @@ function createPlaceholder(tile) {
     tile.parentNode.insertBefore(dragPlaceholder, tile.nextSibling);
 }
 
-// Handler optimizado con throttle para evitar cálculos excesivos
-const throttledDragMove = dragThrottle(function(e) {
+// Cachear posiciones de todos los tiles una vez (evita reflow en cada frame)
+function cacheTilePositions() {
+    if (!cachedTilesContainer) return;
+    const allTiles = cachedTilesContainer.querySelectorAll('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)');
+    cachedTileRects = [];
+    for (const t of allTiles) {
+        const rect = t.getBoundingClientRect();
+        cachedTileRects.push({
+            el: t,
+            cx: rect.left + rect.width / 2,
+            cy: rect.top + rect.height / 2,
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom
+        });
+    }
+}
+
+// Loop de animación con rAF - sincronizado con el monitor
+function dragAnimationLoop() {
     if (!isDragging || !dragGhost || !dragPlaceholder) return;
 
-    // Mover el ghost con el cursor
-    dragGhost.style.left = (e.clientX - dragOffsetX) + 'px';
-    dragGhost.style.top = (e.clientY - dragOffsetY) + 'px';
+    // 1. Mover ghost con transform3d (solo compositor, sin layout)
+    const gx = lastMouseX - dragOffsetX;
+    const gy = lastMouseY - dragOffsetY;
+    dragGhost.style.transform = `translate3d(${gx}px, ${gy}px, 0) rotate(2deg) scale(1.04)`;
 
-    // Buscar sobre qué tile estamos
-    const tilesContainer = $('#tiles');
-    const allTiles = Array.from(tilesContainer.querySelectorAll('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)'));
-    
-    // Limpiar estado de carpeta si ya no estamos sobre ella
-    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+    // 2. Detectar carpeta bajo el cursor
+    const elementBelow = document.elementFromPoint(lastMouseX, lastMouseY);
     const tileBelow = elementBelow?.closest?.('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)');
-    
+
     if (folderDropTarget && folderDropTarget !== tileBelow) {
         folderDropTarget.classList.remove('drag-over-folder');
         folderDropTarget = null;
     }
-    
-    // Verificar si estamos sobre una carpeta
+
     if (tileBelow) {
         const tileIdx = Number(tileBelow.dataset.idx);
         const currentTiles = FolderManager.getTilesForCurrentView(tiles);
         const tileData = currentTiles[tileIdx];
-        
+
         if (tileData && tileData.type === 'folder') {
             folderDropTarget = tileBelow;
             tileBelow.classList.add('drag-over-folder');
-            return; // No mover el placeholder si estamos sobre una carpeta
+            rafId = requestAnimationFrame(dragAnimationLoop);
+            return;
         }
     }
 
-    // Calcular la mejor posición para el placeholder
-    let closestTile = null;
+    // 3. Encontrar tile más cercano usando cache (sin reflow)
+    let closestEntry = null;
     let closestDist = Infinity;
     let insertBefore = true;
 
-    for (const t of allTiles) {
-        const rect = t.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
-
+    for (const entry of cachedTileRects) {
+        const dx = lastMouseX - entry.cx;
+        const dy = lastMouseY - entry.cy;
+        const dist = dx * dx + dy * dy; // Evitar sqrt innecesario
         if (dist < closestDist) {
             closestDist = dist;
-            closestTile = t;
-            // Determinar si insertar antes o después
-            insertBefore = e.clientX < centerX || (e.clientX >= centerX && e.clientY < centerY);
+            closestEntry = entry;
+            insertBefore = lastMouseX < entry.cx || (lastMouseX >= entry.cx && lastMouseY < entry.cy);
         }
     }
 
-    if (closestTile) {
-        const targetRef = insertBefore ? closestTile : closestTile.nextSibling;
-        // Solo mover si la posición realmente cambió
-        if (dragPlaceholder.nextSibling !== targetRef || dragPlaceholder.previousSibling !== (insertBefore ? null : closestTile)) {
-            tilesContainer.insertBefore(dragPlaceholder, targetRef);
+    // 4. Mover placeholder solo si cambió la posición
+    if (closestEntry) {
+        const targetRef = insertBefore ? closestEntry.el : closestEntry.el.nextSibling;
+        if (dragPlaceholder.nextSibling !== targetRef) {
+            cachedTilesContainer.insertBefore(dragPlaceholder, targetRef);
+            // Recachear posiciones después de mover el placeholder (siguiente frame)
+            requestAnimationFrame(cacheTilePositions);
         }
     }
-}, 50); // 50ms throttle = ~20fps para cálculos de posición
+
+    rafId = requestAnimationFrame(dragAnimationLoop);
+}
 
 function handleTileDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    throttledDragMove(e);
+
+    // Solo guardar coordenadas - el rAF loop se encarga del resto
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+
+    // Iniciar loop de animación si no está corriendo
+    if (!rafId) {
+        rafId = requestAnimationFrame(dragAnimationLoop);
+    }
 }
 
 function handleTileDragLeave(e) {
@@ -470,7 +494,7 @@ function handleTileDrop(e) {
     e.preventDefault();
     if (!isDragging || !dragTileSrcEl) return;
 
-    const tilesContainer = $('#tiles');
+    const tilesContainer = cachedTilesContainer || $('#tiles');
     const currentTileList = FolderManager.getTilesForCurrentView(tiles);
     const fromIndex = dragFromIndex;
 
@@ -484,48 +508,73 @@ function handleTileDrop(e) {
             if (!folderData.children) folderData.children = [];
             folderData.children.unshift(item);
             cleanupDrag();
-            saveAndRender();
+            saveAndRender(); // Necesita re-render completo porque el tile desaparece
             return;
         }
     }
 
     // Caso 2: Reordenar según la posición del placeholder
     if (dragPlaceholder) {
-        // Calcular el nuevo índice basándose en la posición del placeholder
         const allVisible = Array.from(tilesContainer.querySelectorAll('.tile:not(.tile-add):not(.drag-placeholder), .drag-placeholder'));
         const newIndex = allVisible.indexOf(dragPlaceholder);
         
-        // Extraer el item del array
+        // Reordenar el array de datos
         const item = currentTileList.splice(fromIndex, 1)[0];
-        
-        // Calcular el índice correcto de inserción
-        // El placeholder ya no cuenta como tile, así que ajustamos
         let insertAt = newIndex;
-        // Si el tile arrastrado estaba antes del placeholder, no necesitamos ajustar
-        // Si estaba después, el splice ya redujo los índices
         if (fromIndex < newIndex) {
-            insertAt = newIndex - 1; // -1 porque ya removimos el item
+            insertAt = newIndex - 1;
         }
-        
-        // Clamp al rango válido
         insertAt = Math.max(0, Math.min(insertAt, currentTileList.length));
-        
         currentTileList.splice(insertAt, 0, item);
+
+        // Reordenar el DOM directamente SIN destruir/recrear nodos (evita parpadeo)
+        const draggedTile = dragTileSrcEl;
+        
+        // Limpiar antes de manipular DOM
+        cleanupDrag();
+
+        // Restaurar visibilidad del tile arrastrado
+        draggedTile.classList.remove('dragging');
+        draggedTile.style.position = '';
+        draggedTile.style.visibility = '';
+        draggedTile.style.width = '';
+        draggedTile.style.height = '';
+        draggedTile.style.overflow = '';
+        draggedTile.style.padding = '';
+        draggedTile.style.margin = '';
+        draggedTile.style.border = '';
+
+        // Mover el nodo DOM a la posición correcta
+        const allTilesAfter = Array.from(tilesContainer.querySelectorAll('.tile:not(.tile-add)'));
+        if (insertAt >= allTilesAfter.length) {
+            // Insertar antes del botón "+"
+            const addBtn = tilesContainer.querySelector('.tile-add');
+            tilesContainer.insertBefore(draggedTile, addBtn);
+        } else {
+            // Insertar antes del tile en la posición destino
+            const refTile = allTilesAfter[insertAt];
+            if (refTile && refTile !== draggedTile) {
+                tilesContainer.insertBefore(draggedTile, refTile);
+            }
+        }
+
+        // Actualizar data-idx de todos los tiles
+        tilesContainer.querySelectorAll('.tile:not(.tile-add)').forEach((t, i) => {
+            t.dataset.idx = i;
+        });
+
+        // Guardar sin re-renderizar (ya movimos el DOM)
+        saveTilesQuietly().then(() => showSaveStatus());
+
+        // Actualizar snapshot
+        if (FolderManager.isRootView()) {
+            localStorage.setItem('tiles_snapshot', tilesContainer.innerHTML);
+        }
+
+        return;
     }
 
     cleanupDrag();
-    saveAndRender();
-
-    // Animar el tile recién posicionado
-    requestAnimationFrame(() => {
-        const landedTile = tilesContainer.querySelector(`[data-idx="${currentTileList.indexOf(currentTileList.find(t => t === currentTileList[dragFromIndex]))}"]`);
-        // Aplicar animación de aterrizaje a todos los tiles brevemente
-        const allTiles = tilesContainer.querySelectorAll('.tile:not(.tile-add)');
-        allTiles.forEach(t => {
-            t.classList.add('drop-landing');
-            t.addEventListener('animationend', () => t.classList.remove('drop-landing'), { once: true });
-        });
-    });
 }
 
 function handleTileDragEnd() {
@@ -559,9 +608,18 @@ function cleanupDrag() {
         folderDropTarget = null;
     }
 
+    // Cancelar loop de animación
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+    }
+
     // Reset variables
     dragTileSrcEl = null;
     isDragging = false;
     dragFromIndex = -1;
-    currentPlaceholderIndex = -1;
+    cachedTilesContainer = null;
+    cachedTileRects = [];
+    lastMouseX = 0;
+    lastMouseY = 0;
 }

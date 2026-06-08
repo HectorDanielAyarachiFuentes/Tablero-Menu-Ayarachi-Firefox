@@ -4,14 +4,23 @@
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  /* Max 4 columnas, centrado - estilo Opera Speed Dial */
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   width: 100%;
-  max-width: 1100px;
+  max-width: 960px;
   margin: 6px auto 0;
   perspective: 800px;
 }
 
+/* Tablet: 3 columnas */
+@media (max-width: 900px) {
+  .tiles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Móvil: 2 columnas */
 @media (max-width: 640px) {
   .tiles {
     grid-template-columns: repeat(2, 1fr)
@@ -127,7 +136,10 @@ a.tile {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  /* Igualar altura de tiles normales: padding(20) + thumb(48) + thumb-padding(8) */
+  min-height: 76px;
+  padding: 10px;
   /* Border removed to prevent visual artifact */
   border: none !important;
   background: rgba(255, 255, 255, 0.03);

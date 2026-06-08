@@ -22,36 +22,32 @@
     border: 2px dashed rgba(var(--accent-color-rgb, 138, 43, 226), 0.4);
     border-radius: var(--panel-radius, 12px);
     background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.06);
-    box-shadow: inset 0 0 20px rgba(var(--accent-color-rgb, 138, 43, 226), 0.08);
     min-height: 68px;
-    transition: opacity 0.2s ease;
-    animation: placeholder-breathe 1.8s ease-in-out infinite;
     pointer-events: none;
+    /* Animación ligera: solo opacity (compositor-only) */
+    animation: placeholder-pulse 1.5s ease-in-out infinite;
+    will-change: opacity;
 }
 
-@keyframes placeholder-breathe {
-    0%, 100% {
-        border-color: rgba(var(--accent-color-rgb, 138, 43, 226), 0.3);
-        background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.04);
-    }
-    50% {
-        border-color: rgba(var(--accent-color-rgb, 138, 43, 226), 0.6);
-        background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.1);
-    }
+@keyframes placeholder-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
 }
 
 /* ---- Imagen fantasma flotante ---- */
 .drag-ghost {
     position: fixed;
+    left: 0;
+    top: 0;
     pointer-events: none;
     z-index: 9999;
     opacity: 0.85;
-    transform: scale(1.04) rotate(2deg);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45),
                 0 0 0 1px rgba(var(--accent-color-rgb, 138, 43, 226), 0.3);
     border-radius: var(--panel-radius, 12px);
-    transition: transform 0.12s ease-out, opacity 0.15s ease;
-    will-change: transform, left, top;
+    /* SIN transition en transform - movimiento instantáneo sin lag */
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 .drag-ghost.dropping {
