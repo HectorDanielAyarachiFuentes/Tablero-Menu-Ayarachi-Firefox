@@ -474,29 +474,30 @@ function dragAnimationLoop() {
     // Asegurar que el placeholder sea visible si no estamos sobre un target
     dragPlaceholder.style.display = '';
 
-    // 3. Encontrar tile más cercano usando cache (sin reflow)
-    let closestEntry = null;
-    let closestDist = Infinity;
-    let insertBefore = true;
-
-    for (const entry of cachedTileRects) {
-        const dx = lastMouseX - entry.cx;
-        const dy = lastMouseY - entry.cy;
-        const dist = dx * dx + dy * dy; // Evitar sqrt innecesario
-        if (dist < closestDist) {
-            closestDist = dist;
-            closestEntry = entry;
-            insertBefore = lastMouseX < entry.cx || (lastMouseX >= entry.cx && lastMouseY < entry.cy);
-        }
-    }
-
-    // 4. Mover placeholder solo si cambió la posición
-    if (closestEntry) {
-        const targetRef = insertBefore ? closestEntry.el : closestEntry.el.nextSibling;
-        if (dragPlaceholder.nextSibling !== targetRef) {
-            cachedTilesContainer.insertBefore(dragPlaceholder, targetRef);
-            // Recachear posiciones después de mover el placeholder (siguiente frame)
-            requestAnimationFrame(cacheTilePositions);
+    // 3. Reordenamiento basado en el elemento bajo el cursor (evita parpadeo)
+    const hoverTile = elementBelow?.closest('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)');
+    
+    if (hoverTile) {
+        const rect = hoverTile.getBoundingClientRect();
+        
+        // Hysteresis: evitar parpadeo requiriendo que el cursor entre un poco en el elemento
+        const padX = rect.width * 0.15;
+        const padY = rect.height * 0.15;
+        
+        if (lastMouseX > rect.left + padX && lastMouseX < rect.right - padX &&
+            lastMouseY > rect.top + padY && lastMouseY < rect.bottom - padY) {
+            
+            const isPlaceholderAfter = hoverTile.compareDocumentPosition(dragPlaceholder) & Node.DOCUMENT_POSITION_FOLLOWING;
+            
+            if (isPlaceholderAfter) {
+                if (dragPlaceholder.nextSibling !== hoverTile) {
+                    cachedTilesContainer.insertBefore(dragPlaceholder, hoverTile);
+                }
+            } else {
+                if (dragPlaceholder.nextSibling !== hoverTile.nextSibling) {
+                    cachedTilesContainer.insertBefore(dragPlaceholder, hoverTile.nextSibling);
+                }
+            }
         }
     }
 
