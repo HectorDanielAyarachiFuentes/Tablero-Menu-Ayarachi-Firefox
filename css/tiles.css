@@ -62,15 +62,8 @@ a.tile {
   overflow: hidden
 }
 
-.tile.dragging {
-  opacity: 0.4;
-}
+/* Estilos de drag & drop están en drag-drop.css */
 
-.tile.drag-over {
-  transform: scale(1.02);
-  /* Border removed - use box-shadow instead for visual feedback */
-  box-shadow: 0 0 0 2px var(--accent-color), 0 18px 40px rgba(0, 0, 0, 0.5);
-}
 
 .title {
   font-weight: 600;

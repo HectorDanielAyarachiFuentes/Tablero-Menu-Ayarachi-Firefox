@@ -295,75 +295,273 @@ function handleTileClick(e) {
     }
 }
 
-function handleTileDragStart(e) {
-    const tile = e.target.closest('.tile:not(.tile-add)');
-    if (tile) {
-        dragTileSrcEl = tile;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', tile.dataset.idx);
-        setTimeout(() => tile.classList.add('dragging'), 0);
-    }
+// =========================================================
+// DRAG & DROP ESTILO OPERA - Sistema con placeholder gap
+// =========================================================
+
+let dragGhost = null;           // Clon flotante que sigue al cursor
+let dragPlaceholder = null;     // Espacio vacío en el grid
+let dragOffsetX = 0;            // Offset del cursor dentro del tile
+let dragOffsetY = 0;
+let dragFromIndex = -1;         // Índice original del tile arrastrado
+let currentPlaceholderIndex = -1; // Posición actual del placeholder en el DOM
+let folderDropTarget = null;    // Referencia al tile carpeta sobre el que estamos
+let isDragging = false;
+
+// Función throttle local para limitar cálculos de posición
+function dragThrottle(fn, ms) {
+    let lastCall = 0;
+    return function(...args) {
+        const now = Date.now();
+        if (now - lastCall >= ms) {
+            lastCall = now;
+            fn.apply(this, args);
+        }
+    };
 }
+
+function handleTileDragStart(e) {
+    const tile = e.target.closest('.tile:not(.tile-add):not(.drag-placeholder)');
+    if (!tile) return;
+
+    isDragging = true;
+    dragTileSrcEl = tile;
+    dragFromIndex = Number(tile.dataset.idx);
+
+    // Usar una imagen de drag transparente (1x1px) para ocultar el fantasma nativo
+    const emptyImg = new Image();
+    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    e.dataTransfer.setDragImage(emptyImg, 0, 0);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tile.dataset.idx);
+
+    // Calcular offset del cursor dentro del tile
+    const rect = tile.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+
+    // Crear el clon fantasma flotante
+    createDragGhost(tile, e.clientX, e.clientY);
+
+    // Crear el placeholder del mismo tamaño
+    createPlaceholder(tile);
+
+    // Marcar el tile como arrastrado y activar modo drag en el contenedor
+    requestAnimationFrame(() => {
+        tile.classList.add('dragging');
+        $('#tiles').classList.add('dragging-active');
+    });
+
+    currentPlaceholderIndex = dragFromIndex;
+}
+
+function createDragGhost(tile, x, y) {
+    // Remover ghost anterior si existe
+    dragGhost?.remove();
+
+    dragGhost = tile.cloneNode(true);
+    dragGhost.className = 'tile drag-ghost';
+    // Copiar estilos computados relevantes
+    const computedStyle = getComputedStyle(tile);
+    dragGhost.style.width = computedStyle.width;
+    dragGhost.style.height = computedStyle.height;
+    dragGhost.style.left = (x - dragOffsetX) + 'px';
+    dragGhost.style.top = (y - dragOffsetY) + 'px';
+    dragGhost.style.background = computedStyle.background || 'var(--glass-bg)';
+
+    document.body.appendChild(dragGhost);
+}
+
+function createPlaceholder(tile) {
+    dragPlaceholder?.remove();
+
+    dragPlaceholder = document.createElement('div');
+    dragPlaceholder.className = 'drag-placeholder';
+    // Mismo tamaño que el tile
+    const computedStyle = getComputedStyle(tile);
+    dragPlaceholder.style.minHeight = computedStyle.height;
+
+    // Insertar justo después del tile arrastrado
+    tile.parentNode.insertBefore(dragPlaceholder, tile.nextSibling);
+}
+
+// Handler optimizado con throttle para evitar cálculos excesivos
+const throttledDragMove = dragThrottle(function(e) {
+    if (!isDragging || !dragGhost || !dragPlaceholder) return;
+
+    // Mover el ghost con el cursor
+    dragGhost.style.left = (e.clientX - dragOffsetX) + 'px';
+    dragGhost.style.top = (e.clientY - dragOffsetY) + 'px';
+
+    // Buscar sobre qué tile estamos
+    const tilesContainer = $('#tiles');
+    const allTiles = Array.from(tilesContainer.querySelectorAll('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)'));
+    
+    // Limpiar estado de carpeta si ya no estamos sobre ella
+    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+    const tileBelow = elementBelow?.closest?.('.tile:not(.dragging):not(.tile-add):not(.drag-placeholder)');
+    
+    if (folderDropTarget && folderDropTarget !== tileBelow) {
+        folderDropTarget.classList.remove('drag-over-folder');
+        folderDropTarget = null;
+    }
+    
+    // Verificar si estamos sobre una carpeta
+    if (tileBelow) {
+        const tileIdx = Number(tileBelow.dataset.idx);
+        const currentTiles = FolderManager.getTilesForCurrentView(tiles);
+        const tileData = currentTiles[tileIdx];
+        
+        if (tileData && tileData.type === 'folder') {
+            folderDropTarget = tileBelow;
+            tileBelow.classList.add('drag-over-folder');
+            return; // No mover el placeholder si estamos sobre una carpeta
+        }
+    }
+
+    // Calcular la mejor posición para el placeholder
+    let closestTile = null;
+    let closestDist = Infinity;
+    let insertBefore = true;
+
+    for (const t of allTiles) {
+        const rect = t.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+
+        if (dist < closestDist) {
+            closestDist = dist;
+            closestTile = t;
+            // Determinar si insertar antes o después
+            insertBefore = e.clientX < centerX || (e.clientX >= centerX && e.clientY < centerY);
+        }
+    }
+
+    if (closestTile) {
+        const targetRef = insertBefore ? closestTile : closestTile.nextSibling;
+        // Solo mover si la posición realmente cambió
+        if (dragPlaceholder.nextSibling !== targetRef || dragPlaceholder.previousSibling !== (insertBefore ? null : closestTile)) {
+            tilesContainer.insertBefore(dragPlaceholder, targetRef);
+        }
+    }
+}, 50); // 50ms throttle = ~20fps para cálculos de posición
 
 function handleTileDragOver(e) {
     e.preventDefault();
-    const targetTile = e.target.closest('.tile:not(.tile-add)');
-    if (!targetTile || targetTile === dragTileSrcEl) return;
-
-    // Limpiar clases de otros tiles
-    $$('.tile.drag-over, .tile.drag-over-folder').forEach(t => {
-        if (t !== targetTile) {
-            t.classList.remove('drag-over', 'drag-over-folder');
-        }
-    });
-
-    const toIndex = Number(targetTile.dataset.idx);
-    const currentTiles = FolderManager.getTilesForCurrentView(tiles);
-    const targetTileData = currentTiles[toIndex];
-
-    if (targetTileData.type === 'folder') {
-        targetTile.classList.add('drag-over-folder');
-    } else {
-        targetTile.classList.add('drag-over');
-    }
+    e.dataTransfer.dropEffect = 'move';
+    throttledDragMove(e);
 }
 
 function handleTileDragLeave(e) {
-    e.target.closest('.tile')?.classList.remove('drag-over', 'drag-over-folder');
+    // Limpiar estado de folder si salimos del tile
+    const tile = e.target.closest('.tile');
+    if (tile && tile === folderDropTarget) {
+        // Solo limpiar si realmente salimos (no si entramos a un hijo)
+        const related = e.relatedTarget?.closest?.('.tile');
+        if (related !== tile) {
+            tile.classList.remove('drag-over-folder');
+            folderDropTarget = null;
+        }
+    }
 }
 
 function handleTileDrop(e) {
     e.preventDefault();
-    const dropTarget = e.target.closest('.tile:not(.tile-add)');
-    if (!dragTileSrcEl || !dropTarget) return;
+    if (!isDragging || !dragTileSrcEl) return;
 
-    const fromIndex = Number(dragTileSrcEl.dataset.idx);
-    const toIndex = Number(dropTarget.dataset.idx);
+    const tilesContainer = $('#tiles');
     const currentTileList = FolderManager.getTilesForCurrentView(tiles);
-    const targetTileData = currentTileList[toIndex];
+    const fromIndex = dragFromIndex;
 
-    // Si soltamos sobre una carpeta
-    if (targetTileData.type === 'folder' && dragTileSrcEl !== dropTarget) {
-        const itemToMove = currentTileList.splice(fromIndex, 1)[0];
-        // Asegurarse de que la carpeta tiene un array de hijos
-        if (!targetTileData.children) {
-            targetTileData.children = [];
+    // Caso 1: Soltar sobre una carpeta
+    if (folderDropTarget) {
+        const folderIdx = Number(folderDropTarget.dataset.idx);
+        const folderData = currentTileList[folderIdx];
+        
+        if (folderData && folderData.type === 'folder') {
+            const item = currentTileList.splice(fromIndex, 1)[0];
+            if (!folderData.children) folderData.children = [];
+            folderData.children.unshift(item);
+            cleanupDrag();
+            saveAndRender();
+            return;
         }
-        targetTileData.children.unshift(itemToMove); // Añadir al principio de la carpeta
-        saveAndRender();
     }
-    // Si soltamos sobre otro acceso (para reordenar)
-    else if (dragTileSrcEl !== dropTarget) {
-        const fromIndex = Number(dragTileSrcEl.dataset.idx);
-        const toIndex = Number(dropTarget.dataset.idx);
-        const currentTiles = FolderManager.getTilesForCurrentView(tiles);
-        const item = currentTiles.splice(fromIndex, 1)[0];
-        currentTiles.splice(toIndex, 0, item);
-        saveAndRender();
+
+    // Caso 2: Reordenar según la posición del placeholder
+    if (dragPlaceholder) {
+        // Calcular el nuevo índice basándose en la posición del placeholder
+        const allVisible = Array.from(tilesContainer.querySelectorAll('.tile:not(.tile-add):not(.drag-placeholder), .drag-placeholder'));
+        const newIndex = allVisible.indexOf(dragPlaceholder);
+        
+        // Extraer el item del array
+        const item = currentTileList.splice(fromIndex, 1)[0];
+        
+        // Calcular el índice correcto de inserción
+        // El placeholder ya no cuenta como tile, así que ajustamos
+        let insertAt = newIndex;
+        // Si el tile arrastrado estaba antes del placeholder, no necesitamos ajustar
+        // Si estaba después, el splice ya redujo los índices
+        if (fromIndex < newIndex) {
+            insertAt = newIndex - 1; // -1 porque ya removimos el item
+        }
+        
+        // Clamp al rango válido
+        insertAt = Math.max(0, Math.min(insertAt, currentTileList.length));
+        
+        currentTileList.splice(insertAt, 0, item);
     }
+
+    cleanupDrag();
+    saveAndRender();
+
+    // Animar el tile recién posicionado
+    requestAnimationFrame(() => {
+        const landedTile = tilesContainer.querySelector(`[data-idx="${currentTileList.indexOf(currentTileList.find(t => t === currentTileList[dragFromIndex]))}"]`);
+        // Aplicar animación de aterrizaje a todos los tiles brevemente
+        const allTiles = tilesContainer.querySelectorAll('.tile:not(.tile-add)');
+        allTiles.forEach(t => {
+            t.classList.add('drop-landing');
+            t.addEventListener('animationend', () => t.classList.remove('drop-landing'), { once: true });
+        });
+    });
 }
 
 function handleTileDragEnd() {
-    $$('.tile').forEach(t => t.classList.remove('dragging', 'drag-over', 'drag-over-folder'));
+    cleanupDrag();
+}
+
+function cleanupDrag() {
+    // Remover ghost
+    if (dragGhost) {
+        dragGhost.classList.add('dropping');
+        setTimeout(() => {
+            dragGhost?.remove();
+            dragGhost = null;
+        }, 200);
+    }
+
+    // Remover placeholder
+    dragPlaceholder?.remove();
+    dragPlaceholder = null;
+
+    // Limpiar clases
+    if (dragTileSrcEl) {
+        dragTileSrcEl.classList.remove('dragging');
+    }
+    $$('.tile').forEach(t => t.classList.remove('drag-over', 'drag-over-folder'));
+    $('#tiles')?.classList.remove('dragging-active');
+
+    // Limpiar estado de carpeta
+    if (folderDropTarget) {
+        folderDropTarget.classList.remove('drag-over-folder');
+        folderDropTarget = null;
+    }
+
+    // Reset variables
     dragTileSrcEl = null;
+    isDragging = false;
+    dragFromIndex = -1;
+    currentPlaceholderIndex = -1;
 }

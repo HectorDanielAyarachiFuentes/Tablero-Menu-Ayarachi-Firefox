@@ -213,7 +213,7 @@ async function initHeavySystems(settings) {
 
 
 function loadNonCriticalCSS() {
-  ['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop-safe.css'].forEach(file => {
+  ['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop.css', 'css/drag-drop-safe.css'].forEach(file => {
     const link = document.createElement('link');
     link.rel = 'stylesheet'; link.href = file;
     document.head.appendChild(link);

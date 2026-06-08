@@ -171,48 +171,9 @@ export const FolderManager = {
             }
         }
 
-        // Drag/drop listeners
+        // Drag: solo setear datos, la lógica centralizada está en tiles.js
         node.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', index));
-        node.addEventListener('dragover', ev => {
-            ev.preventDefault();
-            ev.dataTransfer.dropEffect = 'move';
-            // Add visual feedback
-            if (tile.type === 'folder') {
-                ev.currentTarget.classList.add('drag-over-folder');
-            } else {
-                ev.currentTarget.classList.add('drag-over');
-            }
-        });
-        node.addEventListener('dragenter', () => {
-            if (tile.type === 'folder') node.classList.add('drag-over-folder');
-        });
-        node.addEventListener('dragleave', () => node.classList.remove('drag-over-folder', 'drag-over'));
-        node.addEventListener('drop', ev => {
-            ev.preventDefault();
-            ev.stopPropagation(); // ¡CLAVE! Evita que el evento se propague al contenedor #tiles
-            ev.currentTarget.classList.remove('drag-over-folder', 'drag-over');
-            const fromIndex = Number(ev.dataTransfer.getData('text/plain'));
-            const toIndex = index;
-            const currentLevel = FolderManager.getTilesForCurrentView(rootTiles);
 
-            if (fromIndex === toIndex) return; // No hacer nada si es el mismo índice
-
-            const item = currentLevel.splice(fromIndex, 1)[0];
-
-            if (tile.type === 'folder' && item !== tile) {
-                // Soltar sobre una carpeta: mover dentro de la carpeta
-                tile.children.unshift(item);
-            } else if (item !== tile) {
-                // Soltar sobre otro tile: reordenar
-                // Ajustar el índice de destino si el origen está antes
-                const adjustedToIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
-                currentLevel.splice(adjustedToIndex, 0, item);
-            } else {
-                // Se soltó sobre sí mismo, reinsertar en posición original
-                currentLevel.splice(fromIndex, 0, item);
-            }
-            saveAndRender();
-        });
 
         return node;
     },
