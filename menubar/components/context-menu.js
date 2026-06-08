@@ -75,7 +75,17 @@ export function showContextMenu(button, index) {
                     }
                 }
                 
-                btn.innerHTML = `<img src="${iconSrc}" width="16" height="16" style="margin-right:8px; border-radius:4px; object-fit:contain;"> <span>${child.name}</span>`;
+                const img = document.createElement('img');
+                img.src = iconSrc || '';
+                img.width = 16;
+                img.height = 16;
+                img.style.marginRight = '8px';
+                img.style.borderRadius = '4px';
+                img.style.objectFit = 'contain';
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = child.name;
+                btn.appendChild(img);
+                btn.appendChild(nameSpan);
                 li.appendChild(btn);
                 extractSubmenuList.appendChild(li);
             });

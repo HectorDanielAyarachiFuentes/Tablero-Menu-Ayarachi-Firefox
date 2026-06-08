@@ -89,7 +89,8 @@ export const FolderManager = {
             imgThumb.parentNode.replaceChild(thumbEl, imgThumb);
             if (tile.children && tile.children.length > 0) {
                 const maxIcons = Math.min(tile.children.length, 4);
-                let iconsHTML = '';
+                const folderGrid = document.createElement('div');
+                folderGrid.className = 'folder-grid';
                 for (let i = 0; i < maxIcons; i++) {
                     const child = tile.children[i];
                     let iconSrc = child.customIcon;
@@ -107,12 +108,17 @@ export const FolderManager = {
                         }
                     }
                     if (iconSrc) {
-                        iconsHTML += `<img class="mini-icon" src="${iconSrc}" alt="" loading="lazy" />`;
+                        const miniImg = document.createElement('img');
+                        miniImg.className = 'mini-icon';
+                        miniImg.src = iconSrc;
+                        miniImg.alt = '';
+                        miniImg.loading = 'lazy';
+                        folderGrid.appendChild(miniImg);
                     }
                 }
-                thumbEl.innerHTML = `<div class="folder-grid">${iconsHTML}</div>`;
-                thumbEl.style.backgroundImage = 'none'; // Disable the default SVG folder background
-                thumbEl.style.padding = '4px'; // Remove the large padding used for the SVG so the grid fits
+                thumbEl.appendChild(folderGrid);
+                thumbEl.style.backgroundImage = 'none';
+                thumbEl.style.padding = '4px';
             }
 
             node.setAttribute('aria-label', `${tile.name}, carpeta`);
