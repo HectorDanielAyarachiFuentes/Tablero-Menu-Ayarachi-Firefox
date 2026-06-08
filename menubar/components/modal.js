@@ -7,7 +7,7 @@ import { tiles, saveAndRender } from '../core/tiles.js';
 import { FolderManager } from '../core/carpetas.js';
 import { DOMPurify } from '../lib/lib.js';
 
-let editing = null;
+let editingPath = null;
 let debounceTimer;
 const MAX_NOTE_LENGTH = 10000; // Límite de 10,000 caracteres para el contenido de las notas.
 
@@ -42,13 +42,29 @@ export function initModal() {
     });
 }
 
-export function openModal(index = null, forceType = null) {
-    editing = index;
+function getTileByPath(pathArr) {
+    if (!pathArr || pathArr.length === 0) return null;
+    let current = tiles;
+    for (let i = 0; i < pathArr.length - 1; i++) {
+        current = current[pathArr[i]].children;
+    }
+    return current[pathArr[pathArr.length - 1]];
+}
+
+export function openModal(pathOrIndex = null, forceType = null) {
+    if (Array.isArray(pathOrIndex)) {
+        editingPath = pathOrIndex;
+    } else if (pathOrIndex !== null) {
+        editingPath = [pathOrIndex];
+    } else {
+        editingPath = null;
+    }
+
     const modal = $('#modal');
-    modal.dataset.editingIndex = index;
+    modal.dataset.editingIndex = editingPath ? editingPath.join(',') : 'null';
 
     $('#overlay').setAttribute('aria-hidden', 'false');
-    const tile = (index !== null) ? tiles[index] : null;
+    const tile = getTileByPath(editingPath);
     const type = forceType || tile?.type || 'link';
 
     // Reset state
@@ -58,107 +74,85 @@ export function openModal(index = null, forceType = null) {
     $('#modalUrl').placeholder = ' ';
     $('#modalContent').dataset.placeholder = ' ';
     $('#modalIconContainer').hidden = true;
-    $('#modalPreviewImg').hidden = true;
-    $('#modalUrl').required = true;
-    $('#modalIconPlaceholder').hidden = false;
 
-    if (tile) {
-        $('#modalTitle').textContent = `Editar ${type === 'note' ? 'Nota' : 'Acceso'}`;
-        $('#modalName').value = tile.name;
+    // Remove existing classes
+    modal.classList.remove('modal-type-link', 'modal-type-folder', 'modal-type-note');
+    modal.classList.add(`modal-type-${type}`);
 
-        if (tile.type === 'link') {
-            $('#modalUrlGroup').hidden = false;
-            $('#modalIconContainer').hidden = false;
+    if (type === 'link') {
+        $('#modalTitle').textContent = tile ? 'Editar Enlace' : 'Añadir Enlace';
+        $('#modalUrlGroup').hidden = false;
+        $('#modalIconContainer').hidden = false;
+        if (tile) {
+            $('#modalName').value = tile.name;
             $('#modalUrl').value = tile.url;
-            try {
-                const iconSrc = tile.customIcon || `https://www.google.com/s2/favicons?sz=128&domain=${new URL(tile.url).hostname}`;
-                updateIconPreview(iconSrc, !!tile.customIcon);
-            } catch (e) {
-                updateIconPreview('', false);
-            }
-        } else if (tile.type === 'note') {
-            $('#modalContentGroup').hidden = false;
-            const contentEl = $('#modalContent');
-            setHTML(contentEl, DOMPurify.sanitize(tile.content || ''));
-        } else if (tile.type === 'folder') {
-            // No hay campos adicionales para una carpeta, solo el nombre.
-            // El modal ya muestra el nombre por defecto.
-            $('#modalIconContainer').hidden = true;
-        }
-    } else {
-        $('#modalName').value = '';
-        $('#modalUrl').value = '';
-        $('#modalContent').textContent = '';
-        updateIconPreview('', false);
-
-        if (type === 'note') {
-            $('#modalTitle').textContent = 'Añadir Nueva Nota';
-            $('#modalContentGroup').hidden = false;
-        } else if (type === 'folder') {
-            $('#modalTitle').textContent = 'Añadir Nueva Carpeta';
-            $('#modalIconContainer').hidden = true;
-            $('#modalUrl').required = false; // La URL no es necesaria para una carpeta
-            $('#modalUrlGroup').hidden = true;
+            updateIconPreview(tile.customIcon || `https://www.google.com/s2/favicons?sz=128&domain=${new URL(tile.url).hostname}`, !!tile.customIcon);
         } else {
-            $('#modalTitle').textContent = 'Añadir Nuevo Acceso';
-            $('#modalUrlGroup').hidden = false;
-            $('#modalIconContainer').hidden = false;
+            $('#modalName').value = '';
+            $('#modalUrl').value = '';
+            updateIconPreview('', false);
         }
+    } else if (type === 'folder') {
+        $('#modalTitle').textContent = tile ? 'Editar Carpeta' : 'Crear Carpeta';
+        $('#modalName').value = tile ? tile.name : '';
+    } else if (type === 'note') {
+        $('#modalTitle').textContent = tile ? 'Editar Nota' : 'Crear Nota';
+        $('#modalContentGroup').hidden = false;
+        $('#modalName').placeholder = 'Título de la nota (opcional)';
+        $('#modalName').value = tile ? tile.name : '';
+        setHTML($('#modalContent'), tile ? (tile.content || '') : '');
     }
+
+    setTimeout(() => {
+        if (type === 'link' && !tile) $('#modalUrl').focus();
+        else $('#modalName').focus();
+    }, 50);
     modal.setAttribute('aria-hidden', 'false');
     setTimeout(() => modal.classList.add('is-open'), 10);
-    $('#modalName').focus();
 }
 
 export function closeModal() {
     const modal = $('#modal');
     modal.classList.remove('is-open');
-    editing = null;
-    // Solo ocultar el overlay si no hay otros paneles abiertos
-    if ($('#settings').getAttribute('aria-hidden') === 'true' && $('#notes-panel').getAttribute('aria-hidden') === 'true') {
-        $('#overlay').setAttribute('aria-hidden', 'true');
-    }
+    $('#overlay').setAttribute('aria-hidden', 'true');
+    editingPath = null;
     $('#modalIconFile').value = '';
+    $('#modalPreviewImg').dataset.isCustom = 'false';
     setTimeout(() => { modal.setAttribute('aria-hidden', 'true'); }, 300);
 }
 
 function handleModalSave() {
-    const rawName = $('#modalName').value.trim();
-    if (!rawName) return;
-    const name = escapeHTML(rawName);
+    const name = $('#modalName').value.trim();
+    const type = editingPath !== null ? getTileByPath(editingPath).type : 
+                 (!$('#modalUrlGroup').hidden ? 'link' : 
+                  !$('#modalContentGroup').hidden ? 'note' : 'folder');
 
-    const originalItem = editing !== null ? tiles[editing] : null;
-    let type;
-    if (originalItem) {
-        type = originalItem.type;
-    } else { // Nuevo elemento: determinar el tipo basándose en los campos visibles
-        if (!$('#modalContentGroup').hidden) {
-            type = 'note';
-        } else if (!$('#modalUrlGroup').hidden) {
-            type = 'link';
-        } else { // Ni el grupo de URL ni el de contenido están visibles, implica carpeta
-            type = 'folder';
-        }
-    }
-    if (editing !== null) {
-        tiles[editing].name = name;
-        if (tiles[editing].type === 'link') {
-            const url = $('#modalUrl').value.trim(); if (!url) { alert('Por favor, introduce una URL.'); return; } try { new URL(url); } catch (e) { alert('La URL introducida no es válida. Asegúrate de que el formato sea correcto (ej: https://www.google.com).'); return; } tiles[editing].url = url;
+    if (editingPath !== null) {
+        const tileToEdit = getTileByPath(editingPath);
+        if (tileToEdit.type === 'link') {
+            const url = $('#modalUrl').value.trim();
+            if (!url) { alert('Por favor, introduce una URL.'); return; }
+            try { new URL(url); } catch (e) { alert('La URL introducida no es válida.'); return; }
+            tileToEdit.name = name;
+            tileToEdit.url = url;
             if ($('#modalPreviewImg').src.startsWith('data:image')) {
-                tiles[editing].customIcon = $('#modalPreviewImg').src;
+                tileToEdit.customIcon = $('#modalPreviewImg').src;
+            } else if ($('#modalPreviewImg').hidden) {
+                tileToEdit.customIcon = null;
             }
-        } else if (tiles[editing].type === 'note') {
+        } else if (tileToEdit.type === 'note') {
             const content = $('#modalContent').innerHTML;
             if (content.length > MAX_NOTE_LENGTH) { alert(`El contenido de la nota excede el límite de ${MAX_NOTE_LENGTH} caracteres.`); return; }
-            tiles[editing].content = DOMPurify.sanitize(content);
-        } else if (tiles[editing].type === 'folder') {
-            // El nombre ya se actualizó, no hay más que hacer.
+            tileToEdit.content = DOMPurify.sanitize(content);
+            tileToEdit.name = name;
+        } else if (tileToEdit.type === 'folder') {
+            tileToEdit.name = name;
         }
     } else {
         if (type === 'link') {
             const url = $('#modalUrl').value.trim();
             if (!url) { alert('Por favor, introduce una URL.'); return; }
-            try { new URL(url); } catch (e) { alert('La URL introducida no es válida. Asegúrate de que el formato sea correcto (ej: https://www.google.com).'); return; }
+            try { new URL(url); } catch (e) { alert('La URL introducida no es válida.'); return; }
             const newLink = { type: 'link', name, url, favorite: false, customIcon: null };
             if ($('#modalPreviewImg').src.startsWith('data:image')) {
                 newLink.customIcon = $('#modalPreviewImg').src;

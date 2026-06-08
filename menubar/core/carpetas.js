@@ -3,6 +3,7 @@
  * Mantiene el estado de la ruta actual y proporciona métodos para navegar dentro y fuera de las carpetas.
  */
 import { renderTiles, saveAndRender, saveTilesQuietly } from './tiles.js';
+import { openModal } from '../components/modal.js';
 
 let viewPath = []; // Private state for folder path
 
@@ -64,6 +65,11 @@ export const FolderManager = {
         return currentLevel;
     },
 
+    navigateToFolder(index) {
+        viewPath.push(index);
+        renderTiles();
+    },
+
     // Renders a single tile (link or folder)
     renderTile(tile, index, tpl, rootTiles) {
         let node = tpl.content.firstElementChild.cloneNode(true);
@@ -112,13 +118,16 @@ export const FolderManager = {
             node.setAttribute('aria-label', `${tile.name}, carpeta`);
             node.removeAttribute('target');
             node.removeAttribute('rel');
-            node.addEventListener('click', (e) => {
-                // Si el clic fue en el botón "more-btn", no navegamos
-                if (e.target.closest('.more-btn')) return;
-                e.preventDefault();
-                viewPath.push(index);
-                renderTiles(); // Assumes renderTiles is a global function
-            });
+        } else if (tile.type === 'note') {
+            node.classList.add('is-note');
+            const thumbEl = node.querySelector('.thumb');
+            
+            // Generate a simple text icon for the note
+            const fallbackText = tile.name || 'Nota';
+            const FALLBACK_ICON = getDynamicFallbackIcon(fallbackText);
+            thumbEl.src = FALLBACK_ICON;
+            
+            node.querySelector('.url').textContent = 'Nota';
         } else { // link (default)
             // For links, we wrap the div from the template in an <a> tag
             const linkNode = document.createElement('a');

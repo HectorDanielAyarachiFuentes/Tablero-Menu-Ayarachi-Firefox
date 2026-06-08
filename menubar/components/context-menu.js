@@ -207,10 +207,11 @@ function handleContextMenuClick(e) {
                 saveAndRender();
             }
             break;
-        case 'edit':
-            const globalIndex = tiles.findIndex(t => t === tile);
-            openModal(globalIndex);
+        case 'edit': {
+            const itemPath = [...FolderManager.getCurrentPath(), activeMenuIndex];
+            openModal(itemPath);
             break;
+        }
         case 'delete':
             const deleteOption = targetButton;
             if (deleteOption.classList.contains('confirm-delete')) {

@@ -153,7 +153,8 @@ function loadMoreTiles() {
     const tilesEl = $('#tiles');
     const tpl = $('#tileTpl');
     const currentTiles = FolderManager.getTilesForCurrentView(tiles);
-    const displayableTiles = currentTiles.filter(t => t.type !== 'note');
+    const isRoot = FolderManager.isRootView();
+    const displayableTiles = currentTiles.filter(t => isRoot ? t.type !== 'note' : true);
     
     if (loadedCount >= displayableTiles.length) {
         // Ya se cargó todo, asegurar que aparezca el botón "+"
@@ -170,8 +171,9 @@ function loadMoreTiles() {
     const fragment = document.createDocumentFragment();
 
     nextBatch.forEach((t, i) => {
-        const realIndex = loadedCount + i;
-        const node = FolderManager.renderTile(t, realIndex, tpl, tiles);
+        const visualIndex = loadedCount + i;
+        const trueIndex = currentTiles.indexOf(t);
+        const node = FolderManager.renderTile(t, trueIndex, tpl, tiles);
         
         // Si es la primera carga (intercambio con snapshot), desactivamos la animación
         // para que no haya parpadeo al aparecer sobre la "foto" previa.
@@ -179,7 +181,7 @@ function loadMoreTiles() {
             node.style.animation = 'none';
             node.style.opacity = '1';
         } else {
-            node.style.setProperty('--animation-delay', `${(realIndex % PAGE_SIZE) * 15}ms`);
+            node.style.setProperty('--animation-delay', `${(visualIndex % PAGE_SIZE) * 15}ms`);
         }
         
         fragment.appendChild(node);
@@ -291,6 +293,11 @@ function handleTileClick(e) {
         const tileData = FolderManager.getTilesForCurrentView(tiles)[idx];
         if (tileData?.type === 'folder') {
             e.preventDefault(); // Prevent navigation for folders
+            FolderManager.navigateToFolder(idx);
+        } else if (tileData?.type === 'note') {
+            e.preventDefault();
+            const itemPath = [...FolderManager.getCurrentPath(), idx];
+            openModal(itemPath);
         }
     }
 }
@@ -450,13 +457,14 @@ function dragAnimationLoop() {
             
             if (tileData.type === 'folder') {
                 isDropTarget = true; // Carpetas siempre aceptan drops
-            } else if (tileData.type === 'link') {
-                // Para crear carpeta sobre un link, debemos estar cerca del centro
+            } else if (tileData.type === 'link' || tileData.type === 'note') {
+                // Para crear carpeta sobre un link/nota, debemos estar cerca del centro
                 const rect = tileBelow.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const cy = rect.top + rect.height / 2;
-                // Si estamos en un radio de ~35px del centro
-                if (Math.hypot(lastMouseX - cx, lastMouseY - cy) < 35) {
+                const rx = Math.abs(lastMouseX - (rect.left + rect.width / 2)) / (rect.width / 2);
+                const ry = Math.abs(lastMouseY - (rect.top + rect.height / 2)) / (rect.height / 2);
+                
+                // Zona central ampliada: 65% del tile (evita tener que apuntar perfecto)
+                if (rx < 0.65 && ry < 0.65) {
                     isDropTarget = true;
                 }
             }
@@ -464,7 +472,9 @@ function dragAnimationLoop() {
             if (isDropTarget) {
                 folderDropTarget = tileBelow;
                 tileBelow.classList.add('drag-over-folder');
-                dragPlaceholder.style.display = 'none'; // Ocultar placeholder
+                // Importante: No ocultar el dragPlaceholder aquí. Ocultarlo causaba que el
+                // layout se reacomodara (reflow), moviendo la carpeta debajo del cursor 
+                // y provocando un parpadeo infinito que impedía soltar la pestaña.
                 rafId = requestAnimationFrame(dragAnimationLoop);
                 return;
             }
@@ -578,7 +588,7 @@ function handleTileDrop(e) {
                 const folderRef = currentTileList[newTargetIdx];
                 if (!folderRef.children) folderRef.children = [];
                 folderRef.children.unshift(item);
-            } else if (targetData.type === 'link') {
+            } else if (targetData.type === 'link' || targetData.type === 'note') {
                 // Crear nueva carpeta combinando ambos
                 const linkRef = currentTileList[newTargetIdx];
                 currentTileList[newTargetIdx] = {
