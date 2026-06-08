@@ -445,6 +445,15 @@ async function handleImport(e) {
     reader.onload = async (e) => {
         try {
             const data = JSON.parse(e.target.result);
+            
+            // Si el JSON es un array, asumimos que es una lista de marcadores/tiles
+            if (Array.isArray(data)) {
+                setTiles([...data, ...tiles]);
+                saveAndRender();
+                alert(`${data.length} marcadores han sido importados y añadidos a tu tablero.`);
+                return;
+            }
+
             await storageSet(data);
             if (data.tiles) setTiles(data.tiles);
             if (data.trash) setTrash(data.trash);
