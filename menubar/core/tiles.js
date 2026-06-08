@@ -23,6 +23,7 @@ const PAGE_SIZE = 100;
 let loadedCount = 0;
 let intersectionObserver = null;
 let isLoading = false;
+let autoLoadTimer = null; // Timer para carga automática agresiva
 
 export function setTiles(newTiles) {
     tiles = newTiles;
@@ -100,7 +101,7 @@ function initInfiniteScroll() {
                 loadMoreTiles();
             }
         });
-    }, { rootMargin: '400px' });
+    }, { rootMargin: '600px' });
 }
 
 export function saveAndRender() {
@@ -133,16 +134,27 @@ export function renderTiles() {
     const tpl = $('#tileTpl');
     if (!tpl) return;
 
+    // Cancelar cualquier timer de carga automática pendiente
+    if (autoLoadTimer) {
+        clearTimeout(autoLoadTimer);
+        autoLoadTimer = null;
+    }
+
     // Resetear contador de carga
     loadedCount = 0;
     isLoading = false;
-    // Ya no limpiamos aquí para evitar parpadeo (lo hace loadMoreTiles de forma atómica)
-    // tilesEl.textContent = '';
-    
-    // Desconectar observador previo
-    if (intersectionObserver) intersectionObserver.disconnect();
 
+    // Limpiar DOM completamente para evitar estados inconsistentes
+    tilesEl.textContent = '';
+    
+    // Reinicializar observador para estar 100% seguros
+    initInfiniteScroll();
+
+    // Cargar primer batch
     loadMoreTiles();
+
+    // Carga agresiva: seguir cargando hasta que todos los tiles estén en pantalla
+    scheduleAutoLoad();
 
     $('#backBtn').hidden = FolderManager.isRootView();
 }
@@ -159,98 +171,98 @@ function loadMoreTiles() {
     if (loadedCount >= displayableTiles.length) {
         // Ya se cargó todo, asegurar que aparezca el botón "+"
         ensureAddButton(tilesEl, displayableTiles.length);
+        // Cancelar timer de auto-carga ya que terminamos
+        if (autoLoadTimer) {
+            clearTimeout(autoLoadTimer);
+            autoLoadTimer = null;
+        }
         return;
     }
 
     isLoading = true;
 
-    // Asegurar que el observador esté inicializado antes de usarlo
-    if (!intersectionObserver) initInfiniteScroll();
+    try {
+        // Asegurar que el observador esté inicializado antes de usarlo
+        if (!intersectionObserver) initInfiniteScroll();
 
-    const nextBatch = displayableTiles.slice(loadedCount, loadedCount + PAGE_SIZE);
-    const fragment = document.createDocumentFragment();
+        const nextBatch = displayableTiles.slice(loadedCount, loadedCount + PAGE_SIZE);
+        const fragment = document.createDocumentFragment();
 
-    nextBatch.forEach((t, i) => {
-        const visualIndex = loadedCount + i;
-        const trueIndex = currentTiles.indexOf(t);
-        const node = FolderManager.renderTile(t, trueIndex, tpl, tiles);
-        
-        // Si es la primera carga (intercambio con snapshot), desactivamos la animación
-        // para que no haya parpadeo al aparecer sobre la "foto" previa.
-        if (loadedCount === 0) {
-            node.style.animation = 'none';
-            node.style.opacity = '1';
-        } else {
+        nextBatch.forEach((t, i) => {
+            const visualIndex = loadedCount + i;
+            const trueIndex = currentTiles.indexOf(t);
+            const node = FolderManager.renderTile(t, trueIndex, tpl, tiles);
+            
             node.style.setProperty('--animation-delay', `${(visualIndex % PAGE_SIZE) * 15}ms`);
-        }
-        
-        fragment.appendChild(node);
-    });
+            
+            fragment.appendChild(node);
+        });
 
-    // Eliminar botón de añadir y centinela anteriores
-    $('.tile-add')?.remove();
-    const oldSentinel = $('#scroll-sentinel');
-    if (oldSentinel) {
-        intersectionObserver.unobserve(oldSentinel);
-        oldSentinel.remove();
-    }
-
-    // INTERCAMBIO INTELIGENTE: Para evitar el parpadeo de "recarga", si es la primera carga y
-    // el snapshot es igual a los datos reales, no destruimos el DOM.
-    if (loadedCount === 0) {
-        const currentTileNodes = Array.from(tilesEl.children).filter(n => n.classList.contains('tile') && !n.classList.contains('tile-add'));
-        let isIdentical = false;
-        
-        if (currentTileNodes.length === nextBatch.length) {
-            isIdentical = currentTileNodes.every((node, i) => {
-                const titleEl = node.querySelector('.title');
-                return titleEl && titleEl.textContent === nextBatch[i].name;
-            });
+        // Eliminar botón de añadir y centinela anteriores
+        $('.tile-add')?.remove();
+        const oldSentinel = $('#scroll-sentinel');
+        if (oldSentinel) {
+            intersectionObserver.unobserve(oldSentinel);
+            oldSentinel.remove();
         }
-        
-        if (isIdentical) {
-            // Actualizar índices por seguridad pero no reemplazar los elementos del DOM
-            currentTileNodes.forEach((node, i) => {
-                node.dataset.idx = loadedCount + i;
+
+        tilesEl.appendChild(fragment);
+        loadedCount += nextBatch.length;
+
+        // Si aún quedan más por cargar, añadir centinela
+        if (loadedCount < displayableTiles.length) {
+            const sentinel = document.createElement('div');
+            sentinel.id = 'scroll-sentinel';
+            sentinel.style.gridColumn = '1 / -1';
+            sentinel.style.height = '120px';
+            sentinel.style.width = '100%';
+            sentinel.style.opacity = '0';
+            sentinel.style.pointerEvents = 'none';
+            tilesEl.appendChild(sentinel);
+            
+            intersectionObserver.observe(sentinel);
+
+            // Verificación inmediata por si el sentinel ya es visible
+            requestAnimationFrame(() => {
+                const rect = sentinel.getBoundingClientRect();
+                if (rect.top < window.innerHeight + 600) {
+                    loadMoreTiles();
+                }
             });
         } else {
-            tilesEl.replaceChildren(fragment);
-        }
-    } else {
-        tilesEl.appendChild(fragment);
-    }
-    
-    // GUARDAR SNAPSHOT: Capturar el estado actual tras añadir nuevos tiles
-    if (FolderManager.isRootView()) {
-        localStorage.setItem('tiles_snapshot', tilesEl.innerHTML);
-    }
-
-    loadedCount += nextBatch.length;
-    isLoading = false;
-
-    // Si aún quedan más por cargar, añadir un centinela más robusto
-    if (loadedCount < displayableTiles.length) {
-        const sentinel = document.createElement('div');
-        sentinel.id = 'scroll-sentinel';
-        sentinel.style.gridColumn = '1 / -1';
-        sentinel.style.height = '100px';
-        sentinel.style.width = '100%';
-        sentinel.style.visibility = 'hidden';
-        sentinel.style.pointerEvents = 'none';
-        tilesEl.appendChild(sentinel);
-        
-        intersectionObserver.observe(sentinel);
-
-        // Verificación inmediata
-        requestAnimationFrame(() => {
-            const rect = sentinel.getBoundingClientRect();
-            if (rect.top < window.innerHeight + 400) {
-                loadMoreTiles();
+            ensureAddButton(tilesEl, loadedCount);
+            // Cancelar timer de auto-carga ya que terminamos
+            if (autoLoadTimer) {
+                clearTimeout(autoLoadTimer);
+                autoLoadTimer = null;
             }
-        });
-    } else {
-        ensureAddButton(tilesEl, loadedCount);
+        }
+    } finally {
+        isLoading = false;
     }
+}
+
+/**
+ * Programa una carga automática agresiva para garantizar que todos los tiles
+ * se carguen incluso si el IntersectionObserver o el scroll no disparan.
+ * Se re-programa a sí mismo hasta que todos los tiles estén cargados.
+ */
+function scheduleAutoLoad() {
+    if (autoLoadTimer) {
+        clearTimeout(autoLoadTimer);
+    }
+    autoLoadTimer = setTimeout(() => {
+        autoLoadTimer = null;
+        const currentTiles = FolderManager.getTilesForCurrentView(tiles);
+        const isRoot = FolderManager.isRootView();
+        const displayableTiles = currentTiles.filter(t => isRoot ? t.type !== 'note' : true);
+        
+        if (loadedCount < displayableTiles.length && !isLoading) {
+            loadMoreTiles();
+            // Reprogramar para seguir cargando
+            scheduleAutoLoad();
+        }
+    }, 300);
 }
 
 function ensureAddButton(container, count) {
@@ -273,10 +285,7 @@ function ensureAddButton(container, count) {
     });
     container.appendChild(addNode);
     
-    // GUARDAR SNAPSHOT: Capturar el estado actual para carga instantánea
-    if (FolderManager.isRootView()) {
-        localStorage.setItem('tiles_snapshot', container.innerHTML);
-    }
+
 }
 
 function handleTileClick(e) {
@@ -657,10 +666,7 @@ function handleTileDrop(e) {
         // Guardar sin re-renderizar (ya movimos el DOM)
         saveTilesQuietly().then(() => showSaveStatus());
 
-        // Actualizar snapshot
-        if (FolderManager.isRootView()) {
-            localStorage.setItem('tiles_snapshot', tilesContainer.innerHTML);
-        }
+
 
         return;
     }

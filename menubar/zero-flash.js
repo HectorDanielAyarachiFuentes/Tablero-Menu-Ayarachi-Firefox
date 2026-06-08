@@ -42,23 +42,7 @@
     document.documentElement.appendChild(styleHider);
   }
 
-  // 3. Restauración instantánea de Tiles (HTML Snapshot)
-  // Esto hace que los iconos aparezcan antes de que el motor de la extensión se inicie
-  const tilesSnapshot = localStorage.getItem('tiles_snapshot');
-  if (tilesSnapshot) {
-    window.addEventListener('DOMContentLoaded', () => {
-      const tilesContainer = document.getElementById('tiles');
-      if (tilesContainer && !tilesContainer.hasChildNodes()) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(tilesSnapshot, 'text/html');
-        const fragment = document.createDocumentFragment();
-        while (doc.body.firstChild) {
-          fragment.appendChild(doc.body.firstChild);
-        }
-        tilesContainer.appendChild(fragment);
-      }
-    });
-  }
+
 
   // 4. Renderizado instantáneo de textos (Saludo y Reloj)
   window.addEventListener('DOMContentLoaded', () => {
