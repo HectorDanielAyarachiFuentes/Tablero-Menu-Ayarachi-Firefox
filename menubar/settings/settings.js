@@ -200,7 +200,7 @@ export function initSettings(initialState) {
     if (!importInput) {
         importInput = document.createElement('input');
         importInput.type = 'file';
-        importInput.accept = '.json';
+        importInput.accept = '.json, .html';
         importInput.style.display = 'none';
         importInput.addEventListener('change', handleImport);
         document.body.appendChild(importInput);
@@ -444,9 +444,31 @@ async function handleImport(e) {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            const data = JSON.parse(e.target.result);
+            const content = e.target.result;
+            let data;
             
-            // Si el JSON es un array, asumimos que es una lista de marcadores/tiles
+            // Detectar si es un archivo HTML (marcadores exportados)
+            if (file.name.endsWith('.html') || file.type === 'text/html') {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/html');
+                const links = doc.querySelectorAll('a');
+                data = [];
+                links.forEach(link => {
+                    const url = link.getAttribute('href');
+                    if (url && !url.startsWith('javascript:')) {
+                        data.push({
+                            type: 'enlace',
+                            name: link.textContent.trim() || url,
+                            url: url,
+                            icon: link.getAttribute('icon') || ''
+                        });
+                    }
+                });
+            } else {
+                data = JSON.parse(content);
+            }
+            
+            // Si los datos son un array, asumimos que es una lista de marcadores/tiles
             if (Array.isArray(data)) {
                 setTiles([...data, ...tiles]);
                 saveAndRender();
