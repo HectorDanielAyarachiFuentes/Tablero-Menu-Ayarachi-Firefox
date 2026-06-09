@@ -152,17 +152,21 @@ export const FolderManager = {
             }
             node = linkNode;
 
-            const fallbackText = tile.name || (tile.url ? new URL(tile.url).hostname.replace('www.', '') : '?');
+            let urlHostname = '?';
+            try {
+                if (tile.url) {
+                    urlHostname = new URL(tile.url).hostname.replace('www.', '');
+                }
+            } catch (e) {
+                // Ignore invalid URLs
+            }
+
+            const fallbackText = tile.name || urlHostname;
             const FALLBACK_ICON = getDynamicFallbackIcon(fallbackText);
             const thumbEl = node.querySelector('.thumb');
 
             // Establecer el texto de la URL
-            try {
-                const url = new URL(tile.url);
-                node.querySelector('.url').textContent = url.hostname.replace('www.', '');
-            } catch (e) {
-                node.querySelector('.url').textContent = tile.url;
-            }
+            node.querySelector('.url').textContent = tile.url ? urlHostname : tile.url;
 
             // Listener de error
             thumbEl.onerror = function() {

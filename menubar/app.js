@@ -2,7 +2,7 @@
  * Punto de entrada principal de la aplicación.
  * Optimizada para carga progresiva (Layered Loading)
  */
-import { $, storageGet, storageSet } from './core/utils.js';
+import { $, storageGet, storageSet, safeGetHostname } from './core/utils.js';
 import { STORAGE_KEYS } from './core/config.js';
 
 import { initUI, renderGreeting, updateActiveThemeButton, updateActiveGradientButton, updateDataTabUI, toggleSettings, switchToTab } from './components/ui.js';
@@ -27,44 +27,22 @@ import { initWidgetsSidebar } from './widgets-integration.js';
 let currentBackgroundValue = '';
 
 async function init() {
-  // 1. CARGA CRÍTICA - Obtenemos solo lo visual para el primer pintado
+  // =====================================================================
+  // FASE 0: CARGA MÍNIMA — Solo lo necesario para el primer pintado
+  // Cargamos tiles + settings visuales. NO cargamos todo el storage.
+  // =====================================================================
   const criticalKeys = [
+    'tiles', 'trash', 'socialMigrationDone',
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
     'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
     'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-    'tiles', 'trash', 'socialMigrationDone', 'syncFirefoxTheme'
+    'syncFirefoxTheme'
   ];
 
   const settings = await storageGet(criticalKeys);
-
-  // Actualizar caché síncrona para la próxima carga (Zero-Flash)
-  const zeroFlashCache = {};
-  criticalKeys.forEach(k => {
-    // Excluimos datos pesados de la caché síncrona de localStorage
-    if (k === 'tiles' || k === 'trash') return;
-    if (settings[k] !== undefined) zeroFlashCache[k] = settings[k];
-  });
-
-  // Añadir template del doodle actual para carga instantánea
-  const currentDoodle = DOODLES_LIST.find(d => d.id === settings.doodle);
-  if (currentDoodle) {
-    zeroFlashCache.doodleTemplate = currentDoodle.template;
-    // Extraer color de fondo básico si existe
-    const bgMatch = currentDoodle.template.match(/background:\s*(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|[a-z]+)/);
-    if (bgMatch) zeroFlashCache.doodleColor = bgMatch[1];
-  }
-
-  localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
-
-  // REVELADO INSTANTÁNEO: El contenido ya es visible por CSS
-  // Proceder con la carga de datos sin esperas visuales
-
-  // Cargar el resto de los datos (tiles, notes, etc.) lo más rápido posible
-  const fullSettings = await storageGet(null);
-  Object.assign(settings, fullSettings);
 
   // MIGRACIÓN ÚNICA: Añadir nuevos iconos recomendados si no existen
   let initialTiles = settings.tiles || [];
@@ -84,14 +62,50 @@ async function init() {
   setTrash(settings.trash || []);
   renderGreeting(settings.userName);
 
-  // Una vez tenemos los datos reales, volvemos a aplicar lo visual para mostrar los Tiles reales
-  await BackgroundManager.apply(settings);
+  // =====================================================================
+  // FASE 1: RENDERIZAR TILES INMEDIATAMENTE — No esperar al fondo
+  // El sistema de paginación en tiles.js ya carga de a 100 (PAGE_SIZE)
+  // y usa IntersectionObserver para cargar más al hacer scroll.
+  // =====================================================================
   renderTiles();
+
+  // =====================================================================
+  // FASE 1.5: FONDO EN PARALELO — No bloquea los tiles
+  // BackgroundManager.apply() puede tardar (ej. fetch de tema Firefox)
+  // así que lo lanzamos sin await para no bloquear nada.
+  // =====================================================================
+  BackgroundManager.apply(settings);
+
+  // Actualizar caché síncrona para la PRÓXIMA carga (Zero-Flash)
+  const zfCacheKeys = [
+    'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+    'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
+    'greetingColor', 'nameColor', 'clockColor', 'dateColor',
+    'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
+    'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
+    'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
+    'syncFirefoxTheme'
+  ];
+  const zeroFlashCache = {};
+  zfCacheKeys.forEach(k => {
+    if (settings[k] !== undefined) zeroFlashCache[k] = settings[k];
+  });
+
+  // Añadir template del doodle actual para carga instantánea
+  const currentDoodle = DOODLES_LIST.find(d => d.id === settings.doodle);
+  if (currentDoodle) {
+    zeroFlashCache.doodleTemplate = currentDoodle.template;
+    const bgMatch = currentDoodle.template.match(/background:\s*(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|[a-z]+)/);
+    if (bgMatch) zeroFlashCache.doodleColor = bgMatch[1];
+  }
+
+  // Cachear resúmenes de tiles para renderizado instantáneo en zero-flash
+  cacheTileSummaries(initialTiles, zeroFlashCache);
+
   // Escuchar cambios de fondo desde la configuración (evita dependencias circulares)
   window.addEventListener('background-changed', async () => {
     const currentSettings = await storageGet(null);
-    BackgroundManager.apply(currentSettings, true); // forceAsyncFetch = true para respuesta inmediata del usuario
-    // Renderizar doodle si es necesario
+    BackgroundManager.apply(currentSettings, true);
     renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
   });
 
@@ -108,35 +122,27 @@ async function init() {
 
   /**
    * Renderiza o elimina el doodle en el contenedor #doodle-background
-   * @param {string} doodleId - El ID del doodle seleccionado
-   * @param {string} doodleTemplate - El template CSS del doodle (opcional, se busca en DOODLES_LIST)
    */
   function renderDoodleBackground(doodleId, doodleTemplate) {
     const container = document.getElementById('doodle-background');
     if (!container) return;
 
-    // Si no hay doodle o es 'none', limpiar contenedor
     if (!doodleId || doodleId === 'none') {
       container.textContent = '';
       container.classList.remove('ready');
-      // Restaurar fondo si estaba transparente
       if (BackgroundManager.lastAppliedBg) {
         BackgroundManager.applyBackground(BackgroundManager.lastAppliedBg);
       }
       return;
     }
 
-    // Buscar el template si no se proporcionó
     if (!doodleTemplate) {
       const doodleData = DOODLES_LIST.find(d => d.id === doodleId);
       if (!doodleData || !doodleData.template) return;
       doodleTemplate = doodleData.template;
     }
 
-    // Limpiar contenedor
     container.textContent = '';
-
-    // Crear elemento css-doodle
     const doodle = document.createElement('css-doodle');
     doodle.textContent = `
             ${doodleTemplate}
@@ -147,13 +153,23 @@ async function init() {
     container.classList.add('ready');
   }
 
-  // Fase 2: Lógica de interacción
+  // =====================================================================
+  // FASE 2: LÓGICA DE INTERACCIÓN — Diferida 100ms
+  // =====================================================================
   setTimeout(() => {
     initInteractionLogic(settings);
   }, 100);
 
-  // Fase 3: Sistemas Pesados
-  setTimeout(() => {
+  // =====================================================================
+  // FASE 3: SISTEMAS PESADOS — Diferida 500ms
+  // Aquí cargamos el RESTO del storage que no era crítico para el primer
+  // pintado (notas, editor, papelera, etc.)
+  // =====================================================================
+  setTimeout(async () => {
+    // Cargar settings adicionales que no eran críticos para el pintado inicial
+    const fullSettings = await storageGet(null);
+    Object.assign(settings, fullSettings);
+
     initHeavySystems(settings);
     loadNonCriticalCSS();
     
@@ -161,10 +177,11 @@ async function init() {
     document.body.classList.remove('loading');
   }, 500);
 
-  // Fase 4: Sincronización (Solo restaurar si el storage local está vacío)
+  // =====================================================================
+  // FASE 4: SINCRONIZACIÓN — Diferida 2s
+  // =====================================================================
   setTimeout(async () => {
     try {
-      // Comprobar si el storage está vacío (falla catastrófica o limpieza de caché)
       const currentSettings = await storageGet(null);
       const isEmpty = !currentSettings.tiles || currentSettings.tiles.length === 0;
 
@@ -241,6 +258,57 @@ function initScrollToTop() {
       behavior: 'smooth'
     });
   });
+}
+
+/**
+ * Cachea resúmenes ligeros de los tiles en localStorage para que
+ * zero-flash.js pueda renderizarlos instantáneamente al abrir una nueva pestaña.
+ * Solo se guardan datos mínimos para mantener el tamaño del caché bajo.
+ */
+function cacheTileSummaries(tilesData, zeroFlashCache) {
+  try {
+    // Filtrar notas (no se muestran en root) y limitar cantidad
+    const rootTiles = (tilesData || []).filter(t => t.type !== 'note');
+    const maxTiles = Math.min(rootTiles.length, 50); // Limitar para no saturar localStorage
+    const summaries = [];
+
+    for (let i = 0; i < maxTiles; i++) {
+      const t = rootTiles[i];
+      const summary = { name: t.name, type: t.type || 'link' };
+
+      if (t.type === 'folder') {
+        summary.childCount = (t.children || []).length;
+      } else if (t.url) {
+        summary.url = t.url;
+        try {
+          summary.host = safeGetHostname(t.url);
+        } catch (e) {
+          summary.host = t.url;
+        }
+        // Cachear ícono si es personalizado (data URIs pequeños o URLs de favicons)
+        if (t.customIcon && t.customIcon.length < 2000) {
+          summary.icon = t.customIcon;
+        } else if (t.url) {
+          try {
+            const hostname = safeGetHostname(t.url);
+            if (hostname && hostname.includes('.')) {
+              summary.icon = `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`;
+            }
+          } catch (e) { /* ignorar */ }
+        }
+      }
+
+      summaries.push(summary);
+    }
+
+    zeroFlashCache._tileSummaries = summaries;
+    localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
+  } catch (e) {
+    // Si falla (ej. quota), guardar al menos la caché sin tiles
+    try {
+      localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
+    } catch (e2) { /* ignorar */ }
+  }
 }
 
 init();

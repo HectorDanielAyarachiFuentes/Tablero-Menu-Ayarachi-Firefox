@@ -104,3 +104,21 @@ body.loading .weather-widget-fixed {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Esqueletos de tiles para Zero-Flash: se renderizan antes de que carguen los módulos JS */
+.tile.skeleton-preview {
+  pointer-events: auto; /* Permitir clicks en links cacheados */
+}
+
+.tile-skeleton-preview {
+  min-height: 68px;
+  border-radius: var(--panel-radius, 12px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}

@@ -47,6 +47,18 @@ export const setSVG = (el, svgString) => {
   el.appendChild(importedNode);
 };
 
+/**
+ * Obtiene el hostname de una URL de forma segura sin lanzar errores si la URL es inválida.
+ */
+export const safeGetHostname = (urlStr) => {
+    try {
+        if (!urlStr) return '?';
+        return new URL(urlStr).hostname.replace('www.', '');
+    } catch (e) {
+        return '?';
+    }
+};
+
 let saveDebounceTimer;
 let syncBuffer = {};
 let syncTimer = null;

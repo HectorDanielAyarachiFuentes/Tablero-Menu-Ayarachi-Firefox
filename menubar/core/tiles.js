@@ -80,16 +80,38 @@ export function initTiles() {
     // Inicializar observador para scroll infinito
     initInfiniteScroll();
 
-    // Fallback: Listener de scroll tradicional (por si falla el observador), optimizado
-    window.addEventListener('scroll', throttle(() => {
+    // Fallback: Listener de scroll tradicional (por si falla el observador), optimizado y extra robusto
+    const handleScroll = throttle(() => {
         if (loadedCount > 0 && !isLoading) {
-            const scrollPos = window.innerHeight + window.scrollY;
-            const threshold = document.documentElement.scrollHeight - 600;
-            if (scrollPos > threshold) {
+            const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            const scrollHeight = Math.max(
+                document.body.scrollHeight, document.documentElement.scrollHeight,
+                document.body.offsetHeight, document.documentElement.offsetHeight
+            );
+            const scrollPos = window.innerHeight + scrollY;
+            const threshold = scrollHeight - 800;
+            
+            // Check robusto mediante BoundingClientRect del centinela
+            const sentinel = document.getElementById('scroll-sentinel');
+            let sentinelVisible = false;
+            if (sentinel) {
+                const rect = sentinel.getBoundingClientRect();
+                sentinelVisible = rect.top > 0 && rect.top < window.innerHeight + 800;
+            }
+
+            if (scrollPos > threshold || sentinelVisible) {
                 loadMoreTiles();
             }
         }
-    }, 150), { passive: true });
+    }, 150);
+
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    if (document.body) {
+        document.body.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('wheel', handleScroll, { passive: true });
+    window.addEventListener('touchmove', handleScroll, { passive: true });
 }
 
 function initInfiniteScroll() {
@@ -152,9 +174,6 @@ export function renderTiles() {
 
     // Cargar primer batch
     loadMoreTiles();
-
-    // Carga agresiva: seguir cargando hasta que todos los tiles estén en pantalla
-    scheduleAutoLoad();
 
     $('#backBtn').hidden = FolderManager.isRootView();
 }
@@ -225,7 +244,8 @@ function loadMoreTiles() {
             // Verificación inmediata por si el sentinel ya es visible
             requestAnimationFrame(() => {
                 const rect = sentinel.getBoundingClientRect();
-                if (rect.top < window.innerHeight + 600) {
+                // Verificamos que sea mayor que 0 para asegurar que no es invisible (ej. display none)
+                if (rect.top > 0 && rect.top < window.innerHeight + 800) {
                     loadMoreTiles();
                 }
             });

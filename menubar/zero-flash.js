@@ -41,7 +41,83 @@
     styleHider.textContent = hideStyles.join('\n');
     document.documentElement.appendChild(styleHider);
   }
+  // 3.6 Renderizado instantáneo de TILES ESQUELETO desde caché
+  // Esto elimina el flash vacío en la primera carga de una nueva pestaña
+  const cachedTileSummaries = settings._tileSummaries;
+  if (cachedTileSummaries && cachedTileSummaries.length > 0) {
+    const renderSkeletons = () => {
+      const tilesContainer = document.getElementById('tiles');
+      if (!tilesContainer) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', renderSkeletons, { once: true });
+        }
+        return;
+      }
+      // Solo renderizar si el contenedor está vacío (no interferir con la carga real)
+      if (tilesContainer.children.length > 0) return;
 
+      const fragment = document.createDocumentFragment();
+      const tpl = document.getElementById('tileTpl');
+
+      cachedTileSummaries.forEach((summary, i) => {
+        if (!tpl) {
+          // Fallback: crear esqueleto simple sin template
+          const skeleton = document.createElement('div');
+          skeleton.className = 'tile tile-skeleton-preview';
+          skeleton.style.setProperty('--animation-delay', `${i * 15}ms`);
+          fragment.appendChild(skeleton);
+          return;
+        }
+
+        let node;
+        if (summary.type === 'link' && summary.url) {
+          node = document.createElement('a');
+          node.href = summary.url;
+          node.rel = 'noopener noreferrer';
+          const tplNode = tpl.content.firstElementChild.cloneNode(true);
+          for (const attr of tplNode.attributes) {
+            if (attr.name === 'style') {
+              node.style.cssText = attr.value;
+            } else {
+              node.setAttribute(attr.name, attr.value);
+            }
+          }
+          while (tplNode.firstChild) node.appendChild(tplNode.firstChild);
+        } else {
+          node = tpl.content.firstElementChild.cloneNode(true);
+          if (summary.type === 'folder') node.classList.add('folder');
+        }
+
+        node.dataset.idx = i;
+        node.classList.add('skeleton-preview');
+        node.style.setProperty('--animation-delay', `${i * 15}ms`);
+
+        const titleEl = node.querySelector('.title');
+        if (titleEl) titleEl.textContent = summary.name || '';
+
+        const urlEl = node.querySelector('.url');
+        if (urlEl) {
+          if (summary.type === 'folder') {
+            urlEl.textContent = `${summary.childCount || 0} elemento(s)`;
+          } else if (summary.host) {
+            urlEl.textContent = summary.host;
+          }
+        }
+
+        const thumbEl = node.querySelector('.thumb');
+        if (thumbEl && summary.icon) {
+          thumbEl.src = summary.icon;
+          thumbEl.loading = 'eager'; // Cargar inmediatamente los iconos cacheados
+        }
+
+        fragment.appendChild(node);
+      });
+
+      tilesContainer.appendChild(fragment);
+    };
+
+    renderSkeletons();
+  }
 
 
   // 4. Renderizado instantáneo de textos (Saludo y Reloj)
