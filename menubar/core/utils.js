@@ -4,8 +4,17 @@
  * Proporciona funciones de utilidad reutilizables en toda la aplicación.
  * Incluye selectores de DOM, helpers para el almacenamiento y una función de guardado con debounce.
  */
-import { FileSystem } from '../system/file-system.js';
-import { showSaveStatus } from '../components/ui.js';
+let _saveToFileHandler = null;
+let _showSaveStatusHandler = null;
+
+/**
+ * Registra handlers externos para persistencia en archivo y estado de UI
+ * eliminando el acoplamiento y las dependencias circulares.
+ */
+export function registerSaveHandlers(handlers = {}) {
+    if (handlers.saveToFile) _saveToFileHandler = handlers.saveToFile;
+    if (handlers.showSaveStatus) _showSaveStatusHandler = handlers.showSaveStatus;
+}
 
 export const $ = s => document.querySelector(s);
 export const $$ = s => Array.from(document.querySelectorAll(s));
@@ -177,14 +186,14 @@ export const storageSet = (obj) => {
 const debouncedSaveToFile = (dataToSave, forceAll = false) => {
     clearTimeout(saveDebounceTimer);
     saveDebounceTimer = setTimeout(async () => {
-        // Pasamos el objeto de configuración directamente para que se guarde en el archivo.
-        // No es necesario pasar `dataToSave` aquí, ya que `saveDataToFile` obtiene el estado más reciente del storage.
         try {
-            // Al pasar un objeto vacío, forzamos a saveDataToFile a recolectar todos los datos.
-            await FileSystem.saveDataToFile({}); 
-            showSaveStatus();
+            if (_saveToFileHandler) {
+                await _saveToFileHandler(dataToSave || {}); 
+            }
+            if (_showSaveStatusHandler) {
+                _showSaveStatusHandler();
+            }
         } catch (error) {
-            // El error ya se muestra en la UI desde file-system.js, aquí solo lo capturamos.
             console.error("Fallo el guardado automático después de varios intentos.", error);
         }
     }, 300); // Espera 300ms antes de guardar
@@ -209,6 +218,8 @@ export async function saveAndSyncSetting(setting, applyCallback) {
         //    a que se guarde el estado COMPLETO, no solo este cambio.
         debouncedSaveToFile({});
     } else {
-        showSaveStatus();
+        if (_showSaveStatusHandler) {
+            _showSaveStatusHandler();
+        }
     }
 }

@@ -1,0 +1,34 @@
+# GitNexus Ignore — Tablero (Firefox WebExtension)
+
+# Assets estáticos, binarios e iconos
+abecedario/
+fonts/
+icons/
+images/
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Librerías minificadas de terceros externas
+lib/purify.min.js
+doodle/css-doodle.min.js
+
+# Skills e instrucciones de agentes (no forman parte del AST de código)
+.agents/skills/
+.claude/
+
+# Caches y temporales
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+*.log
+*.tmp

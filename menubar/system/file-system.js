@@ -4,7 +4,14 @@
  */
 import { storageGet, storageSet } from '../core/utils.js';
 import { STORAGE_KEYS } from '../core/config.js';
-import { showFileError, showSaveStatus, updateDataTabUI } from '../components/ui.js';
+let _fileErrorHandler = (err) => console.error(err);
+
+/**
+ * Registra el manejador de errores de la UI para FileSystem sin acoplamiento circular.
+ */
+export function setFileSystemErrorHandler(handler) {
+    if (typeof handler === 'function') _fileErrorHandler = handler;
+}
 
 const FILE_NAME = 'tablero-data.json';
 let internalDirHandle = null;
@@ -83,7 +90,7 @@ export const FileSystem = {
                         console.log('[FileSystem] Sincronización interna completada.');
                         resolve();
                     } else {
-                        showFileError(`Error de sincronización interna: ${event.data.error}`);
+                        _fileErrorHandler(`Error de sincronización interna: ${event.data.error}`);
                         reject(new Error(event.data.error));
                     }
                 }

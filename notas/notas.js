@@ -24,6 +24,9 @@ export async function initNotesComponent() {
     // Bind events
     $('#addNote')?.addEventListener('click', () => openModal(null, 'note'));
     $('#closeNotes')?.addEventListener('click', () => toggleNotesPanel(false));
+    window.addEventListener('tablero:tiles-changed', () => {
+        if (typeof renderNotes === 'function') renderNotes();
+    });
     
     isInitialized = true;
     renderNotes();

@@ -4,15 +4,38 @@
  * y la lógica de arrastrar y soltar (drag and drop) en la vista principal.
  */
 import { $, $$, storageSet, storageGet, throttle } from './utils.js';
-import { FolderManager } from './carpetas.js';
-import { renderFavoritesInSelect } from '../../utils/search.js';
-import { showSaveStatus } from '../components/ui.js';
-import { FileSystem } from '../system/file-system.js';
-import { initContextMenu, showContextMenu } from '../components/context-menu.js';
-import { renderTrash } from '../components/trash.js';
-import { initModal, openModal } from '../components/modal.js';
-import { initEditor, renderEditor } from '../settings/editor.js';
-import { renderNotes } from '../../notas/notas.js';
+import { FolderManager, setFolderTilesCallbacks } from './carpetas.js';
+
+let _onSaveToFile = null;
+let _onSaveStatus = null;
+let _showContextMenu = null;
+let _openModal = null;
+const _tilesChangeListeners = new Set();
+
+/**
+ * Suscribe un callback a los cambios en tiles/trash (PubSub)
+ * para desacoplar vistas (search, editor, notes, trash).
+ */
+export function onTilesChange(fn) {
+    _tilesChangeListeners.add(fn);
+    return () => _tilesChangeListeners.delete(fn);
+}
+
+export function notifyTilesChange() {
+    for (const fn of _tilesChangeListeners) {
+        try { fn(); } catch (e) { console.error(e); }
+    }
+}
+
+/**
+ * Registra handlers de interacción para evitar dependencias circulares con componentes.
+ */
+export function registerTilesHandlers(handlers = {}) {
+    if (handlers.saveToFile) _onSaveToFile = handlers.saveToFile;
+    if (handlers.showSaveStatus) _onSaveStatus = handlers.showSaveStatus;
+    if (handlers.showContextMenu) _showContextMenu = handlers.showContextMenu;
+    if (handlers.openModal) _openModal = handlers.openModal;
+}
 
 export let tiles = [];
 export let trash = [];
@@ -71,11 +94,9 @@ export function initTiles() {
         }
     }, 100));
 
-    $('#addTile').addEventListener('click', () => openModal());
-
-    initContextMenu();
-    initModal();
-    initEditor();
+    $('#addTile').addEventListener('click', () => {
+        if (_openModal) _openModal();
+    });
 
     // Inicializar observador para scroll infinito
     initInfiniteScroll();
@@ -127,27 +148,29 @@ function initInfiniteScroll() {
 }
 
 export function saveAndRender() {
-    saveTilesQuietly().then(() => showSaveStatus());
+    saveTilesQuietly().then(() => {
+        if (_onSaveStatus) _onSaveStatus();
+    });
 
-    renderFavoritesInSelect();
     renderTiles();
-    
-    const searchInput = $('#editorSearchInput');
-    if (searchInput) searchInput.value = '';
-    renderEditor();
-    renderNotes();
-    renderTrash();
+    notifyTilesChange();
 }
 
 export function saveTilesQuietly() {
     const dataToSave = { tiles, trash };
     return storageSet(dataToSave).then(async () => {
         const { autoSync } = await storageGet(['autoSync']);
-        if (autoSync) {
-            await FileSystem.saveDataToFile(dataToSave);
+        if (autoSync && _onSaveToFile) {
+            await _onSaveToFile(dataToSave);
         }
     });
 }
+
+// Conectar callbacks con carpetas.js sin ciclo de importación
+setFolderTilesCallbacks({
+    renderTiles,
+    saveTilesQuietly
+});
 
 
 
@@ -301,7 +324,7 @@ function ensureAddButton(container, count) {
     
     addNode.addEventListener('click', (e) => {
         e.preventDefault();
-        openModal();
+        if (_openModal) _openModal();
     });
     container.appendChild(addNode);
     
@@ -317,7 +340,7 @@ function handleTileClick(e) {
     if (e.target.closest('.more-btn')) {
         e.preventDefault();
         e.stopPropagation();
-        showContextMenu(e.target, idx);
+        if (_showContextMenu) _showContextMenu(e.target, idx);
     } else {
         const tileData = FolderManager.getTilesForCurrentView(tiles)[idx];
         if (tileData?.type === 'folder') {
@@ -326,7 +349,7 @@ function handleTileClick(e) {
         } else if (tileData?.type === 'note') {
             e.preventDefault();
             const itemPath = [...FolderManager.getCurrentPath(), idx];
-            openModal(itemPath);
+            if (_openModal) _openModal(itemPath);
         }
     }
 }

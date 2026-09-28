@@ -5,11 +5,14 @@
 import { $, storageGet, storageSet, safeGetHostname } from './core/utils.js';
 import { STORAGE_KEYS } from './core/config.js';
 
-import { initUI, renderGreeting, updateActiveThemeButton, updateActiveGradientButton, updateDataTabUI, toggleSettings, switchToTab } from './components/ui.js';
+import { registerSaveHandlers } from './core/utils.js';
+import { initUI, renderGreeting, updateActiveThemeButton, updateActiveGradientButton, updateDataTabUI, toggleSettings, switchToTab, showSaveStatus, showFileError } from './components/ui.js';
 import { updateSliderValueSpans, updatePanelRgb } from './settings/settings-panels.js';
-import { initTiles, renderTiles, tiles, setTiles, setTrash } from './core/tiles.js';
+import { initTiles, renderTiles, tiles, setTiles, setTrash, registerTilesHandlers, onTilesChange } from './core/tiles.js';
+import { initContextMenu, showContextMenu } from './components/context-menu.js';
+import { initModal, openModal } from './components/modal.js';
 import { initNotesComponent } from '../../notas/notas.js';
-import { renderEditor } from './settings/editor.js';
+import { initEditor, renderEditor } from './settings/editor.js';
 import { renderTrash } from './components/trash.js';
 import { initSearch, renderFavoritesInSelect } from '../utils/search.js';
 import { initSettings, loadGradients } from './settings/settings.js';
@@ -19,10 +22,35 @@ import { WeatherManager } from '../utils/tiempo.js';
 import { loadDoodles, initDoodleSettings, updateDoodleSelectionUI } from './settings/doodles.js';
 import { DOODLES_LIST } from './settings/doodles-list.js';
 window.DOODLES_LIST = DOODLES_LIST;
-import { FileSystem } from './system/file-system.js';
+import { FileSystem, setFileSystemErrorHandler } from './system/file-system.js';
 import { initPremiumThemes } from './settings/themes-premium.js';
 import { initWidgetsSidebar } from './widgets-integration.js';
 // BackgroundManager ahora es global
+
+// Conexión desacoplada de handlers (sin dependencias circulares)
+setFileSystemErrorHandler(showFileError);
+
+registerSaveHandlers({
+  saveToFile: (data) => FileSystem.saveDataToFile(data),
+  showSaveStatus
+});
+
+registerTilesHandlers({
+  saveToFile: (data) => FileSystem.saveDataToFile(data),
+  showSaveStatus,
+  showContextMenu,
+  openModal
+});
+
+onTilesChange(() => {
+  if (typeof showSaveStatus === 'function') showSaveStatus();
+  if (typeof renderFavoritesInSelect === 'function') renderFavoritesInSelect();
+  const searchInput = $('#editorSearchInput');
+  if (searchInput) searchInput.value = '';
+  if (typeof renderEditor === 'function') renderEditor();
+  if (typeof renderTrash === 'function') renderTrash();
+  window.dispatchEvent(new CustomEvent('tablero:tiles-changed'));
+});
 
 let currentBackgroundValue = '';
 
@@ -199,6 +227,9 @@ async function init() {
 function initInteractionLogic(settings) {
   initUI();
   initTiles();
+  initContextMenu();
+  initModal();
+  initEditor();
   initSearch();
   initScrollToTop();
   initSettings({

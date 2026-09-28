@@ -2,8 +2,17 @@
  * Gestiona la lógica de navegación y renderizado de carpetas.
  * Mantiene el estado de la ruta actual y proporciona métodos para navegar dentro y fuera de las carpetas.
  */
-import { renderTiles, saveAndRender, saveTilesQuietly } from './tiles.js';
-import { openModal } from '../components/modal.js';
+let _renderTiles = () => {};
+let _saveTilesQuietly = () => Promise.resolve();
+
+/**
+ * Registra callbacks de tiles para la navegación y guardado de carpetas
+ * eliminando la dependencia circular entre tiles.js y carpetas.js.
+ */
+export function setFolderTilesCallbacks(callbacks = {}) {
+    if (callbacks.renderTiles) _renderTiles = callbacks.renderTiles;
+    if (callbacks.saveTilesQuietly) _saveTilesQuietly = callbacks.saveTilesQuietly;
+}
 
 let viewPath = []; // Private state for folder path
 
@@ -67,7 +76,7 @@ export const FolderManager = {
 
     navigateToFolder(index) {
         viewPath.push(index);
-        renderTiles();
+        _renderTiles();
     },
 
     // Renders a single tile (link or folder)
@@ -174,7 +183,7 @@ export const FolderManager = {
                     this.dataset.fallbackLoaded = 'true';
                     this.src = FALLBACK_ICON;
                     tile.customIcon = FALLBACK_ICON;
-                    saveTilesQuietly();
+                    _saveTilesQuietly();
                 }
             };
 
@@ -200,14 +209,14 @@ export const FolderManager = {
                                 thumbEl.dataset.fallbackLoaded = 'true';
                                 thumbEl.src = FALLBACK_ICON;
                                 tile.customIcon = FALLBACK_ICON;
-                                saveTilesQuietly();
+                                _saveTilesQuietly();
                             }
                         };
                         imgLoader.onerror = function() {
                             thumbEl.dataset.fallbackLoaded = 'true';
                             thumbEl.src = FALLBACK_ICON;
                             tile.customIcon = FALLBACK_ICON;
-                            saveTilesQuietly();
+                            _saveTilesQuietly();
                         };
                         imgLoader.src = targetSrc;
                         
@@ -215,13 +224,13 @@ export const FolderManager = {
                         thumbEl.dataset.fallbackLoaded = 'true';
                         thumbEl.src = FALLBACK_ICON;
                         tile.customIcon = FALLBACK_ICON;
-                        saveTilesQuietly();
+                        _saveTilesQuietly();
                     }
                 } catch (e) {
                     thumbEl.dataset.fallbackLoaded = 'true';
                     thumbEl.src = FALLBACK_ICON;
                     tile.customIcon = FALLBACK_ICON;
-                    saveTilesQuietly();
+                    _saveTilesQuietly();
                 }
             }
         }
