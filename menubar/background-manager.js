@@ -136,9 +136,8 @@
                 if (match) fallbackColor = match[0];
             }
 
-            // SMART PERSISTENCE: Animamos si el fondo cambió, o si es la primera carga de la sesión
-            if (this.initialLoadDone === undefined) this.initialLoadDone = false;
-            const hasChanged = !this.initialLoadDone || (this.normalizeBg(finalBg) !== this.normalizeBg(lastAppliedBg));
+            // Persistencia inteligente: en el arranque inicial no animamos porque instant-bg.js ya pintó el fondo
+            const hasChanged = this.initialLoadDone ? (this.normalizeBg(finalBg) !== this.normalizeBg(this.lastAppliedBg || lastAppliedBg)) : false;
             this.initialLoadDone = true;
 
             if (isDoodle) {
@@ -165,60 +164,41 @@
             
             // Si el fondo es el mismo y está en medio de la animación de carga, no interrumpir la transición.
             if (this.isAnimating && this.normalizeBg(bg) === this.normalizeBg(this.lastAppliedBg) && !animate) {
-                console.log('BackgroundManager: Animación en curso, omitiendo sobreescritura instantánea.');
                 return;
             }
             
             if (bgLayer) {
                 if (animate) {
                     this.isAnimating = true;
-                    // Reiniciar opacidad y filtro para carga progresiva escalonada
-                    bgLayer.style.opacity = '0';
-                    bgLayer.style.filter = 'blur(20px) grayscale(50%)';
-                    
-                    bgLayer.style.setProperty('background', bg, 'important');
-                    bgLayer.style.setProperty('background-size', 'cover', 'important');
-                    bgLayer.style.setProperty('background-attachment', 'fixed', 'important');
-                    bgLayer.style.setProperty('background-position', 'center', 'important');
-                    
-                    // Activar la secuencia de tandas
-                    setTimeout(() => {
-                        bgLayer.style.opacity = '1';
-                        bgLayer.style.filter = 'blur(0px) grayscale(0%)';
-                    }, 50);
-
-                    // Restablecer flag de animación cuando termine el efecto de carga (1200ms de transición)
-                    setTimeout(() => {
-                        this.isAnimating = false;
-                    }, 1300);
-                } else {
-                    // Si ya estaba cargado, asegurar visibilidad completa e instantánea estableciendo los estilos de fondo
+                    // Transición sutil y moderna (crossfade suave) al cambiar fondo en configuración
+                    bgLayer.style.transition = 'opacity 0.25s ease-out';
                     bgLayer.style.setProperty('background', bg, 'important');
                     bgLayer.style.setProperty('background-size', 'cover', 'important');
                     bgLayer.style.setProperty('background-attachment', 'fixed', 'important');
                     bgLayer.style.setProperty('background-position', 'center', 'important');
                     bgLayer.style.opacity = '1';
-                    bgLayer.style.filter = 'blur(0px) grayscale(0%)';
+                    bgLayer.style.filter = 'none';
+
+                    setTimeout(() => {
+                        this.isAnimating = false;
+                        bgLayer.style.transition = '';
+                    }, 260);
+                } else {
+                    // Carga inicial o fondo sin cambios: 100% instantáneo
+                    bgLayer.style.transition = 'none';
+                    bgLayer.style.setProperty('background', bg, 'important');
+                    bgLayer.style.setProperty('background-size', 'cover', 'important');
+                    bgLayer.style.setProperty('background-attachment', 'fixed', 'important');
+                    bgLayer.style.setProperty('background-position', 'center', 'important');
+                    bgLayer.style.opacity = '1';
+                    bgLayer.style.filter = 'none';
                 }
             }
 
             if (body) {
                 body.style.setProperty('background', 'transparent', 'important');
-
-                if (animate) {
-                    // Solo activar efectos si es un fondo nuevo (ej. desde Settings)
-                    body.classList.remove('bg-ready');
-                    body.classList.add('bg-blur', 'bg-progressive-loading');
-
-                    setTimeout(() => {
-                        body.classList.remove('bg-blur', 'bg-progressive-loading');
-                        body.classList.add('bg-ready');
-                    }, 600);
-                } else {
-                    // Si ya estaba cargado, asegurar estado listo sin transiciones
-                    body.classList.remove('bg-blur', 'bg-progressive-loading');
-                    body.classList.add('bg-ready');
-                }
+                body.classList.remove('bg-blur', 'bg-progressive-loading');
+                body.classList.add('bg-ready');
             }
         },
 

@@ -85,7 +85,8 @@ export const FolderManager = {
         node.dataset.idx = index;
         node.setAttribute('draggable', 'true'); // Enable drag and drop
         node.querySelector('.title').textContent = tile.name;
-        node.style.setProperty('--animation-delay', `${index * 50}ms`);
+        const animEnabled = document.body.classList.contains('with-load-animations');
+        node.style.setProperty('--animation-delay', animEnabled ? `${index * 50}ms` : '0s');
 
         if (tile.type === 'folder') {
             node.classList.add('folder');

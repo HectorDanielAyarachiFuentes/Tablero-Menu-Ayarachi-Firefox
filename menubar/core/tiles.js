@@ -235,7 +235,8 @@ function loadMoreTiles() {
             const trueIndex = currentTiles.indexOf(t);
             const node = FolderManager.renderTile(t, trueIndex, tpl, tiles);
             
-            node.style.setProperty('--animation-delay', `${(visualIndex % PAGE_SIZE) * 15}ms`);
+            const animEnabled = document.body.classList.contains('with-load-animations');
+            node.style.setProperty('--animation-delay', animEnabled ? `${(visualIndex % PAGE_SIZE) * 15}ms` : '0s');
             
             fragment.appendChild(node);
         });

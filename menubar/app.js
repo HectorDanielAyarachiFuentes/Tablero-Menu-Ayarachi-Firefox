@@ -96,6 +96,7 @@ async function init() {
   // y usa IntersectionObserver para cargar más al hacer scroll.
   // =====================================================================
   renderTiles();
+  document.body.classList.remove('loading');
 
   // =====================================================================
   // FASE 1.5: FONDO EN PARALELO — No bloquea los tiles

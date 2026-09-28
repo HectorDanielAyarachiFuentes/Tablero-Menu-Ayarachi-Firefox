@@ -1,3 +1,9 @@
+/**
+ * @file menubar/zero-flash.js
+ * @description Orquestador de arranque instantáneo Zero-Flash.
+ * Renderiza tiles cacheados, textos de cabecera y estado visual inmediatamente
+ * para garantizar una experiencia completamente fluida y sin parpadeos.
+ */
 (function () {
   // 1. Obtener toda la configuración de un solo golpe
   let settings = {};
@@ -20,9 +26,6 @@
   }
 
   // 3. Forzar que el body mantenga el fondo aplicado por instant-bg.js
-  // Esto previene que el CSS externo sobrescriba el fondo durante la carga
-  const lastBg = localStorage.getItem('last_bg');
-  const lastColor = localStorage.getItem('last_bg_color');
   if (document.body) {
     document.body.style.setProperty('background', 'transparent', 'important');
   }
@@ -41,15 +44,16 @@
     styleHider.textContent = hideStyles.join('\n');
     document.documentElement.appendChild(styleHider);
   }
-  // 3.6 Renderizado instantáneo de TILES ESQUELETO desde caché
-  // Esto elimina el flash vacío en la primera carga de una nueva pestaña
+
+  // 3.6 Renderizado instantáneo de TILES LIMPIOS desde caché
+  // Esto elimina el flash vacío en la primera carga sin usar skeletons que pulsan
   const cachedTileSummaries = settings._tileSummaries;
   if (cachedTileSummaries && cachedTileSummaries.length > 0) {
-    const renderSkeletons = () => {
+    const renderCachedTiles = () => {
       const tilesContainer = document.getElementById('tiles');
       if (!tilesContainer) {
         if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', renderSkeletons, { once: true });
+          document.addEventListener('DOMContentLoaded', renderCachedTiles, { once: true });
         }
         return;
       }
@@ -61,11 +65,10 @@
 
       cachedTileSummaries.forEach((summary, i) => {
         if (!tpl) {
-          // Fallback: crear esqueleto simple sin template
-          const skeleton = document.createElement('div');
-          skeleton.className = 'tile tile-skeleton-preview';
-          skeleton.style.setProperty('--animation-delay', `${i * 15}ms`);
-          fragment.appendChild(skeleton);
+          const tileEl = document.createElement('div');
+          tileEl.className = 'tile';
+          tileEl.style.setProperty('--animation-delay', '0s');
+          fragment.appendChild(tileEl);
           return;
         }
 
@@ -89,8 +92,8 @@
         }
 
         node.dataset.idx = i;
-        node.classList.add('skeleton-preview');
-        node.style.setProperty('--animation-delay', `${i * 15}ms`);
+        node.setAttribute('draggable', 'true');
+        node.style.setProperty('--animation-delay', '0s');
 
         const titleEl = node.querySelector('.title');
         if (titleEl) titleEl.textContent = summary.name || '';
@@ -116,12 +119,11 @@
       tilesContainer.appendChild(fragment);
     };
 
-    renderSkeletons();
+    renderCachedTiles();
   }
 
-
   // 4. Renderizado instantáneo de textos (Saludo y Reloj)
-  window.addEventListener('DOMContentLoaded', () => {
+  const applyTexts = () => {
     const greetingEl = document.getElementById('header-greeting');
     const clockEl = document.getElementById('header-clock');
     const dateEl = document.getElementById('date');
@@ -152,7 +154,13 @@
 
     const yearEl = document.getElementById('footer-year');
     if (yearEl) yearEl.textContent = new Date().getFullYear();
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyTexts, { once: true });
+  } else {
+    applyTexts();
+  }
 
   // 4. Renderizado instantáneo del Doodle (Encima del fondo base)
   if (settings.doodle && settings.doodle !== 'none' && settings.doodleTemplate) {
@@ -189,7 +197,7 @@
     injectDoodle();
   }
 
-  // 5. Bloquear transiciones iniciales, excepto para la capa de fondo, doodles y efectos del body
+  // 5. Bloquear transiciones espurias iniciales durante el arranque
   const style = document.createElement('style');
   style.id = 'zero-flash-no-trans';
   style.textContent = `
@@ -205,8 +213,8 @@
   };
 
   if (document.readyState === 'complete') {
-    setTimeout(cleanTrans, 500);
+    setTimeout(cleanTrans, 50);
   } else {
-    window.addEventListener('load', () => setTimeout(cleanTrans, 500));
+    window.addEventListener('load', () => setTimeout(cleanTrans, 50), { once: true });
   }
 })();
