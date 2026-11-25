@@ -261,7 +261,7 @@ let premiumThemes = [
         "name": "Bosque Esmeralda",
         "description": "Lujo orgánico y tonos naturales profundos",
         "background": {
-            "gradient": "radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)"
+            "gradient": "radial-gradient(ellipse 58% 36% at 50% 28%, rgba(52, 211, 153, 0.08) 0%, transparent 72%), radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)"
         },
         "panel": {
             "bg": "#064e3b",
@@ -589,26 +589,26 @@ function setupAutoModeControls() {
 
     daySelect.addEventListener('change', async (e) => {
         await saveAndSyncSetting({ dayThemeId: e.target.value });
-        if (autoModeEnabled && isDayTime()) applyPremiumTheme(e.target.value);
+        if (autoModeEnabled && isDayTime()) applyAutoTheme();
     });
 
     nightSelect.addEventListener('change', async (e) => {
         await saveAndSyncSetting({ nightThemeId: e.target.value });
-        if (autoModeEnabled && !isDayTime()) applyPremiumTheme(e.target.value);
+        if (autoModeEnabled && !isDayTime()) applyAutoTheme();
     });
 }
 
-export async function applyPremiumTheme(themeId, skipSave = false) {
+export async function applyPremiumTheme(themeId, skipSave = false, preservedDoodle = null) {
     const theme = premiumThemes.find(t => t.id === themeId);
     if (!theme) return;
 
     const themeSettingsPayload = {
-        defaultStyleVersion: 2,
+        defaultStyleVersion: 3,
         activePremiumTheme: themeId,
         premiumThemeData: theme,
         gradient: theme.background.gradient,
         bgType: 'premium',
-        doodle: 'none',
+        doodle: preservedDoodle || 'none',
         syncFirefoxTheme: false,
         hasCustomBgData: false,
         bgData: null,
@@ -639,6 +639,16 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
         localStorage.setItem('lastPremiumGradient', theme.background.gradient);
         const syncToggle = $('#syncFirefoxThemeToggle');
         if (syncToggle) syncToggle.checked = false;
+        if (!preservedDoodle) {
+            $$('#doodle-list .doodle-item').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.doodleId === 'none');
+            });
+            const doodleContainer = document.getElementById('doodle-background');
+            if (doodleContainer) {
+                doodleContainer.textContent = '';
+                doodleContainer.classList.remove('ready');
+            }
+        }
     }
 }
 
@@ -703,10 +713,11 @@ function stopAutoMode() {
 }
 
 async function applyAutoTheme() {
-    const settings = await storageGet(['dayThemeId', 'nightThemeId']);
+    const settings = await storageGet(['dayThemeId', 'nightThemeId', 'doodle']);
     const isDay = isDayTime();
     const themeId = isDay ? settings.dayThemeId : settings.nightThemeId;
-    if (themeId) applyPremiumTheme(themeId, true);
+    const activeDoodle = (settings.doodle && settings.doodle !== 'none') ? settings.doodle : null;
+    if (themeId) applyPremiumTheme(themeId, true, activeDoodle);
     updateAutoModeStatus();
 }
 
@@ -721,7 +732,7 @@ function updateAutoModeStatus() {
 }
 
 async function loadPremiumThemeSettings() {
-    const settings = await storageGet(['activePremiumTheme', 'autoThemeMode', 'dayThemeId', 'nightThemeId']);
+    const settings = await storageGet(['activePremiumTheme', 'autoThemeMode', 'dayThemeId', 'nightThemeId', 'doodle']);
     autoModeEnabled = settings.autoThemeMode || false;
     const autoToggle = $('#autoThemeToggle');
     const autoSettings = $('#autoThemeSettings');
@@ -732,7 +743,7 @@ async function loadPremiumThemeSettings() {
     if (settings.dayThemeId && daySelect) daySelect.value = settings.dayThemeId;
     if (settings.nightThemeId && nightSelect) nightSelect.value = settings.nightThemeId;
     if (autoModeEnabled && (settings.dayThemeId || settings.nightThemeId)) startAutoMode();
-    else if (settings.activePremiumTheme) applyPremiumTheme(settings.activePremiumTheme, true);
+    else if (settings.activePremiumTheme) updateActivePremiumTheme(settings.activePremiumTheme);
 }
 
 window.addEventListener('beforeunload', () => {

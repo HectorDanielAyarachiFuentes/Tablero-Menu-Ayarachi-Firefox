@@ -155,7 +155,7 @@ export const toHexColor = (color, fallback = '#000000') => {
 };
 
 /**
- * Actualiza las variables CSS --accent-color y --accent-color-rgb en :root.
+ * Actualiza las variables CSS --accent-color, --accent-color-rgb y --accent-contrast-color en :root.
  */
 export const setAccentColorVars = (color) => {
   if (!color) return;
@@ -163,6 +163,8 @@ export const setAccentColorVars = (color) => {
   root.setProperty('--accent-color', color);
   const rgb = parseColorToRgb(color, [52, 211, 153]);
   root.setProperty('--accent-color-rgb', rgb.join(', '));
+  const luminance = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000;
+  root.setProperty('--accent-contrast-color', luminance > 145 ? '#042319' : '#ffffff');
 };
 
 /**
@@ -331,4 +333,51 @@ export async function saveAndSyncSetting(setting, applyCallback) {
     } else if (_showSaveStatusHandler) {
         _showSaveStatusHandler();
     }
+}
+
+let _cssDoodleLoadPromise = null;
+
+/**
+ * Carga bajo demanda la librería css-doodle.min.js una sola vez
+ * y resuelve cuando el Web Component <css-doodle> queda registrado.
+ */
+export function ensureCssDoodleLoaded() {
+    if (typeof window === 'undefined' || !window.customElements) {
+        return Promise.resolve(false);
+    }
+    if (customElements.get('css-doodle')) {
+        return Promise.resolve(true);
+    }
+    if (_cssDoodleLoadPromise) {
+        return _cssDoodleLoadPromise;
+    }
+
+    _cssDoodleLoadPromise = new Promise((resolve) => {
+        const waitDefined = () => {
+            customElements.whenDefined('css-doodle')
+                .then(() => resolve(true))
+                .catch(() => resolve(false));
+        };
+
+        let script = document.getElementById('css-doodle-lib');
+        if (script) {
+            if (customElements.get('css-doodle')) {
+                resolve(true);
+            } else {
+                script.addEventListener('load', waitDefined, { once: true });
+                script.addEventListener('error', () => resolve(false), { once: true });
+                waitDefined();
+            }
+            return;
+        }
+
+        script = document.createElement('script');
+        script.id = 'css-doodle-lib';
+        script.src = 'doodle/css-doodle.min.js';
+        script.addEventListener('load', waitDefined, { once: true });
+        script.addEventListener('error', () => resolve(false), { once: true });
+        document.head.appendChild(script);
+    });
+
+    return _cssDoodleLoadPromise;
 }

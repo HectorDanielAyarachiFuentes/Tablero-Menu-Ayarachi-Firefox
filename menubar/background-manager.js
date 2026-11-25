@@ -60,7 +60,7 @@
         return fallback;
     }
 
-    const DEFAULT_WELCOME_BG = 'radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)';
+    const DEFAULT_WELCOME_BG = 'radial-gradient(ellipse 58% 36% at 50% 28%, rgba(52, 211, 153, 0.08) 0%, transparent 72%), radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)';
     const DEFAULT_CANVAS_COLOR = '#2b2a33';
 
     /**
@@ -124,8 +124,10 @@
             const textColor = settings.panelTextColor || (theme && theme.colors ? theme.colors.text : '#ecfdf5');
 
             root.setProperty('--panel-bg', panelBg);
+            const accentRgb = parseRgb(accentColor, [52, 211, 153]);
             root.setProperty('--accent-color', accentColor);
-            root.setProperty('--accent-color-rgb', parseRgb(accentColor, [52, 211, 153]).join(', '));
+            root.setProperty('--accent-color-rgb', accentRgb.join(', '));
+            root.setProperty('--accent-contrast-color', (accentRgb[0] * 299 + accentRgb[1] * 587 + accentRgb[2] * 114) / 1000 > 145 ? '#042319' : '#ffffff');
             root.setProperty('--panel-text-color', textColor);
             root.setProperty('--panel-text-secondary-color', settings.panelTextSecondaryColor || (theme && theme.colors ? theme.colors.textSecondary : '#6ee7b7'));
 

@@ -8,20 +8,20 @@
   display: flex;
   align-items: stretch;
   width: min(980px, 96%);
-  background: var(--glass-bg);
+  background-color: rgba(var(--panel-bg-rgb, 6, 78, 59), clamp(0.18, calc(var(--panel-opacity, 0.2) + 0.08), 0.72));
   border-radius: 50px;
   backdrop-filter: blur(var(--panel-blur));
   -webkit-backdrop-filter: blur(var(--panel-blur));
   border: 1px solid var(--glass-border);
-  box-shadow: var(--panel-shadow, 0 0 0 transparent), inset 0 0 0 1px var(--glass-highlight);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color .3s ease, background-color .3s ease;
-  overflow: visible; /* Back to visible to show the dropdown */
+  box-shadow: var(--panel-shadow, 0 8px 28px rgba(0, 0, 0, 0.22)), inset 0 1px 0 var(--glass-highlight);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color .25s ease, background-color .25s ease;
+  overflow: visible;
   z-index: 1;
 }
 
 .search-card:focus-within {
   border-color: var(--accent-color);
-  background: color-mix(in srgb, var(--glass-bg), white 5%);
+  background-color: rgba(var(--panel-bg-rgb, 6, 78, 59), clamp(0.24, calc(var(--panel-opacity, 0.2) + 0.14), 0.78));
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), inset 0 0 0 1px var(--accent-color);
 }
 
@@ -49,19 +49,22 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--accent-color);
+  background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color), black 14%));
   border: 0;
-  padding: 0 30px;
-  margin: 0;
-  border-radius: 0 50px 50px 0; /* Explicitly round the right side */
-  color: white;
+  padding: 0 24px;
+  margin: 4px 4px 4px 0;
+  border-radius: 999px;
+  color: var(--accent-contrast-color, #042319);
+  font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
-  transition: all .2s;
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
   align-self: stretch;
 }
 
-.search-card button:hover {
-  background-color: color-mix(in srgb, var(--accent-color), black 10%);
+.search-card button#searchGo:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 4px 16px rgba(var(--accent-color-rgb, 52, 211, 153), 0.32);
 }
 
 .search-card button svg {
@@ -219,9 +222,4 @@
   position: relative;
   /* Crea un contexto de apilamiento inferior */
   z-index: 1;
-}
-
-.search-card {
-  background-color: rgba(var(--panel-bg-rgb), var(--panel-opacity));
-  backdrop-filter: blur(var(--panel-blur));
 }

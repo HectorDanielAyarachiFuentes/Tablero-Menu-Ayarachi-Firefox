@@ -4,12 +4,12 @@
 
 .tiles {
   display: grid;
-  /* Auto-fill columns dynamically to prevent stretching and handle multiple synced bookmarks elegantly */
+  /* Alinear eje visual con la barra de búsqueda superior */
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
-  width: 100%;
-  max-width: 1400px;
-  margin: 6px auto 0;
+  width: min(980px, 100%);
+  max-width: 980px;
+  margin: 4px auto 0;
   perspective: 800px;
 }
 
@@ -26,22 +26,22 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
+  min-height: 74px;
+  padding: 12px 14px;
   border-radius: var(--panel-radius);
-  /* Solid background without blur to prevent rendering artifacts */
   background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--panel-shadow, 0 0 0 transparent), inset 0 0 0 1px var(--glass-highlight);
+  box-shadow: var(--panel-shadow, 0 4px 20px rgba(0, 0, 0, 0.15)), inset 0 1px 0 var(--glass-highlight);
   cursor: grab;
-  transition: transform .18s ease-out, box-shadow .18s ease-out, background-color .18s ease-out;
+  transition: transform .18s ease-out, box-shadow .18s ease-out, background-color .18s ease-out, border-color .18s ease-out;
   text-decoration: none;
   color: var(--panel-text-color);
   outline: none;
   will-change: transform, background-color, box-shadow;
-  /* Limit tile width to prevent them from stretching too much on wider screens */
-  max-width: 280px;
   width: 100%;
-  justify-self: center;
+  justify-self: stretch;
 }
 
 a.tile {
@@ -50,9 +50,10 @@ a.tile {
 }
 
 .tile:hover {
-  transform: translateY(-6px) scale(1.02);
-  background: var(--hover-overlay);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--shadow-accent);
+  transform: translateY(-4px) scale(1.015);
+  background: rgba(var(--panel-bg-rgb, 6, 78, 59), clamp(0.28, calc(var(--panel-opacity, 0.2) + 0.24), 0.85));
+  border-color: var(--border-active);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.38), 0 0 18px var(--shadow-accent);
 }
 
 .tile:focus-visible {
@@ -61,32 +62,38 @@ a.tile {
 }
 
 .thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   object-fit: contain;
-  padding: 4px
+  padding: 6px;
+  flex-shrink: 0;
 }
 
 .info {
   flex: 1;
-  overflow: hidden
+  overflow: hidden;
+  min-width: 0;
 }
 
 /* Estilos de drag & drop están en drag-drop.css */
 
 
 .title {
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis
+  text-overflow: ellipsis;
 }
 
 .url {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 11.5px;
+  opacity: 0.72;
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -140,13 +147,13 @@ a.tile {
   justify-content: center;
   align-items: center;
   gap: 4px;
-  /* Igualar altura de tiles normales: padding(20) + thumb(48) + thumb-padding(8) */
-  min-height: 76px;
-  padding: 10px;
-  /* Border removed to prevent visual artifact */
-  border: none !important;
-  background: rgba(255, 255, 255, 0.03);
-  cursor: pointer
+  min-height: 74px;
+  padding: 12px 14px;
+  border: 1.5px dashed rgba(var(--accent-color-rgb, 52, 211, 153), 0.35);
+  background: rgba(var(--panel-bg-rgb, 6, 78, 59), 0.14);
+  color: var(--panel-text-secondary-color);
+  box-shadow: none;
+  cursor: pointer;
 }
 
 .tile.folder .thumb {
@@ -184,14 +191,17 @@ a.tile {
 }
 
 .tile-add:hover {
-  background: rgba(255, 255, 255, 0.08);
-  /* No border change on hover */
+  background: rgba(var(--accent-color-rgb, 52, 211, 153), 0.12);
+  border-color: var(--accent-color);
+  color: var(--panel-text-color);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
 }
 
 .tile-add span {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 300;
-  line-height: 1
+  line-height: 1;
+  color: var(--accent-color);
 }
 
 .tile-add .actions {

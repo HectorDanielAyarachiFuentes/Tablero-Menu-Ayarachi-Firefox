@@ -66,8 +66,8 @@ body.no-scroll {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  padding: 12px 90px;
+  gap: 22px;
+  padding: clamp(28px, 6vh, 64px) 90px 24px;
   transition: filter .4s ease, background-color .3s;
   opacity: 1;
   transform: translateY(0);
@@ -137,10 +137,10 @@ body.no-scroll {
 }
 
 #openNotes, #openSettings, #widgets-toggle-btn {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(var(--panel-bg-rgb, 6, 78, 59), 0.35) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--glass-border) !important;
   color: var(--panel-text-color) !important;
   width: 44px !important;
   height: 44px !important;
@@ -148,8 +148,8 @@ body.no-scroll {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.2) !important;
   margin-left: 5px;
 }
 
@@ -165,11 +165,11 @@ body.with-load-animations #widgets-toggle-btn {
 .controls button:nth-child(4) { animation-delay: 0.25s; }
 
 #openNotes:hover, #openSettings:hover, #widgets-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  transform: translateY(-2px) scale(1.05) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #fff !important;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 15px rgba(255, 255, 255, 0.1) !important;
+  background: rgba(var(--accent-color-rgb, 52, 211, 153), 0.16) !important;
+  transform: translateY(-2px) scale(1.04) !important;
+  border-color: var(--border-active) !important;
+  color: var(--text-color-strong, #fff) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 10px 28px rgba(0, 0, 0, 0.28), 0 0 14px var(--shadow-accent) !important;
 }
 
 #openNotes svg, #openSettings svg {
@@ -252,24 +252,26 @@ body.with-load-animations #widgets-toggle-btn {
 .top-content {
   width: min(980px, 96%);
   text-align: center;
-  padding-top: 2vh;
-  /* Add some space at the top */
-  padding-bottom: 1vh;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .date {
   font-family: var(--date-font);
-  font-size: 1.2em;
-  font-weight: 400;
-  opacity: 0.9;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   color: var(--date-color);
 }
 
 .footer {
-  padding: 12px;
+  padding: 14px;
   text-align: center;
-  opacity: 0.8;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  opacity: 0.45;
   color: var(--panel-text-color, #fff);
 }
 

@@ -2,7 +2,7 @@
  * Punto de entrada principal de la aplicación.
  * Optimizada para carga progresiva (Layered Loading) y sincronización Zero-Flash.
  */
-import { $, storageGet, storageSet, safeGetHostname, toHexColor } from './core/utils.js';
+import { $, storageGet, storageSet, safeGetHostname, toHexColor, ensureCssDoodleLoaded } from './core/utils.js';
 import { set as idbSet } from './lib/idb-keyval.js';
 import { registerSaveHandlers } from './core/utils.js';
 import {
@@ -92,8 +92,9 @@ async function init() {
     (settings.doodle && settings.doodle !== 'none')
   );
   const shouldApplyWelcomeDefault = !hasCustomVisualChoice || (
-    settings.defaultStyleVersion !== 2 &&
+    settings.defaultStyleVersion !== 3 &&
     settings.activePremiumTheme === DEFAULT_PREMIUM_THEME_ID &&
+    (!settings.doodle || settings.doodle === 'none') &&
     !settings.hasCustomBgData &&
     !settings.bgUrl &&
     !settings.syncFirefoxTheme
@@ -103,7 +104,7 @@ async function init() {
     if (defaultTheme) {
       const defaultPayload = {
         defaultThemeApplied: true,
-        defaultStyleVersion: 2,
+        defaultStyleVersion: 3,
         activePremiumTheme: defaultTheme.id,
         premiumThemeData: defaultTheme,
         gradient: defaultTheme.background.gradient,
@@ -190,7 +191,7 @@ async function init() {
   });
 
   const currentDoodle = DOODLES_LIST.find(d => d.id === settings.doodle);
-  if (currentDoodle) {
+  if (currentDoodle && currentDoodle.id !== 'none' && currentDoodle.template) {
     zeroFlashCache.doodleTemplate = currentDoodle.template;
     const bgMatch = currentDoodle.template.match(/background:\s*(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|[a-z]+)/);
     if (bgMatch) zeroFlashCache.doodleColor = bgMatch[1];
@@ -202,7 +203,7 @@ async function init() {
   window.addEventListener('background-changed', async () => {
     const currentSettings = await storageGet(null);
     BackgroundManager.apply(currentSettings, true);
-    renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
+    await renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
   });
 
   // Escuchar mensajes desde el background script (ej. tema de Firefox o nuevo marcador)
@@ -224,9 +225,13 @@ async function init() {
     });
   }
 
-  function renderDoodleBackground(doodleId, doodleTemplate) {
+  let doodleRenderToken = 0;
+
+  async function renderDoodleBackground(doodleId, doodleTemplate) {
     const container = document.getElementById('doodle-background');
     if (!container) return;
+
+    const currentToken = ++doodleRenderToken;
 
     if (!doodleId || doodleId === 'none') {
       container.textContent = '';
@@ -242,6 +247,9 @@ async function init() {
       if (!doodleData || !doodleData.template) return;
       doodleTemplate = doodleData.template;
     }
+
+    const loaded = await ensureCssDoodleLoaded();
+    if (!loaded || currentToken !== doodleRenderToken) return;
 
     container.textContent = '';
     const doodle = document.createElement('css-doodle');
