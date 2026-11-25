@@ -255,12 +255,13 @@ export const storageSet = (obj) => {
     // Caché crítica síncrona para Zero-Flash (evitando guardar imágenes base64 pesadas en localStorage)
     const criticalKeys = [
       'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+      'panelShadowEnabled', 'panelShadowColor', 'panelShadowBlur',
       'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
       'greetingColor', 'nameColor', 'clockColor', 'dateColor',
-      'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
-      'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData',
+      'greetingFont', 'dateFont', 'activePanelTheme', 'activePremiumTheme', 'premiumThemeData',
+      'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData', 'randomBg',
       'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-      'syncFirefoxTheme'
+      'syncFirefoxTheme', 'engine'
     ];
 
     let zeroFlashCache = {};

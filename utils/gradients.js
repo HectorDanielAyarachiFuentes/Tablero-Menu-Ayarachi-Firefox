@@ -14,15 +14,191 @@ export const DEFAULT_GRADIENT_COLORS = {
 };
 
 // Lista de degradados.
-// He añadido `cssVariables` a algunos como ejemplo.
+// Los estilos modernos y con paleta integrada aparecen primero.
 const gradientsData = [
+    {
+        "id": "esmeralda-abismo",
+        "name": "Esmeralda Abismo",
+        "gradient": "radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.28) 0%, transparent 52%), radial-gradient(circle at 18% 85%, rgba(6, 95, 70, 0.35) 0%, transparent 55%), linear-gradient(135deg, #040b09 0%, #071915 55%, #030908 100%)",
+        "cssVariables": {
+            "--text-color": "#ecfdf5",
+            "--text-secondary": "#6ee7b7",
+            "--panel-bg": "#064e3b",
+            "--accent-color": "#34d399"
+        }
+    },
+    {
+        "id": "aurora-nordica",
+        "name": "Aurora Nórdica",
+        "gradient": "radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.26) 0%, transparent 50%), radial-gradient(circle at 85% 75%, rgba(52, 211, 153, 0.22) 0%, transparent 52%), linear-gradient(135deg, #0b132b 0%, #1c2541 52%, #0f292e 100%)",
+        "cssVariables": {
+            "--text-color": "#f0f9ff",
+            "--text-secondary": "#7dd3fc",
+            "--panel-bg": "#0f2438",
+            "--accent-color": "#38bdf8"
+        }
+    },
+    {
+        "id": "nebulosa-amatista",
+        "name": "Nebulosa Amatista",
+        "gradient": "radial-gradient(circle at 80% 20%, rgba(192, 132, 252, 0.28) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.2) 0%, transparent 50%), linear-gradient(135deg, #0b0716 0%, #1d1035 55%, #0c0818 100%)",
+        "cssVariables": {
+            "--text-color": "#faf5ff",
+            "--text-secondary": "#d8b4fe",
+            "--panel-bg": "#24113d",
+            "--accent-color": "#c084fc"
+        }
+    },
+    {
+        "id": "obsidiana-dorada",
+        "name": "Obsidiana Dorada",
+        "gradient": "radial-gradient(circle at 75% 22%, rgba(251, 191, 36, 0.2) 0%, transparent 48%), linear-gradient(135deg, #0c0a09 0%, #1f1916 55%, #2b1808 100%)",
+        "cssVariables": {
+            "--text-color": "#fefce8",
+            "--text-secondary": "#fcd34d",
+            "--panel-bg": "#24190d",
+            "--accent-color": "#fbbf24"
+        }
+    },
+    {
+        "id": "oceano-abisal",
+        "name": "Océano Abisal",
+        "gradient": "radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.24) 0%, transparent 50%), linear-gradient(135deg, #040d1a 0%, #0a2540 55%, #06182c 100%)",
+        "cssVariables": {
+            "--text-color": "#ecfeff",
+            "--text-secondary": "#67e8f9",
+            "--panel-bg": "#072236",
+            "--accent-color": "#22d3ee"
+        }
+    },
+    {
+        "id": "carmesi-nocturno",
+        "name": "Carmesí Nocturno",
+        "gradient": "radial-gradient(circle at 82% 20%, rgba(251, 113, 133, 0.24) 0%, transparent 50%), linear-gradient(135deg, #120509 0%, #3b0a1a 55%, #190814 100%)",
+        "cssVariables": {
+            "--text-color": "#fff1f2",
+            "--text-secondary": "#fda4af",
+            "--panel-bg": "#360c18",
+            "--accent-color": "#fb7185"
+        }
+    },
+    {
+        "id": "bosque-bruma",
+        "name": "Bosque en Bruma",
+        "gradient": "linear-gradient(135deg, #071917 0%, #113831 50%, #1e293b 100%)",
+        "cssVariables": {
+            "--text-color": "#f0fdfa",
+            "--text-secondary": "#5eead4",
+            "--panel-bg": "#0f2e2b",
+            "--accent-color": "#2dd4bf"
+        }
+    },
+    {
+        "id": "cyber-synthwave",
+        "name": "Synthwave 2099",
+        "gradient": "radial-gradient(circle at 18% 82%, rgba(56, 189, 248, 0.25) 0%, transparent 48%), linear-gradient(135deg, #140826 0%, #3b0764 52%, #701a75 100%)",
+        "cssVariables": {
+            "--text-color": "#fdf2f8",
+            "--text-secondary": "#f9a8d4",
+            "--panel-bg": "#2b0947",
+            "--accent-color": "#f472b6"
+        }
+    },
+    {
+        "id": "cobalto-electrico",
+        "name": "Cobalto Eléctrico",
+        "gradient": "radial-gradient(circle at 80% 15%, rgba(96, 165, 250, 0.3) 0%, transparent 50%), linear-gradient(135deg, #050a1f 0%, #172554 55%, #1e3a8a 100%)",
+        "cssVariables": {
+            "--text-color": "#eff6ff",
+            "--text-secondary": "#93c5fd",
+            "--panel-bg": "#102152",
+            "--accent-color": "#60a5fa"
+        }
+    },
+    {
+        "id": "ocaso-volcanico",
+        "name": "Ocaso Volcánico",
+        "gradient": "linear-gradient(135deg, #18080b 0%, #7c2d12 52%, #be123c 100%)",
+        "cssVariables": {
+            "--text-color": "#fff7ed",
+            "--text-secondary": "#fdba74",
+            "--panel-bg": "#45150e",
+            "--accent-color": "#fb923c"
+        }
+    },
+    {
+        "id": "jade-cristal",
+        "name": "Jade Cristal",
+        "gradient": "linear-gradient(135deg, #042f2e 0%, #115e59 50%, #134e4a 100%)",
+        "cssVariables": {
+            "--text-color": "#f0fdfa",
+            "--text-secondary": "#99f6e4",
+            "--panel-bg": "#083d39",
+            "--accent-color": "#5eead4"
+        }
+    },
+    {
+        "id": "prisma-nocturno",
+        "name": "Prisma Nocturno",
+        "gradient": "radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.28) 0%, transparent 45%), radial-gradient(circle at 85% 20%, rgba(16, 185, 129, 0.22) 0%, transparent 45%), radial-gradient(circle at 50% 85%, rgba(236, 72, 153, 0.18) 0%, transparent 50%), linear-gradient(135deg, #090b14 0%, #111827 100%)",
+        "cssVariables": {
+            "--text-color": "#f1f5f9",
+            "--text-secondary": "#a5b4fc",
+            "--panel-bg": "#151a2e",
+            "--accent-color": "#818cf8"
+        }
+    },
+    {
+        "id": "sakura-seda",
+        "name": "Seda Sakura",
+        "gradient": "linear-gradient(135deg, #2b1329 0%, #500724 50%, #1e1b2e 100%)",
+        "cssVariables": {
+            "--text-color": "#fdf2f8",
+            "--text-secondary": "#fbcfe8",
+            "--panel-bg": "#3b102c",
+            "--accent-color": "#f9a8d4"
+        }
+    },
+    {
+        "id": "cosmos-profundo",
+        "name": "Cosmos Profundo",
+        "gradient": "radial-gradient(circle at 75% 25%, rgba(56, 189, 248, 0.22) 0%, transparent 48%), radial-gradient(circle at 25% 80%, rgba(129, 140, 248, 0.2) 0%, transparent 50%), linear-gradient(160deg, #020617 0%, #0f172a 100%)",
+        "cssVariables": {
+            "--text-color": "#f8fafc",
+            "--text-secondary": "#93c5fd",
+            "--panel-bg": "#0b1426",
+            "--accent-color": "#38bdf8"
+        }
+    },
+    {
+        "id": "glaciar-polar",
+        "name": "Glaciar Polar",
+        "gradient": "linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #dbeafe 100%)",
+        "cssVariables": {
+            "--text-color": "#0f172a",
+            "--text-secondary": "#334155",
+            "--panel-bg": "#ffffff",
+            "--accent-color": "#0284c7"
+        }
+    },
+    {
+        "id": "arena-dorada",
+        "name": "Arena Cálida",
+        "gradient": "linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fed7aa 100%)",
+        "cssVariables": {
+            "--text-color": "#451a03",
+            "--text-secondary": "#78350f",
+            "--panel-bg": "#ffffff",
+            "--accent-color": "#d97706"
+        }
+    },
     {
         "id": "aurora-mist",
         "name": "Aurora Mist (Modern)",
         "gradient": "linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)",
         "cssVariables": {
             '--text-color': '#e0f7fa',
-            '--panel-bg': 'rgba(15, 23, 42, 0.6)',
+            '--panel-bg': '#0f172a',
             '--accent-color': '#00f2fe'
         }
     },
@@ -32,7 +208,7 @@ const gradientsData = [
         "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         "cssVariables": {
             '--text-color': '#e0e7ff',
-            '--panel-bg': 'rgba(30, 27, 75, 0.7)',
+            '--panel-bg': '#1e1b4b',
             '--accent-color': '#a5b4fc'
         }
     },
@@ -42,17 +218,17 @@ const gradientsData = [
         "gradient": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
         "cssVariables": {
             '--text-color': '#fff1f2',
-            '--panel-bg': 'rgba(67, 12, 23, 0.6)',
+            '--panel-bg': '#430c17',
             '--accent-color': '#f093fb'
         }
     },
     {
         "id": "deep-space-mesh",
         "name": "Deep Space Mesh",
-        "gradient": "radial-gradient(at 0% 0%, #000428 0, transparent 50%), radial-gradient(at 50% 0%, #004e92 0, transparent 50%), radial-gradient(at 100% 0%, #000428 0, transparent 50%)",
+        "gradient": "radial-gradient(at 0% 0%, #000428 0, transparent 50%), radial-gradient(at 50% 0%, #004e92 0, transparent 50%), radial-gradient(at 100% 0%, #000428 0, transparent 50%), #000428",
         "cssVariables": {
             '--text-color': '#d1d5db',
-            '--panel-bg': 'rgba(3, 7, 18, 0.8)',
+            '--panel-bg': '#030712',
             '--accent-color': '#3b82f6'
         }
     },
@@ -556,3 +732,87 @@ export const GRADIENTS = gradientsData.map(g => ({
   ...g,
   name: g.name.trim()
 }));
+
+function parseHexToRgb(hex) {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  if (full.length !== 6) return null;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return null;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Deriva una paleta completa (paneles, acento, texto y reloj) desde un objeto degradado
+ * respetando `cssVariables` si existen o calculando contraste automático según luminancia.
+ */
+export function deriveGradientPalette(gradObj) {
+  const vars = gradObj?.cssVariables || {};
+  const hexMatches = (gradObj?.gradient || '').match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/g) || [];
+  const rgbStops = hexMatches.map(parseHexToRgb).filter(Boolean);
+
+  const lums = rgbStops.map(([r, g, b]) => (r * 299 + g * 587 + b * 114) / 1000);
+  const avgLum = lums.length ? lums.reduce((a, b) => a + b, 0) / lums.length : 40;
+  const isLight = avgLum > 165;
+
+  // Color más saturado/vivo como acento por defecto si no está en cssVariables
+  let derivedAccent = vars['--accent-color'] || null;
+  if (!derivedAccent && rgbStops.length > 0) {
+    let bestScore = -1;
+    for (const [r, g, b] of rgbStops) {
+      const lum = (r * 299 + g * 587 + b * 114) / 1000;
+      const spread = Math.max(r, g, b) - Math.min(r, g, b);
+      const contrastFit = isLight ? (255 - lum) * 0.45 : lum * 0.45;
+      const score = spread + contrastFit;
+      if (score > bestScore) {
+        bestScore = score;
+        derivedAccent = rgbToHex(r, g, b);
+      }
+    }
+  }
+  if (!derivedAccent) derivedAccent = isLight ? '#2563eb' : '#38bdf8';
+
+  // Normalizar --panel-bg a #hex cuando venía en rgba(...)
+  let panelBg = vars['--panel-bg'] || null;
+  if (panelBg && panelBg.startsWith('rgb')) {
+    const nums = panelBg.match(/\d+/g);
+    if (nums && nums.length >= 3) {
+      panelBg = rgbToHex(Number(nums[0]), Number(nums[1]), Number(nums[2]));
+    }
+  }
+  if (!panelBg) {
+    if (isLight) {
+      panelBg = '#ffffff';
+    } else if (rgbStops.length > 0) {
+      // Oscurecer suavemente el primer color del degradado para tarjetas vidrio legibles
+      const [r, g, b] = rgbStops[0];
+      panelBg = rgbToHex(r * 0.35 + 8, g * 0.35 + 10, b * 0.35 + 16);
+    } else {
+      panelBg = '#141824';
+    }
+  }
+
+  const text = vars['--text-color'] || (isLight ? '#0f172a' : '#f8fafc');
+  const textSecondary = vars['--text-secondary'] || (isLight ? '#334155' : '#cbd5e1');
+
+  return {
+    panelBg,
+    panelOpacity: isLight ? 0.38 : 0.28,
+    panelBlur: 22,
+    panelRadius: 16,
+    panelShadowEnabled: false,
+    panelShadowColor: '#000000',
+    panelShadowBlur: 12,
+    panelTextColor: text,
+    panelTextSecondaryColor: textSecondary,
+    accentColor: derivedAccent,
+    greetingColor: text,
+    nameColor: derivedAccent,
+    clockColor: text,
+    dateColor: textSecondary
+  };
+}

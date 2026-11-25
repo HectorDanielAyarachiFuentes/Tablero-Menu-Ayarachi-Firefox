@@ -69,6 +69,7 @@ async function init() {
   const criticalKeys = [
     'tiles', 'trash', 'socialMigrationDone', 'defaultThemeApplied', 'defaultStyleVersion',
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+    'panelShadowEnabled', 'panelShadowColor', 'panelShadowBlur',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
     'greetingFont', 'dateFont', 'activePanelTheme', 'activePremiumTheme', 'premiumThemeData',
@@ -178,9 +179,10 @@ async function init() {
   // Actualizar caché síncrona para la próxima carga (Zero-Flash)
   const zfCacheKeys = [
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+    'panelShadowEnabled', 'panelShadowColor', 'panelShadowBlur',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
-    'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
+    'greetingFont', 'dateFont', 'activePanelTheme', 'activePremiumTheme', 'premiumThemeData',
     'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData', 'randomBg',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
     'syncFirefoxTheme', 'engine'
@@ -202,7 +204,7 @@ async function init() {
   // Escuchar cambios de fondo desde la configuración
   window.addEventListener('background-changed', async () => {
     const currentSettings = await storageGet(null);
-    BackgroundManager.apply(currentSettings, true);
+    await BackgroundManager.apply(currentSettings, true);
     await renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
   });
 

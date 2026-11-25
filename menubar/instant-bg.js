@@ -106,6 +106,11 @@
     root.setProperty('--panel-opacity', cache.panelOpacity ?? 0.2);
     root.setProperty('--panel-blur', `${cache.panelBlur ?? 25}px`);
     root.setProperty('--panel-radius', `${cache.panelRadius ?? 18}px`);
+    root.setProperty('--panel-shadow-color', cache.panelShadowColor || '#000000');
+    root.setProperty('--panel-shadow-blur', `${cache.panelShadowBlur ?? 10}px`);
+    root.setProperty('--panel-shadow', cache.panelShadowEnabled
+      ? '0 5px var(--panel-shadow-blur, 10px) var(--panel-shadow-color, #000000)'
+      : '0 0 0 transparent');
 
     const fallbackBg = cache.hasCustomBgData ? lastColor : (lastBg || DEFAULT_BG_GRADIENT);
     const bgToApply = isDoodle ? 'transparent' : fallbackBg;

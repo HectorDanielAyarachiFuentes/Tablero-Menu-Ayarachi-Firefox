@@ -143,6 +143,15 @@
             root.setProperty('--panel-blur', `${settings.panelBlur ?? (theme && theme.panel ? theme.panel.blur : 25)}px`);
             root.setProperty('--panel-radius', `${settings.panelRadius ?? (theme && theme.panel ? theme.panel.radius : 18)}px`);
 
+            const shadowEnabled = settings.panelShadowEnabled ?? (theme && theme.panel ? theme.panel.shadowEnabled : false) ?? false;
+            const shadowColor = settings.panelShadowColor || (theme && theme.panel ? theme.panel.shadowColor : '#000000') || '#000000';
+            const shadowBlur = settings.panelShadowBlur ?? (theme && theme.panel ? theme.panel.shadowBlur : 10) ?? 10;
+            root.setProperty('--panel-shadow-color', shadowColor);
+            root.setProperty('--panel-shadow-blur', `${shadowBlur}px`);
+            root.setProperty('--panel-shadow', shadowEnabled
+                ? '0 5px var(--panel-shadow-blur, 10px) var(--panel-shadow-color, #000000)'
+                : '0 0 0 transparent');
+
             this.updatePanelRgb(panelBg);
 
             // Visibilidad de secciones
@@ -250,8 +259,7 @@
                     }
                 }
 
-                const match = finalBg.match(/#(?:[0-9a-fA-F]{3}){1,2}|rgba?\([^)]+\)/);
-                if (match) fallbackColor = match[0];
+                fallbackColor = extractGradientBaseColor(finalBg, DEFAULT_CANVAS_COLOR);
             }
 
             // En arranque inicial nunca animamos transición para evitar destellos; solo al cambiar en Ajustes
@@ -261,6 +269,7 @@
             this.initialLoadDone = true;
 
             if (isDoodle) {
+                this.isAnimating = false;
                 this.lastAppliedBg = finalBg;
                 this.lastDisplayMode = displayMode;
                 root.setProperty('background', 'transparent', 'important');
@@ -274,9 +283,13 @@
             } else {
                 this.lastAppliedBg = finalBg;
                 this.lastDisplayMode = displayMode;
+                if (forceAsyncFetch || window.GRADIENTS) {
+                    const instantStyle = document.getElementById('instant-bg-style');
+                    if (instantStyle) instantStyle.remove();
+                }
                 root.setProperty('background', 'none', 'important');
                 root.setProperty('background-color', fallbackColor, 'important');
-                this.applyBackground(finalBg, hasChanged, displayMode);
+                this.applyBackground(finalBg, hasChanged || forceAsyncFetch, displayMode);
             }
 
             this.updateCache(settings, finalBg, fallbackColor, accentColor, displayMode);
@@ -290,7 +303,7 @@
             const body = document.body;
             const sizeRules = getBackgroundSizeRules(displayMode);
 
-            if (this.isAnimating && this.normalizeBg(bg) === this.normalizeBg(this.lastAppliedBg) && displayMode === this.lastDisplayMode && !animate) {
+            if (this.isAnimating && this.normalizeBg(bg) === this.normalizeBg(this.lastAppliedBg) && displayMode === this.lastDisplayMode && !animate && (!bgLayer || bgLayer.style.opacity !== '0')) {
                 return;
             }
 
@@ -319,6 +332,9 @@
                     bgLayer.style.setProperty('background-repeat', sizeRules.repeat, 'important');
                     bgLayer.style.setProperty('background-attachment', 'fixed', 'important');
                     bgLayer.style.setProperty('background-position', sizeRules.position, 'important');
+                    if (bgLayer.style.opacity === '0') {
+                        bgLayer.style.opacity = bgLayer.classList.contains('bg-enter') ? '' : '1';
+                    }
                     bgLayer.style.filter = 'none';
                 }
             }
@@ -440,9 +456,10 @@
                 const cache = JSON.parse(localStorage.getItem('zero_flash_cache') || '{}');
                 const keysToSync = [
                     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
+                    'panelShadowEnabled', 'panelShadowColor', 'panelShadowBlur',
                     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
                     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
-                    'activePremiumTheme', 'premiumThemeData', 'doodle', 'userName',
+                    'activePanelTheme', 'activePremiumTheme', 'premiumThemeData', 'doodle', 'userName',
                     'showSearch', 'showWeather', 'showDate', 'greetingFont', 'dateFont',
                     'syncFirefoxTheme', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode',
                     'hasCustomBgData', 'use12HourFormat', 'showSeconds', 'randomBg', 'engine'

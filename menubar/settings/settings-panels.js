@@ -139,10 +139,11 @@ function handleShadowColorChange(color) {
 }
 
 function handlePanelSliderChange(key, value, cssVar, unit = '') {
-    document.documentElement.style.setProperty(cssVar, `${value}${unit}`);
+    const numericVal = Number(value);
+    document.documentElement.style.setProperty(cssVar, `${numericVal}${unit}`);
     updateSliderValueSpans();
     saveAndSyncSetting({
-        [key]: value,
+        [key]: numericVal,
         activePanelTheme: null,
         activePremiumTheme: null
     });

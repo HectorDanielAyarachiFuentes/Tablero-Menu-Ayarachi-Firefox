@@ -4,7 +4,7 @@
  * Incluye modo automático día/noche basado en la hora del sistema
  */
 import { $, $$, saveAndSyncSetting, storageGet, setSVG, toHexColor } from '../core/utils.js';
-import { updatePanelRgb } from './settings-panels.js';
+import { updatePanelRgb, updateSliderValueSpans } from './settings-panels.js';
 // BackgroundManager ahora es global
 
 let premiumThemes = [
@@ -605,10 +605,12 @@ export async function applyPremiumTheme(themeId, skipSave = false, preservedDood
     const themeSettingsPayload = {
         defaultStyleVersion: 3,
         activePremiumTheme: themeId,
+        activePanelTheme: null,
         premiumThemeData: theme,
         gradient: theme.background.gradient,
         bgType: 'premium',
         doodle: preservedDoodle || 'none',
+        randomBg: false,
         syncFirefoxTheme: false,
         hasCustomBgData: false,
         bgData: null,
@@ -617,6 +619,9 @@ export async function applyPremiumTheme(themeId, skipSave = false, preservedDood
         panelOpacity: theme.panel.opacity,
         panelBlur: theme.panel.blur,
         panelRadius: theme.panel.radius,
+        panelShadowEnabled: theme.panel.shadowEnabled ?? false,
+        panelShadowColor: theme.panel.shadowColor || '#000000',
+        panelShadowBlur: theme.panel.shadowBlur ?? 10,
         panelTextColor: theme.colors.text,
         panelTextSecondaryColor: theme.colors.textSecondary,
         accentColor: theme.colors.accent,
@@ -628,8 +633,8 @@ export async function applyPremiumTheme(themeId, skipSave = false, preservedDood
         dateFont: theme.fonts ? theme.fonts.secondary : undefined
     };
 
-    // Aplicación centralizada a través del BackgroundManager
-    BackgroundManager.apply(themeSettingsPayload);
+    // Forzar transición inmediata y completa del fondo y variables
+    BackgroundManager.apply(themeSettingsPayload, true);
 
     updateThemeControls(theme);
     updateActivePremiumTheme(themeId);
@@ -639,6 +644,11 @@ export async function applyPremiumTheme(themeId, skipSave = false, preservedDood
         localStorage.setItem('lastPremiumGradient', theme.background.gradient);
         const syncToggle = $('#syncFirefoxThemeToggle');
         if (syncToggle) syncToggle.checked = false;
+        const randomToggle = $('#randomBgToggle');
+        if (randomToggle) randomToggle.checked = false;
+        if ($('#bgUrl')) $('#bgUrl').value = '';
+        $$('.gradient-btn.active').forEach(btn => btn.classList.remove('active'));
+        $$('.panel-theme-btn.active').forEach(btn => btn.classList.remove('active'));
         if (!preservedDoodle) {
             $$('#doodle-list .doodle-item').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.doodleId === 'none');
@@ -667,13 +677,15 @@ function updateThemeControls(theme) {
     if (panelTextColor) panelTextColor.value = toHexColor(theme.colors.text, '#ffffff');
     if (panelTextSecondaryColor) panelTextSecondaryColor.value = toHexColor(theme.colors.textSecondary, '#ffffff');
 
-    const opacityValue = $('#opacityValue');
-    const blurValue = $('#blurValue');
-    const radiusValue = $('#radiusValue');
+    const shadowEnabled = theme.panel.shadowEnabled ?? false;
+    const shadowColor = theme.panel.shadowColor || '#000000';
+    const shadowBlur = theme.panel.shadowBlur ?? 10;
+    if ($('#panelShadowToggle')) $('#panelShadowToggle').checked = shadowEnabled;
+    if ($('#panelShadowOptions')) $('#panelShadowOptions').hidden = !shadowEnabled;
+    if ($('#panelShadowColor')) $('#panelShadowColor').value = toHexColor(shadowColor, '#000000');
+    if ($('#panelShadowBlur')) $('#panelShadowBlur').value = shadowBlur;
 
-    if (opacityValue) opacityValue.textContent = `${Math.round(theme.panel.opacity * 100)}%`;
-    if (blurValue) blurValue.textContent = `${theme.panel.blur}px`;
-    if (radiusValue) radiusValue.textContent = `${theme.panel.radius}px`;
+    updateSliderValueSpans();
 
     const greetingColor = $('#greetingColor');
     const nameColor = $('#nameColor');
@@ -684,6 +696,9 @@ function updateThemeControls(theme) {
     if (nameColor) nameColor.value = toHexColor(theme.colors.name, '#ffffff');
     if (clockColor) clockColor.value = toHexColor(theme.colors.clock, '#ffffff');
     if (dateColor) dateColor.value = toHexColor(theme.colors.date, '#ffffff');
+
+    if (theme.fonts?.main && $('#greetingFont')) $('#greetingFont').value = theme.fonts.main;
+    if (theme.fonts?.secondary && $('#dateFont')) $('#dateFont').value = theme.fonts.secondary;
 }
 
 function updateActivePremiumTheme(themeId) {
@@ -745,6 +760,18 @@ async function loadPremiumThemeSettings() {
     if (autoModeEnabled && (settings.dayThemeId || settings.nightThemeId)) startAutoMode();
     else if (settings.activePremiumTheme) updateActivePremiumTheme(settings.activePremiumTheme);
 }
+
+window.addEventListener('background-changed', async () => {
+    const { autoThemeMode } = await storageGet(['autoThemeMode']);
+    if (!autoThemeMode && autoModeEnabled) {
+        autoModeEnabled = false;
+        stopAutoMode();
+        const autoToggle = $('#autoThemeToggle');
+        const autoSettings = $('#autoThemeSettings');
+        if (autoToggle) autoToggle.checked = false;
+        if (autoSettings) autoSettings.hidden = true;
+    }
+});
 
 window.addEventListener('beforeunload', () => {
     stopAutoMode();

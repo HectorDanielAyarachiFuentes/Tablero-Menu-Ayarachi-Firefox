@@ -6,11 +6,11 @@
 import { $, $$, storageGet, storageSet, saveAndSyncSetting, isSafeWebUrl, toHexColor } from '../core/utils.js';
 import { get as idbGet, set as idbSet, del as idbDel } from '../lib/idb-keyval.js';
 import { showSaveStatus, updateDataTabUI, renderGreeting, updateBgModeUI, showToast } from '../components/ui.js';
-import { updateSliderValueSpans } from './settings-panels.js';
+import { updateSliderValueSpans, updatePanelRgb } from './settings-panels.js';
 import { tiles, setTiles, setTrash, saveAndRender, renderTiles } from '../core/tiles.js';
 import { renderNotes } from '../../notas/notas.js';
 import { renderTrash } from '../components/trash.js';
-import { GRADIENTS } from '../../utils/gradients.js';
+import { GRADIENTS, deriveGradientPalette } from '../../utils/gradients.js';
 import { PREDEFINED_GREETINGS } from '../../utils/greetings-list.js';
 import { STORAGE_KEYS } from '../core/config.js';
 
@@ -90,7 +90,28 @@ export function initSettings(initialState) {
     if ($('#randomBgToggle')) {
         $('#randomBgToggle').checked = initialState.randomBg || false;
         $('#randomBgToggle').addEventListener('change', (e) => {
-            saveAndSyncSetting({ randomBg: e.target.checked }, () => {
+            const enabled = e.target.checked;
+            const updateObj = { randomBg: enabled };
+            if (enabled) {
+                updateObj.bgType = 'gradient';
+                updateObj.doodle = 'none';
+                updateObj.bgUrl = null;
+                updateObj.bgData = null;
+                updateObj.hasCustomBgData = false;
+                updateObj.activePremiumTheme = null;
+                updateObj.premiumThemeData = null;
+                updateObj.activePanelTheme = null;
+                updateObj.autoThemeMode = false;
+                updateObj.syncFirefoxTheme = false;
+                idbDel('custom_bg_data').catch(() => {});
+                if ($('#syncFirefoxThemeToggle')) $('#syncFirefoxThemeToggle').checked = false;
+                if ($('#autoThemeToggle')) $('#autoThemeToggle').checked = false;
+                if ($('#autoThemeSettings')) $('#autoThemeSettings').hidden = true;
+                $$('.premium-theme-btn.active').forEach(el => el.classList.remove('active'));
+                $$('#doodle-list .doodle-item').forEach(el => el.classList.toggle('active', el.dataset.doodleId === 'none'));
+            }
+            saveAndSyncSetting(updateObj, () => {
+                if (enabled) updateBgModeUI(false, appState.bgDisplayMode || 'cover');
                 window.dispatchEvent(new CustomEvent('background-changed'));
             });
         });
@@ -242,11 +263,15 @@ export function initSettings(initialState) {
     };
 
     storageGet(Object.keys(textColors)).then(settings => {
+        const computed = getComputedStyle(document.documentElement);
         Object.entries(textColors).forEach(([key, { cssVar }]) => {
-            const color = settings[key] || '#FFFFFF';
+            const saved = settings[key];
+            if (saved) {
+                document.documentElement.style.setProperty(cssVar, saved);
+            }
+            const activeColor = saved || computed.getPropertyValue(cssVar).trim() || '#ffffff';
             const inputEl = $(`#${key}`);
-            if (inputEl) inputEl.value = toHexColor(color, '#ffffff');
-            document.documentElement.style.setProperty(cssVar, color);
+            if (inputEl) inputEl.value = toHexColor(activeColor, '#ffffff');
         });
     });
 
@@ -276,11 +301,15 @@ export function initSettings(initialState) {
     };
 
     storageGet(Object.keys(textFonts)).then(settings => {
+        const computed = getComputedStyle(document.documentElement);
         Object.entries(textFonts).forEach(([key, { cssVar }]) => {
-            const font = settings[key] || '\'Poppins\', sans-serif';
+            const saved = settings[key];
+            if (saved) {
+                document.documentElement.style.setProperty(cssVar, saved);
+            }
+            const activeFont = saved || computed.getPropertyValue(cssVar).trim() || "'Poppins', sans-serif";
             const selectEl = $(`#${key}`);
-            if (selectEl) selectEl.value = font;
-            document.documentElement.style.setProperty(cssVar, font);
+            if (selectEl) selectEl.value = activeFont;
         });
     });
 
@@ -341,10 +370,15 @@ export async function loadGradients(activeGradient) {
     GRADIENTS.forEach(g => {
         const btn = document.createElement('button');
         btn.className = 'gradient-btn';
+        btn.type = 'button';
         btn.style.setProperty('--gradient-bg-preview', g.gradient);
         btn.title = g.name.trim();
         btn.dataset.gradientId = g.id;
         btn.dataset.type = 'gradient';
+        const label = document.createElement('span');
+        label.className = 'gradient-name';
+        label.textContent = g.name.trim();
+        btn.appendChild(label);
         if (g.id === activeGradient) btn.classList.add('active');
         btn.addEventListener('click', handleBackgroundChange);
         gradientListEl.appendChild(btn);
@@ -398,27 +432,69 @@ function handleBgModeChange(e) {
 }
 
 async function handleBackgroundChange(e) {
-    const gradientId = e.currentTarget.dataset.gradientId;
-    await idbDel('custom_bg_data').catch(() => {});
-    $$('.gradient-btn.active').forEach(el => el.classList.remove('active'));
-    e.currentTarget.classList.add('active');
+    const targetBtn = e.currentTarget;
+    const gradientId = targetBtn?.dataset?.gradientId;
+    const gradObj = GRADIENTS.find(g => g.id === gradientId);
+    if (!gradientId || !gradObj) return;
 
-    saveAndSyncSetting({
+    const palette = deriveGradientPalette(gradObj);
+
+    $$('.gradient-btn.active').forEach(el => el.classList.remove('active'));
+    targetBtn.classList.add('active');
+    $$('.premium-theme-btn.active').forEach(el => el.classList.remove('active'));
+    $$('.panel-theme-btn.active').forEach(el => el.classList.remove('active'));
+    $$('#doodle-list .doodle-item').forEach(el => el.classList.toggle('active', el.dataset.doodleId === 'none'));
+    appState.currentGradient = gradientId;
+    appState.currentBackgroundValue = null;
+
+    await Promise.race([
+        idbDel('custom_bg_data').catch(() => {}),
+        new Promise(resolve => setTimeout(resolve, 120))
+    ]);
+
+    const payload = {
         gradient: gradientId,
+        bgType: 'gradient',
         bgUrl: null,
         bgData: null,
         hasCustomBgData: false,
         doodle: 'none',
         activePremiumTheme: null,
-        syncFirefoxTheme: false
-    }, () => {
+        premiumThemeData: null,
+        activePanelTheme: null,
+        autoThemeMode: false,
+        randomBg: false,
+        syncFirefoxTheme: false,
+        ...palette
+    };
+
+    // Sincronizar controles visuales de Paneles y Colores inmediatamente
+    updatePanelRgb(palette.panelBg);
+    if ($('#panelColor')) $('#panelColor').value = toHexColor(palette.panelBg, '#000000');
+    if ($('#panelOpacity')) $('#panelOpacity').value = palette.panelOpacity;
+    if ($('#panelBlur')) $('#panelBlur').value = palette.panelBlur;
+    if ($('#panelRadius')) $('#panelRadius').value = palette.panelRadius;
+    if ($('#panelTextColor')) $('#panelTextColor').value = toHexColor(palette.panelTextColor, '#ffffff');
+    if ($('#panelTextSecondaryColor')) $('#panelTextSecondaryColor').value = toHexColor(palette.panelTextSecondaryColor, '#ffffff');
+    if ($('#panelShadowToggle')) $('#panelShadowToggle').checked = false;
+    if ($('#panelShadowOptions')) $('#panelShadowOptions').hidden = true;
+    if ($('#greetingColor')) $('#greetingColor').value = toHexColor(palette.greetingColor, '#ffffff');
+    if ($('#nameColor')) $('#nameColor').value = toHexColor(palette.nameColor, '#ffffff');
+    if ($('#clockColor')) $('#clockColor').value = toHexColor(palette.clockColor, '#ffffff');
+    if ($('#dateColor')) $('#dateColor').value = toHexColor(palette.dateColor, '#ffffff');
+    if ($('#autoThemeToggle')) $('#autoThemeToggle').checked = false;
+    if ($('#autoThemeSettings')) $('#autoThemeSettings').hidden = true;
+    updateSliderValueSpans();
+
+    await saveAndSyncSetting(payload, () => {
         updateBgModeUI(false, appState.bgDisplayMode || 'cover');
         window.dispatchEvent(new CustomEvent('background-changed'));
+        if ($('#bgUrl')) $('#bgUrl').value = '';
         const syncToggle = $('#syncFirefoxThemeToggle');
         if (syncToggle) syncToggle.checked = false;
+        const randomToggle = $('#randomBgToggle');
+        if (randomToggle) randomToggle.checked = false;
     });
-    appState.currentGradient = gradientId;
-    appState.currentBackgroundValue = null;
 }
 
 async function exportData() {
