@@ -31,28 +31,32 @@
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url('../fonts/poppins-300.ttf') format('truetype');
+  src: url('../fonts/poppins-300.woff2') format('woff2'),
+       url('../fonts/poppins-300.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Poppins';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../fonts/poppins-400.ttf') format('truetype');
+  src: url('../fonts/poppins-400.woff2') format('woff2'),
+       url('../fonts/poppins-400.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Poppins';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../fonts/poppins-600.ttf') format('truetype');
+  src: url('../fonts/poppins-600.woff2') format('woff2'),
+       url('../fonts/poppins-600.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Poppins';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../fonts/poppins-700.ttf') format('truetype');
+  src: url('../fonts/poppins-700.woff2') format('woff2'),
+       url('../fonts/poppins-700.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Roboto';
@@ -60,7 +64,8 @@
   font-weight: 400;
   font-stretch: normal;
   font-display: swap;
-  src: url('../fonts/roboto-400.ttf') format('truetype');
+  src: url('../fonts/roboto-400.woff2') format('woff2'),
+       url('../fonts/roboto-400.ttf') format('truetype');
 }
 @font-face {
   font-family: 'Roboto';

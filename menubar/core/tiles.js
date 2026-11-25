@@ -3,8 +3,8 @@
  * Se encarga del estado principal (tiles, trash), la renderización de la cuadrícula,
  * y la lógica de arrastrar y soltar (drag and drop) en la vista principal.
  */
-import { $, $$, storageSet, storageGet, throttle } from './utils.js';
-import { FolderManager, setFolderTilesCallbacks } from './carpetas.js';
+import { $, $$, storageSet, storageGet, throttle, safeGetHostname } from './utils.js';
+import { FolderManager, setFolderTilesCallbacks, getDynamicFallbackIcon } from './carpetas.js';
 
 let _onSaveToFile = null;
 let _onSaveStatus = null;
@@ -178,28 +178,80 @@ setFolderTilesCallbacks({
 export function renderTiles() {
     const tilesEl = $('#tiles');
     const tpl = $('#tileTpl');
-    if (!tpl) return;
+    if (!tilesEl || !tpl) return;
 
-    // Cancelar cualquier timer de carga automática pendiente
     if (autoLoadTimer) {
         clearTimeout(autoLoadTimer);
         autoLoadTimer = null;
     }
 
-    // Resetear contador de carga
+    const isRoot = FolderManager.isRootView();
+    $('#backBtn').hidden = isRoot;
+
+    // Hidratación sin parpadeo: si zero-flash.js ya pintó los mismos accesos raíz, reutilizamos el DOM
+    if (isRoot && tilesEl.dataset.zfRendered === 'true') {
+        delete tilesEl.dataset.zfRendered;
+        const currentTiles = FolderManager.getTilesForCurrentView(tiles);
+        const displayableTiles = currentTiles.filter(t => t.type !== 'note');
+        const cachedNodes = Array.from(tilesEl.querySelectorAll('.tile:not(.tile-add)'));
+        const checkCount = Math.min(displayableTiles.length, 50);
+
+        const matchesCache = cachedNodes.length === checkCount && cachedNodes.every((node, idx) => {
+            const t = displayableTiles[idx];
+            const childCount = t.type === 'folder' ? (t.children || []).length : 0;
+            const expectedKey = `${t.type || 'link'}|${t.name || ''}|${t.url || ''}|${childCount}`;
+            return node.dataset.zfKey === expectedKey;
+        });
+
+        if (matchesCache) {
+            cachedNodes.forEach((node, idx) => {
+                const t = displayableTiles[idx];
+                const trueIndex = currentTiles.indexOf(t);
+                node.dataset.idx = String(trueIndex);
+                delete node.dataset.zfKey;
+
+                const thumbEl = node.querySelector('.thumb');
+                if (thumbEl && thumbEl.tagName === 'IMG' && !thumbEl.dataset.zfHydrated) {
+                    thumbEl.dataset.zfHydrated = 'true';
+                    const fallbackIcon = getDynamicFallbackIcon(t.name || safeGetHostname(t.url));
+                    const applyFallback = () => {
+                        if (!thumbEl.dataset.fallbackLoaded) {
+                            thumbEl.dataset.fallbackLoaded = 'true';
+                            thumbEl.src = fallbackIcon;
+                        }
+                    };
+                    if (thumbEl.complete && thumbEl.naturalWidth <= 16 && !t.customIcon) {
+                        applyFallback();
+                    } else {
+                        thumbEl.addEventListener('error', applyFallback, { once: true });
+                        if (!t.customIcon) {
+                            thumbEl.addEventListener('load', () => {
+                                if (thumbEl.naturalWidth <= 16 && thumbEl.naturalHeight <= 16) applyFallback();
+                            }, { once: true });
+                        }
+                    }
+                }
+            });
+
+            loadedCount = checkCount;
+            isLoading = false;
+            initInfiniteScroll();
+            if (loadedCount < displayableTiles.length) {
+                loadMoreTiles();
+            } else {
+                ensureAddButton(tilesEl, loadedCount);
+            }
+            return;
+        }
+    }
+
+    delete tilesEl.dataset.zfRendered;
     loadedCount = 0;
     isLoading = false;
-
-    // Limpiar DOM completamente para evitar estados inconsistentes
     tilesEl.textContent = '';
-    
-    // Reinicializar observador para estar 100% seguros
+
     initInfiniteScroll();
-
-    // Cargar primer batch
     loadMoreTiles();
-
-    $('#backBtn').hidden = FolderManager.isRootView();
 }
 
 function loadMoreTiles() {

@@ -1,20 +1,200 @@
 <!doctype html>
-<html lang="es" style="background-color: #064e3b; color-scheme: dark;">
+<html lang="es" style="background-color: #2b2a33; color-scheme: dark;">
 
 <head>
-  <meta name="color-scheme" content="dark">
-  <link rel="stylesheet" href="css/critical.css">
-  <script src="menubar/background-manager.js" defer></script>
-  <script src="menubar/instant-bg.js"></script>
-  <script src="menubar/zero-flash.js" defer></script>
-  <link rel="stylesheet" href="css/fonts.css">
   <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark">
+  <script src="menubar/instant-bg.js"></script>
+  <!-- CSS crítico y variables inlined para eliminar bloqueo de renderizado inicial (permitido por CSP style-src 'unsafe-inline') -->
+  <style>
+    html {
+      background-color: #2b2a33;
+      color-scheme: dark;
+    }
+
+    body {
+      background: transparent !important;
+      margin: 0;
+    }
+
+    :root {
+      --greeting-color: #ecfdf5;
+      --name-color: #34d399;
+      --clock-color: #ffffff;
+      --date-color: #6ee7b7;
+
+      --greeting-font: 'Playfair Display', serif;
+      --date-font: 'Lato', sans-serif;
+
+      --panel-text-color: #ecfdf5;
+      --panel-text-secondary-color: #6ee7b7;
+      --text-color-strong: #ffffff;
+      --panel-bg: #064e3b;
+      --panel-bg-rgb: 6, 78, 59;
+      --accent-color: #34d399;
+      --accent-color-rgb: 52, 211, 153;
+      --accent: var(--accent-color);
+      --bg-secondary: rgba(6, 78, 59, 0.5);
+      --bg-hover: rgba(255, 255, 255, 0.08);
+      --button-bg: rgba(255, 255, 255, 0.05);
+      --button-hover-bg: rgba(255, 255, 255, 0.1);
+      --panel-radius: 18px;
+
+      --panel-opacity: 0.2;
+      --panel-blur: 25px;
+
+      --border-light: color-mix(in srgb, var(--panel-text-color), transparent 85%);
+      --border-active: color-mix(in srgb, var(--accent-color), transparent 40%);
+      --hover-overlay: color-mix(in srgb, var(--accent-color), transparent 85%);
+      --shadow-accent: color-mix(in srgb, var(--accent-color), transparent 70%);
+
+      --glass-bg: color-mix(in srgb, var(--panel-bg), transparent 10%);
+      --glass-border: color-mix(in srgb, var(--panel-text-color), transparent 80%);
+      --glass-highlight: color-mix(in srgb, var(--panel-text-color), transparent 95%);
+    }
+
+    @keyframes tableroBgFadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes tableroWrapReveal {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    #bg-layer.bg-enter {
+      animation: tableroBgFadeIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .wrap {
+      opacity: 1;
+      animation: tableroWrapReveal 0.34s ease-out both;
+    }
+
+    #doodle-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.45s ease-out;
+      pointer-events: none;
+    }
+
+    #doodle-background.ready {
+      opacity: 1;
+    }
+
+    css-doodle:not(:defined) {
+      display: none;
+    }
+
+    body.loading #settings,
+    body.loading #modal,
+    body.loading #overlay,
+    body.loading #contextMenu,
+    body.loading .weather-widget-fixed {
+      display: none !important;
+    }
+
+    #settings {
+      position: fixed;
+      visibility: hidden;
+      transform: translateX(calc(100% + 40px));
+      pointer-events: none;
+    }
+
+    #settings[aria-hidden="false"] {
+      visibility: visible;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    #modal {
+      position: fixed;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #modal[aria-hidden="false"] {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #overlay[aria-hidden="false"] {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #contextMenu {
+      position: fixed;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #contextMenu:not([hidden]) {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #scrollToTopBtn:not(.visible) {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .weather-widget-fixed:not(.loaded) {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tile.skeleton-preview {
+      pointer-events: auto;
+    }
+
+    .tile-skeleton-preview {
+      min-height: 68px;
+      border-radius: var(--panel-radius, 18px);
+      background: var(--glass-bg, rgba(6, 78, 59, 0.2));
+      border: 1px solid var(--glass-border, rgba(236, 253, 245, 0.2));
+    }
+  </style>
 
   <title>Tablero</title>
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-  <!-- Carga crítica en paralelo para eliminar cuello de botella de renderizado -->
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/animations.css">
+  <!-- Fuentes woff2 locales y hojas esenciales en head para render sin salto tipográfico ni bloqueo extra -->
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/search.css">
   <link rel="stylesheet" href="css/tiles.css">
@@ -22,7 +202,7 @@
 
 <body>
   <!-- Capa dedicada para el fondo (renderizado instantáneo Zero-Flash) -->
-  <div id="bg-layer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; opacity: 1;"></div>
+  <div id="bg-layer" class="bg-enter" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none;"></div>
   <div class="wrap">
     <header class="header">
       <div class="brand-container">
@@ -815,6 +995,8 @@
     </svg>
   </button>
 
+  <script src="menubar/background-manager.js"></script>
+  <script src="menubar/zero-flash.js"></script>
   <script src="menubar/app.js" type="module"></script>
 </body>
 

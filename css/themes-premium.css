@@ -36,7 +36,7 @@
 
 .premium-theme-btn.active {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 138, 43, 226), 0.2);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 52, 211, 153), 0.2);
 }
 
 /* Preview del tema */
@@ -132,14 +132,14 @@
 .auto-mode-status {
     margin-top: 12px;
     padding: 10px 12px;
-    background: rgba(var(--accent-color-rgb, 138, 43, 226), 0.1);
+    background: rgba(var(--accent-color-rgb, 52, 211, 153), 0.1);
     border-radius: 6px;
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13px;
     color: var(--panel-text-color);
-    border: 1px solid rgba(var(--accent-color-rgb, 138, 43, 226), 0.2);
+    border: 1px solid rgba(var(--accent-color-rgb, 52, 211, 153), 0.2);
 }
 
 .auto-mode-status svg {

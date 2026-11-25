@@ -30,6 +30,7 @@ export const STORAGE_KEYS = [
   'activePremiumTheme',
   'premiumThemeData',
   'defaultThemeApplied',
+  'defaultStyleVersion',
   'autoThemeMode',
   'dayThemeId',
   'nightThemeId',

@@ -1,8 +1,8 @@
 /**
  * @file menubar/instant-bg.js
  * @description Pre-renderizado ultra-rápido instantáneo (Zero-Flash).
- * Aplica el fondo persistido, color de respaldo y variables CSS visuales críticas
- * directamente en <head> antes del primer pintado del navegador (Frame 0).
+ * Se ejecuta síncronamente al inicio de <head> antes del primer pintado,
+ * fijando el fondo directamente en <html> y #bg-layer y bloqueando transiciones iniciales.
  */
 (function () {
   function parseRgb(color, fallback) {
@@ -32,6 +32,12 @@
     }
   }
 
+  function isLegacyPurple(val) {
+    if (!val) return false;
+    const norm = String(val).trim().toLowerCase();
+    return norm === '#a855f7' || norm === '#8a2be2';
+  }
+
   try {
     let cache = {};
     try {
@@ -43,24 +49,45 @@
     let lastColor = localStorage.getItem('last_bg_color');
     const root = document.documentElement.style;
 
-    // Bosque Esmeralda como estilo inicial por defecto si aún no hay caché guardada
-    const DEFAULT_BG_GRADIENT = 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #022c22 100%)';
-    const DEFAULT_BG_COLOR = '#064e3b';
+    const DEFAULT_BG_GRADIENT = 'radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)';
+    const DEFAULT_BG_COLOR = '#2b2a33';
+    const isDoodle = Boolean(cache.doodle && cache.doodle !== 'none');
+
+    // Limpiar restos del antiguo color morado o fondo verde sólido detrás de un doodle/gradiente oscuro
+    if (isLegacyPurple(lastColor)) lastColor = null;
+    if (isDoodle && lastColor === '#064e3b') lastColor = null;
+
+    const extractDoodleColor = () => {
+      if (cache.doodleColor) return cache.doodleColor;
+      if (cache.doodleTemplate) {
+        const match = cache.doodleTemplate.match(/background:\s*(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\))/);
+        if (match) return match[1];
+      }
+      return DEFAULT_BG_COLOR;
+    };
+
+    const extractGradientColor = (grad) => {
+      if (!grad) return DEFAULT_BG_COLOR;
+      const linearIdx = grad.indexOf('linear-gradient');
+      const slice = linearIdx >= 0 ? grad.slice(linearIdx) : grad;
+      const match = slice.match(/#(?:[0-9a-fA-F]{3}){1,2}|rgba?\([^)]+\)/);
+      return match ? match[0] : DEFAULT_BG_COLOR;
+    };
 
     if (!lastColor) {
-      if (cache.bgColor) {
+      if (isDoodle) {
+        lastColor = extractDoodleColor();
+      } else if (cache.bgColor) {
         lastColor = cache.bgColor;
-      } else if (cache.premiumThemeData?.panel?.bg) {
-        lastColor = cache.premiumThemeData.panel.bg;
-      } else if (cache.panelBg) {
-        lastColor = cache.panelBg;
+      } else if (cache.premiumThemeData?.background?.gradient) {
+        lastColor = extractGradientColor(cache.premiumThemeData.background.gradient);
       } else {
         lastColor = DEFAULT_BG_COLOR;
       }
     }
 
     const panelBg = cache.panelBg || '#064e3b';
-    const accentColor = cache.accentColor || '#34d399';
+    const accentColor = (!isLegacyPurple(cache.accentColor) && cache.accentColor) ? cache.accentColor : '#34d399';
     root.setProperty('--panel-bg', panelBg);
     root.setProperty('--panel-bg-rgb', parseRgb(panelBg, [6, 78, 59]).join(', '));
     root.setProperty('--accent-color', accentColor);
@@ -78,16 +105,20 @@
     root.setProperty('--panel-blur', `${cache.panelBlur ?? 25}px`);
     root.setProperty('--panel-radius', `${cache.panelRadius ?? 18}px`);
 
-    const isDoodle = cache.doodle && cache.doodle !== 'none';
     const fallbackBg = cache.hasCustomBgData ? lastColor : (lastBg || DEFAULT_BG_GRADIENT);
     const bgToApply = isDoodle ? 'transparent' : fallbackBg;
-    const bgColor = isDoodle ? (cache.doodleColor || lastColor || DEFAULT_BG_COLOR) : (lastColor || DEFAULT_BG_COLOR);
+    const bgColor = isDoodle ? extractDoodleColor() : (lastColor || DEFAULT_BG_COLOR);
     const bgSize = getSizeCss(cache.bgDisplayMode);
+
+    // Mantener <html> con el color sólido base (#2b2a33 por defecto) para que #bg-layer aparezca con transición suave
+    root.setProperty('background', 'none', 'important');
+    root.setProperty('background-color', bgColor, 'important');
 
     const styleEl = document.createElement('style');
     styleEl.id = 'instant-bg-style';
     styleEl.textContent = `
       html {
+        background: none !important;
         background-color: ${bgColor} !important;
         color-scheme: dark !important;
       }
@@ -97,12 +128,20 @@
         background-repeat: no-repeat !important;
         background-attachment: fixed !important;
         background-position: center !important;
-        opacity: ${isDoodle ? '0' : '1'} !important;
-        filter: none !important;
-        transition: none !important;
+        ${isDoodle ? 'opacity: 0; animation: none;' : ''}
       }
     `;
     document.head.appendChild(styleEl);
+
+    // Bloquear transiciones espurias en UI secundaria sin frenar la entrada leve del fondo ni de .wrap
+    const noTrans = document.createElement('style');
+    noTrans.id = 'zero-flash-no-trans';
+    noTrans.textContent = `
+      *:not(#bg-layer):not(body):not(.wrap):not(#doodle-background):not(css-doodle) {
+        transition: none !important;
+      }
+    `;
+    document.head.appendChild(noTrans);
   } catch (e) {
     console.warn('Instant-bg error:', e);
   }

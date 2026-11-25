@@ -38,7 +38,7 @@
         });
     }
 
-    function parseRgb(color, fallback = [168, 85, 247]) {
+    function parseRgb(color, fallback = [52, 211, 153]) {
         try {
             if (!color) return fallback;
             const hex = String(color).trim();
@@ -58,6 +58,32 @@
             }
         } catch (e) {}
         return fallback;
+    }
+
+    const DEFAULT_WELCOME_BG = 'radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)';
+    const DEFAULT_CANVAS_COLOR = '#2b2a33';
+
+    /**
+     * Obtiene el color base del lienzo de un doodle para evitar destellos detrás de él.
+     */
+    function extractDoodleBgColor(settings) {
+        if (settings.doodleColor) return settings.doodleColor;
+        const tpl = settings.doodleTemplate ||
+            (Array.isArray(window.DOODLES_LIST) && window.DOODLES_LIST.find(d => d.id === settings.doodle)?.template) ||
+            '';
+        const match = tpl.match(/background:\s*(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\))/);
+        return match ? match[1] : DEFAULT_CANVAS_COLOR;
+    }
+
+    /**
+     * Extrae un color sólido base desde un degradado CSS (priorizando el linear-gradient de fondo).
+     */
+    function extractGradientBaseColor(gradientStr, fallback = DEFAULT_CANVAS_COLOR) {
+        if (!gradientStr) return fallback;
+        const linearIdx = gradientStr.indexOf('linear-gradient');
+        const slice = linearIdx >= 0 ? gradientStr.slice(linearIdx) : gradientStr;
+        const match = slice.match(/#(?:[0-9a-fA-F]{3}){1,2}|rgba?\([^)]+\)/);
+        return match ? match[0] : fallback;
     }
 
     function getBackgroundSizeRules(mode) {
@@ -139,7 +165,7 @@
 
             if (isDoodle) {
                 finalBg = 'transparent';
-                fallbackColor = settings.doodleColor || (theme && theme.panel ? theme.panel.bg : '#050505');
+                fallbackColor = extractDoodleBgColor(settings);
             } else if (settings.syncFirefoxTheme) {
                 let cachedBg = localStorage.getItem('firefox_theme_bg') || lastAppliedBg;
                 let cachedColor = localStorage.getItem('firefox_theme_color') || '#050505';
@@ -186,7 +212,7 @@
                 }
             } else if (isPremium && theme && theme.background && theme.background.gradient) {
                 finalBg = theme.background.gradient;
-                fallbackColor = (theme.panel && theme.panel.bg) ? theme.panel.bg : '#050505';
+                fallbackColor = extractGradientBaseColor(finalBg, DEFAULT_CANVAS_COLOR);
             } else if (customBgData || settings.bgUrl) {
                 const imgSource = customBgData || settings.bgUrl;
                 finalBg = `url("${imgSource}")`;
@@ -217,7 +243,7 @@
                         if (cachedBg && cachedBg.includes('gradient')) {
                             finalBg = cachedBg;
                         } else {
-                            finalBg = 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #022c22 100%)';
+                            finalBg = DEFAULT_WELCOME_BG;
                         }
                     }
                 }
@@ -226,7 +252,8 @@
                 if (match) fallbackColor = match[0];
             }
 
-            const hasChanged = this.initialLoadDone
+            // En arranque inicial nunca animamos transición para evitar destellos; solo al cambiar en Ajustes
+            const hasChanged = forceAsyncFetch && this.initialLoadDone
                 ? (this.normalizeBg(finalBg) !== this.normalizeBg(this.lastAppliedBg || lastAppliedBg) || displayMode !== this.lastDisplayMode)
                 : false;
             this.initialLoadDone = true;
@@ -235,12 +262,18 @@
                 this.lastAppliedBg = finalBg;
                 this.lastDisplayMode = displayMode;
                 root.setProperty('background', 'transparent', 'important');
+                root.setProperty('background-color', fallbackColor, 'important');
                 if (body) body.style.setProperty('background', 'transparent', 'important');
                 const bgLayer = document.getElementById('bg-layer');
-                if (bgLayer) bgLayer.style.opacity = '0';
+                if (bgLayer) {
+                    bgLayer.classList.remove('bg-enter');
+                    bgLayer.style.opacity = '0';
+                }
             } else {
                 this.lastAppliedBg = finalBg;
                 this.lastDisplayMode = displayMode;
+                root.setProperty('background', 'none', 'important');
+                root.setProperty('background-color', fallbackColor, 'important');
                 this.applyBackground(finalBg, hasChanged, displayMode);
             }
 
@@ -261,7 +294,10 @@
 
             if (bgLayer) {
                 if (animate) {
+                    const instantStyle = document.getElementById('instant-bg-style');
+                    if (instantStyle) instantStyle.remove();
                     this.isAnimating = true;
+                    bgLayer.classList.remove('bg-enter');
                     bgLayer.style.transition = 'opacity 0.25s ease-out';
                     bgLayer.style.setProperty('background', bg, 'important');
                     bgLayer.style.setProperty('background-size', sizeRules.size, 'important');
@@ -276,13 +312,11 @@
                         bgLayer.style.transition = '';
                     }, 260);
                 } else {
-                    bgLayer.style.transition = 'none';
                     bgLayer.style.setProperty('background', bg, 'important');
                     bgLayer.style.setProperty('background-size', sizeRules.size, 'important');
                     bgLayer.style.setProperty('background-repeat', sizeRules.repeat, 'important');
                     bgLayer.style.setProperty('background-attachment', 'fixed', 'important');
                     bgLayer.style.setProperty('background-position', sizeRules.position, 'important');
-                    bgLayer.style.opacity = '1';
                     bgLayer.style.filter = 'none';
                 }
             }
@@ -398,7 +432,7 @@
                     }
                 }
 
-                const validColor = color && color !== '#a855f7' ? color : '#050505';
+                const validColor = color && color !== '#a855f7' ? color : DEFAULT_CANVAS_COLOR;
                 localStorage.setItem('last_bg_color', validColor);
 
                 const cache = JSON.parse(localStorage.getItem('zero_flash_cache') || '{}');
@@ -409,7 +443,7 @@
                     'activePremiumTheme', 'premiumThemeData', 'doodle', 'userName',
                     'showSearch', 'showWeather', 'showDate', 'greetingFont', 'dateFont',
                     'syncFirefoxTheme', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode',
-                    'hasCustomBgData', 'use12HourFormat', 'showSeconds', 'randomBg'
+                    'hasCustomBgData', 'use12HourFormat', 'showSeconds', 'randomBg', 'engine'
                 ];
 
                 keysToSync.forEach(k => {

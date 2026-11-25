@@ -147,7 +147,9 @@ export const toHexColor = (color, fallback = '#000000') => {
   if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
     return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`.toLowerCase();
   }
-  const [r, g, b] = parseColorToRgb(trimmed, null);
+  const parsed = parseColorToRgb(trimmed, null);
+  if (!Array.isArray(parsed) || parsed.length < 3) return fallback;
+  const [r, g, b] = parsed;
   if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return fallback;
   return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
 };
@@ -159,7 +161,7 @@ export const setAccentColorVars = (color) => {
   if (!color) return;
   const root = document.documentElement.style;
   root.setProperty('--accent-color', color);
-  const rgb = parseColorToRgb(color, [168, 85, 247]);
+  const rgb = parseColorToRgb(color, [52, 211, 153]);
   root.setProperty('--accent-color-rgb', rgb.join(', '));
 };
 

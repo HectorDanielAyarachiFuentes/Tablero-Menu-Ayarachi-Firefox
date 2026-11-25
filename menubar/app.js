@@ -58,23 +58,28 @@ onTilesChange(() => {
 let currentBackgroundValue = '';
 
 async function init() {
+  // Inyectar animaciones justo en el primer frame sin bloquear el pintado inicial
+  requestAnimationFrame(() => {
+    loadStylesheets(['css/animations.css']);
+  });
+
   // =====================================================================
   // FASE 0: CARGA MÍNIMA — Solo claves críticas para el primer pintado
   // =====================================================================
   const criticalKeys = [
-    'tiles', 'trash', 'socialMigrationDone', 'defaultThemeApplied',
+    'tiles', 'trash', 'socialMigrationDone', 'defaultThemeApplied', 'defaultStyleVersion',
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
     'greetingFont', 'dateFont', 'activePanelTheme', 'activePremiumTheme', 'premiumThemeData',
     'doodle', 'gradient', 'bgData', 'hasCustomBgData', 'bgUrl', 'bgColor', 'bgDisplayMode', 'randomBg',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-    'syncFirefoxTheme'
+    'syncFirefoxTheme', 'engine'
   ];
 
   const settings = await storageGet(criticalKeys);
 
-  // Estilo inicial por defecto: Bosque Esmeralda (solo si nunca se eligió tema o fondo antes)
+  // Estilo inicial por defecto: Bosque Esmeralda adaptado al lienzo nativo #2b2a33 de Firefox
   const hasCustomVisualChoice = Boolean(
     settings.defaultThemeApplied ||
     settings.activePremiumTheme ||
@@ -86,15 +91,24 @@ async function init() {
     settings.syncFirefoxTheme ||
     (settings.doodle && settings.doodle !== 'none')
   );
-  if (!hasCustomVisualChoice) {
+  const shouldApplyWelcomeDefault = !hasCustomVisualChoice || (
+    settings.defaultStyleVersion !== 2 &&
+    settings.activePremiumTheme === DEFAULT_PREMIUM_THEME_ID &&
+    !settings.hasCustomBgData &&
+    !settings.bgUrl &&
+    !settings.syncFirefoxTheme
+  );
+  if (shouldApplyWelcomeDefault) {
     const defaultTheme = getPremiumThemeById(DEFAULT_PREMIUM_THEME_ID);
     if (defaultTheme) {
       const defaultPayload = {
         defaultThemeApplied: true,
+        defaultStyleVersion: 2,
         activePremiumTheme: defaultTheme.id,
         premiumThemeData: defaultTheme,
         gradient: defaultTheme.background.gradient,
         bgType: 'premium',
+        doodle: 'none',
         panelBg: defaultTheme.panel.bg,
         panelOpacity: defaultTheme.panel.opacity,
         panelBlur: defaultTheme.panel.blur,
@@ -153,6 +167,12 @@ async function init() {
   // FASE 1.5: FONDO EN PARALELO — No bloquea los tiles
   // =====================================================================
   BackgroundManager.apply(settings);
+  if (settings.doodle && settings.doodle !== 'none') {
+    const doodleContainer = document.getElementById('doodle-background');
+    if (doodleContainer && doodleContainer.childElementCount === 0) {
+      renderDoodleBackground(settings.doodle, settings.doodleTemplate);
+    }
+  }
 
   // Actualizar caché síncrona para la próxima carga (Zero-Flash)
   const zfCacheKeys = [
@@ -162,7 +182,7 @@ async function init() {
     'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
     'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData', 'randomBg',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
-    'syncFirefoxTheme'
+    'syncFirefoxTheme', 'engine'
   ];
   const zeroFlashCache = {};
   zfCacheKeys.forEach(k => {
@@ -225,11 +245,7 @@ async function init() {
 
     container.textContent = '';
     const doodle = document.createElement('css-doodle');
-    doodle.textContent = `
-      ${doodleTemplate}
-      @keyframes reveal-stagger { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      &, :after, :before { animation: reveal-stagger 0.6s ease forwards !important; animation-delay: @calc(@i * 0.02)s !important; opacity: 0; }
-    `;
+    doodle.textContent = doodleTemplate;
     container.appendChild(doodle);
     container.classList.add('ready');
   }
@@ -311,13 +327,18 @@ async function initHeavySystems(settings) {
   }
 }
 
-function loadNonCriticalCSS() {
-  ['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop.css', 'css/drag-drop-safe.css'].forEach(file => {
+function loadStylesheets(files) {
+  files.forEach(file => {
+    if (document.head.querySelector(`link[href="${file}"]`)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = file;
     document.head.appendChild(link);
   });
+}
+
+function loadNonCriticalCSS() {
+  loadStylesheets(['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop.css', 'css/drag-drop-safe.css']);
 }
 
 function initScrollToTop() {
@@ -353,16 +374,27 @@ function buildTileSummaries(tilesData) {
     const summary = { name: t.name, type: t.type || 'link' };
 
     if (t.type === 'folder') {
-      summary.childCount = (t.children || []).length;
+      const children = Array.isArray(t.children) ? t.children : [];
+      summary.childCount = children.length;
+      summary.childIcons = children.slice(0, 4).map(child => {
+        if (child.customIcon && child.customIcon.length < 4000) return child.customIcon;
+        if (child.url) {
+          const host = safeGetHostname(child.url);
+          if (host && host !== '?' && host.includes('.')) {
+            return `https://www.google.com/s2/favicons?sz=64&domain=${host}`;
+          }
+        }
+        return null;
+      }).filter(Boolean);
     } else if (t.url) {
       summary.url = t.url;
       summary.host = safeGetHostname(t.url);
-      if (t.customIcon && t.customIcon.length < 2000) {
+      if (t.customIcon && t.customIcon.length < 4000) {
         summary.icon = t.customIcon;
       } else {
         try {
           const hostname = safeGetHostname(t.url);
-          if (hostname && hostname.includes('.')) {
+          if (hostname && hostname !== '?' && hostname.includes('.')) {
             summary.icon = `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`;
           }
         } catch (e) {}

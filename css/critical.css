@@ -1,7 +1,7 @@
 /* Estilo crítico para eliminar destellos de carga (Permitido por CSP) */
 html {
-  background-color: #064e3b !important;
-  color-scheme: dark !important;
+  background-color: #2b2a33;
+  color-scheme: dark;
 }
 
 body {
@@ -15,8 +15,31 @@ body {
   --accent-color-rgb: 52, 211, 153;
 }
 
+@keyframes tableroBgFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tableroWrapReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#bg-layer.bg-enter {
+  animation: tableroBgFadeIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .wrap {
   opacity: 1;
+  animation: tableroWrapReveal 0.34s ease-out both;
 }
 
 #doodle-background {
@@ -27,7 +50,8 @@ body {
   height: 100%;
   z-index: -1;
   opacity: 0;
-  transition: opacity 0.5s ease-out;
+  transition: opacity 0.45s ease-out;
+  pointer-events: none;
 }
 
 #doodle-background.ready {
@@ -103,6 +127,25 @@ body.loading .weather-widget-fixed {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Evitar salto visual del clima y botón volver arriba antes de que cargue su CSS diferido */
+#scrollToTopBtn:not(.visible) {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.weather-widget-fixed:not(.loaded) {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Tiles precacheados para Zero-Flash */

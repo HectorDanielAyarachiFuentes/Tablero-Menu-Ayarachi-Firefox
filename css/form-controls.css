@@ -229,7 +229,7 @@
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, var(--accent-color), #7c3aed);
+  background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color), black 20%));
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff !important;
   font-weight: 600;

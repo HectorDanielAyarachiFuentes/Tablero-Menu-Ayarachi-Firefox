@@ -261,7 +261,7 @@ let premiumThemes = [
         "name": "Bosque Esmeralda",
         "description": "Lujo orgánico y tonos naturales profundos",
         "background": {
-            "gradient": "linear-gradient(135deg, #064e3b 0%, #065f46 50%, #022c22 100%)"
+            "gradient": "radial-gradient(circle at 88% 14%, rgba(16, 185, 129, 0.16) 0%, transparent 48%), radial-gradient(circle at 86% 88%, rgba(109, 40, 217, 0.14) 0%, transparent 50%), linear-gradient(135deg, #2b2a33 0%, #272830 55%, #2b2a33 100%)"
         },
         "panel": {
             "bg": "#064e3b",
@@ -603,10 +603,12 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
     if (!theme) return;
 
     const themeSettingsPayload = {
+        defaultStyleVersion: 2,
         activePremiumTheme: themeId,
         premiumThemeData: theme,
         gradient: theme.background.gradient,
         bgType: 'premium',
+        doodle: 'none',
         syncFirefoxTheme: false,
         hasCustomBgData: false,
         bgData: null,
