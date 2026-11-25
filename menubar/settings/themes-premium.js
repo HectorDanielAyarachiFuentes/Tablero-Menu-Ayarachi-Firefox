@@ -3,7 +3,7 @@
  * Gestiona temas completos que incluyen fondo, paneles y colores de texto
  * Incluye modo automático día/noche basado en la hora del sistema
  */
-import { $, $$, saveAndSyncSetting, storageGet, setSVG } from '../core/utils.js';
+import { $, $$, saveAndSyncSetting, storageGet, setSVG, toHexColor } from '../core/utils.js';
 import { updatePanelRgb } from './settings-panels.js';
 // BackgroundManager ahora es global
 
@@ -401,8 +401,13 @@ let autoModeEnabled = false;
 let autoModeInterval = null;
 let themesRendered = false;
 
+export const DEFAULT_PREMIUM_THEME_ID = 'emerald-forest';
+
+export function getPremiumThemeById(themeId) {
+    return premiumThemes.find(t => t.id === themeId) || null;
+}
+
 export async function initPremiumThemes() {
-    // Configurar modo automático (lógica pura)
     await loadPremiumThemeSettings();
 }
 
@@ -422,8 +427,8 @@ async function syncUIWithSettings() {
         if (autoToggle) autoToggle.checked = true;
         if (autoSettings) autoSettings.hidden = false;
     }
-    if (settings.dayThemeId) $('#dayThemeSelect').value = settings.dayThemeId;
-    if (settings.nightThemeId) $('#nightThemeSelect').value = settings.nightThemeId;
+    if (settings.dayThemeId && $('#dayThemeSelect')) $('#dayThemeSelect').value = settings.dayThemeId;
+    if (settings.nightThemeId && $('#nightThemeSelect')) $('#nightThemeSelect').value = settings.nightThemeId;
     if (settings.activePremiumTheme) updateActivePremiumTheme(settings.activePremiumTheme);
 }
 
@@ -597,40 +602,38 @@ export async function applyPremiumTheme(themeId, skipSave = false) {
     const theme = premiumThemes.find(t => t.id === themeId);
     if (!theme) return;
 
-    // Aplicación centralizada a través del BackgroundManager
-    BackgroundManager.apply({
+    const themeSettingsPayload = {
         activePremiumTheme: themeId,
         premiumThemeData: theme,
-        ...theme.background,
-        ...theme.colors,
-        ...theme.fonts
-    });
+        gradient: theme.background.gradient,
+        bgType: 'premium',
+        syncFirefoxTheme: false,
+        hasCustomBgData: false,
+        bgData: null,
+        bgUrl: null,
+        panelBg: theme.panel.bg,
+        panelOpacity: theme.panel.opacity,
+        panelBlur: theme.panel.blur,
+        panelRadius: theme.panel.radius,
+        panelTextColor: theme.colors.text,
+        panelTextSecondaryColor: theme.colors.textSecondary,
+        accentColor: theme.colors.accent,
+        greetingColor: theme.colors.greeting,
+        nameColor: theme.colors.name,
+        clockColor: theme.colors.clock,
+        dateColor: theme.colors.date,
+        greetingFont: theme.fonts ? theme.fonts.main : undefined,
+        dateFont: theme.fonts ? theme.fonts.secondary : undefined
+    };
+
+    // Aplicación centralizada a través del BackgroundManager
+    BackgroundManager.apply(themeSettingsPayload);
 
     updateThemeControls(theme);
     updateActivePremiumTheme(themeId);
 
     if (!skipSave) {
-        await saveAndSyncSetting({
-            activePremiumTheme: themeId,
-            premiumThemeData: theme,
-            gradient: theme.background.gradient,
-            bgType: 'premium',
-            syncFirefoxTheme: false,
-            // Guardamos los valores individuales para que el usuario pueda "editarlos" y que persistan
-            panelBg: theme.panel.bg,
-            panelOpacity: theme.panel.opacity,
-            panelBlur: theme.panel.blur,
-            panelRadius: theme.panel.radius,
-            panelTextColor: theme.colors.text,
-            panelTextSecondaryColor: theme.colors.textSecondary,
-            greetingColor: theme.colors.greeting,
-            nameColor: theme.colors.name,
-            clockColor: theme.colors.clock,
-            dateColor: theme.colors.date,
-            greetingFont: theme.fonts ? theme.fonts.main : undefined,
-            dateFont: theme.fonts ? theme.fonts.secondary : undefined
-            // Eliminamos doodle: 'none' para permitir persistencia si el usuario añade uno después
-        });
+        await saveAndSyncSetting(themeSettingsPayload);
         localStorage.setItem('lastPremiumGradient', theme.background.gradient);
         const syncToggle = $('#syncFirefoxThemeToggle');
         if (syncToggle) syncToggle.checked = false;
@@ -645,12 +648,12 @@ function updateThemeControls(theme) {
     const panelTextColor = $('#panelTextColor');
     const panelTextSecondaryColor = $('#panelTextSecondaryColor');
 
-    if (panelColor) panelColor.value = theme.panel.bg;
+    if (panelColor) panelColor.value = toHexColor(theme.panel.bg, '#000000');
     if (panelOpacity) panelOpacity.value = theme.panel.opacity;
     if (panelBlur) panelBlur.value = theme.panel.blur;
     if (panelRadius) panelRadius.value = theme.panel.radius;
-    if (panelTextColor) panelTextColor.value = theme.colors.text;
-    if (panelTextSecondaryColor) panelTextSecondaryColor.value = theme.colors.textSecondary;
+    if (panelTextColor) panelTextColor.value = toHexColor(theme.colors.text, '#ffffff');
+    if (panelTextSecondaryColor) panelTextSecondaryColor.value = toHexColor(theme.colors.textSecondary, '#ffffff');
 
     const opacityValue = $('#opacityValue');
     const blurValue = $('#blurValue');
@@ -665,10 +668,10 @@ function updateThemeControls(theme) {
     const clockColor = $('#clockColor');
     const dateColor = $('#dateColor');
 
-    if (greetingColor) greetingColor.value = theme.colors.greeting;
-    if (nameColor) nameColor.value = theme.colors.name;
-    if (clockColor) clockColor.value = theme.colors.clock;
-    if (dateColor) dateColor.value = theme.colors.date;
+    if (greetingColor) greetingColor.value = toHexColor(theme.colors.greeting, '#ffffff');
+    if (nameColor) nameColor.value = toHexColor(theme.colors.name, '#ffffff');
+    if (clockColor) clockColor.value = toHexColor(theme.colors.clock, '#ffffff');
+    if (dateColor) dateColor.value = toHexColor(theme.colors.date, '#ffffff');
 }
 
 function updateActivePremiumTheme(themeId) {

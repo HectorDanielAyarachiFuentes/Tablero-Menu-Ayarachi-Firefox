@@ -163,23 +163,20 @@ export class TodoWidget {
                 this.save();
                 this.renderTodos();
             } else if (deleteBtn) {
-                const index = parseInt(deleteBtn.dataset.index);
+                if (deleteBtn.disabled) return;
+                deleteBtn.disabled = true;
+                const index = parseInt(deleteBtn.dataset.index, 10);
                 const item = deleteBtn.closest('.todo-item');
-                item.classList.add('todo-item-removing');
+                item?.classList.add('todo-item-removing');
                 setTimeout(() => {
-                    this.todos.splice(index, 1);
-                    this.save();
-                    this.renderTodos();
+                    if (index >= 0 && index < this.todos.length) {
+                        this.todos.splice(index, 1);
+                        this.save();
+                        this.renderTodos();
+                    }
                 }, 250);
             }
         });
-    }
-
-    escapeHtml(text) {
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
     }
 
     async save() {

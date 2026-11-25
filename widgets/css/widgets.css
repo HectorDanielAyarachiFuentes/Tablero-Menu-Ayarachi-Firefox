@@ -715,6 +715,7 @@
     .widgets-sidebar {
         width: 100%;
         right: -100%;
+    }
 }
 
 /* Base styles specifically for the iframe environment */

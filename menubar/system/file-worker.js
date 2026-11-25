@@ -1,32 +1,29 @@
 /**
- * Web Worker para manejar operaciones del sistema de archivos en un hilo secundario.
- * Esto evita que operaciones lentas de lectura/escritura bloqueen la interfaz de usuario principal.
- */
-/**
- * Web Worker para manejar operaciones del sistema de archivos en segundo plano.
+ * Web Worker para manejar operaciones del sistema de archivos (OPFS) en segundo plano.
+ * Responde con el requestId recibido para soportar llamadas concurrentes sin colisiones.
  */
 
 const FILE_NAME = 'tablero-data.json';
 
 self.onmessage = async (event) => {
-    const { action, payload } = event.data;
+    const { requestId, action, payload } = event.data;
 
     try {
         switch (action) {
             case 'loadData': {
                 const data = await loadDataFromFile(payload.handle);
-                self.postMessage({ action: 'loadDataResult', success: true, data });
+                self.postMessage({ requestId, action: 'loadDataResult', success: true, data });
                 break;
             }
             case 'saveData': {
                 await saveDataToFile(payload.handle, payload.data);
-                self.postMessage({ action: 'saveDataResult', success: true });
+                self.postMessage({ requestId, action: 'saveDataResult', success: true });
                 break;
             }
         }
     } catch (error) {
         console.error(`Error en el worker de archivos (${action}):`, error);
-        self.postMessage({ action: `${action}Result`, success: false, error: error.message });
+        self.postMessage({ requestId, action: `${action}Result`, success: false, error: error.message });
     }
 };
 
@@ -37,39 +34,24 @@ async function loadDataFromFile(handle) {
         const fileHandle = await handle.getFileHandle(FILE_NAME, { create: false });
         const file = await fileHandle.getFile();
         const content = await file.text();
-        const data = JSON.parse(content);
-        console.log('Datos cargados desde el archivo local (worker).');
-        return data;
+        return JSON.parse(content);
     } catch (err) {
-        if (err.name === 'NotFoundError') {
-            // Silently ignore if file doesn't exist yet
-
-        } else {
+        if (err.name !== 'NotFoundError') {
             console.error('Error al cargar datos desde el archivo (worker):', err);
         }
         return null;
     }
 }
 
-/**
- * Función de utilidad para esperar un tiempo determinado.
- * @param {number} ms - Milisegundos a esperar.
- */
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Intenta ejecutar una función asíncrona con reintentos y backoff exponencial.
- * @param {Function} asyncFn - La función asíncrona a ejecutar.
- * @param {number} maxRetries - Número máximo de reintentos.
- */
 async function withRetries(asyncFn, maxRetries = 3) {
     for (let i = 0; i <= maxRetries; i++) {
         try {
             return await asyncFn();
         } catch (error) {
-            if (i === maxRetries) throw error; // Lanza el error en el último intento
-            const delay = Math.pow(2, i) * 100; // 100ms, 200ms, 400ms...
-            await wait(delay);
+            if (i === maxRetries) throw error;
+            await wait(Math.pow(2, i) * 100);
         }
     }
 }
@@ -77,18 +59,10 @@ async function withRetries(asyncFn, maxRetries = 3) {
 async function saveDataToFile(handle, dataToSave) {
     if (!handle) return;
 
-    try {
-        await withRetries(async () => {
-            // Cambiamos 'create' a 'true' para que se cree automáticamente en el OPFS.
-            const fileHandle = await handle.getFileHandle(FILE_NAME, { create: true });
-            const writable = await fileHandle.createWritable();
-            // El objeto dataToSave ya viene completo desde el hilo principal.
-            await writable.write(JSON.stringify(dataToSave, null, 2));
-            await writable.close();
-            console.log('Datos guardados en el archivo local (worker).');
-        });
-    } catch (err) {
-        console.error('Error al guardar datos en el archivo (worker):', err);
-        throw err; // Re-lanzamos para que el hilo principal sepa del error.
-    }
+    await withRetries(async () => {
+        const fileHandle = await handle.getFileHandle(FILE_NAME, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(dataToSave, null, 2));
+        await writable.close();
+    });
 }

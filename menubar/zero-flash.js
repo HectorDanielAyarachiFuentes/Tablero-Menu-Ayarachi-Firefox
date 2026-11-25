@@ -142,14 +142,23 @@
 
     if (clockEl) {
       const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
+      let h = now.getHours();
       const m = String(now.getMinutes()).padStart(2, '0');
-      clockEl.textContent = `${h}:${m}`;
+      const sec = String(now.getSeconds()).padStart(2, '0');
+      let ampm = '';
+      if (settings.use12HourFormat) {
+        ampm = h >= 12 ? ' PM' : ' AM';
+        h = (h % 12) || 12;
+      }
+      let timeStr = settings.use12HourFormat ? `${h}:${m}` : `${String(h).padStart(2, '0')}:${m}`;
+      if (settings.showSeconds) timeStr += `:${sec}`;
+      clockEl.textContent = `${timeStr}${ampm}`;
     }
 
     if (dateEl) {
-      const options = { weekday: 'long', day: 'numeric', month: 'long' };
-      dateEl.textContent = new Intl.DateTimeFormat('es-ES', options).format(new Date());
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const formatted = new Intl.DateTimeFormat('es-ES', options).format(new Date());
+      dateEl.textContent = formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
 
     const yearEl = document.getElementById('footer-year');

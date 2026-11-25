@@ -1,35 +1,44 @@
+/**
+ * Módulo de notas enriquecidas del tablero.
+ * Carga de forma diferida notas.html/notas.css, sanitiza el contenido con DOMPurify
+ * y sincroniza creación, edición y envío a la papelera.
+ */
 import { $, $$, setHTML } from '../menubar/core/utils.js';
 import { tiles, trash, saveAndRender } from '../menubar/core/tiles.js';
 import { openModal } from '../menubar/components/modal.js';
-import { toggleNotesPanel } from '../menubar/components/ui.js';
+import { toggleNotesPanel, showConfirmDialog } from '../menubar/components/ui.js';
+import { DOMPurify } from '../menubar/lib/lib.js';
 
 let isInitialized = false;
+let initPromise = null;
 
 export async function initNotesComponent() {
     if (isInitialized) return;
-    
-    // Load CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'notas/notas.css';
-    document.head.appendChild(link);
-    
-    // Load HTML
-    const response = await fetch('notas/notas.html');
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    Array.from(doc.body.children).forEach(child => document.body.appendChild(child));
-    
-    // Bind events
-    $('#addNote')?.addEventListener('click', () => openModal(null, 'note'));
-    $('#closeNotes')?.addEventListener('click', () => toggleNotesPanel(false));
-    window.addEventListener('tablero:tiles-changed', () => {
-        if (typeof renderNotes === 'function') renderNotes();
-    });
-    
-    isInitialized = true;
-    renderNotes();
+    if (initPromise) return initPromise;
+
+    initPromise = (async () => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'notas/notas.css';
+        document.head.appendChild(link);
+
+        const response = await fetch('notas/notas.html');
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        Array.from(doc.body.children).forEach(child => document.body.appendChild(child));
+
+        $('#addNote')?.addEventListener('click', () => openModal(null, 'note'));
+        $('#closeNotes')?.addEventListener('click', () => toggleNotesPanel(false));
+        window.addEventListener('tablero:tiles-changed', () => {
+            if (typeof renderNotes === 'function') renderNotes();
+        });
+
+        isInitialized = true;
+        renderNotes();
+    })();
+
+    return initPromise;
 }
 
 export function renderNotes() {
@@ -101,7 +110,7 @@ export function renderNotes() {
 
         const content = document.createElement('div');
         content.className = 'note-item-content';
-        setHTML(content, note.content || ''); 
+        setHTML(content, DOMPurify.sanitize(note.content || '')); 
 
         const actions = document.createElement('div');
         actions.className = 'note-item-actions';
@@ -156,9 +165,10 @@ export function renderNotes() {
             openModal(note.originalIndex);
         });
 
-        noteEl.querySelector('.note-delete-btn').addEventListener('click', (e) => {
+        noteEl.querySelector('.note-delete-btn').addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm(`¿Estás seguro de que quieres enviar la nota "${note.name}" a la papelera?`)) {
+            const confirmed = await showConfirmDialog(`¿Estás seguro de que quieres enviar la nota "${note.name || 'Sin título'}" a la papelera?`);
+            if (confirmed) {
                 const itemToTrash = tiles.splice(note.originalIndex, 1)[0];
                 itemToTrash.deletedAt = new Date().toISOString();
                 trash.unshift(itemToTrash);

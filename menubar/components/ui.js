@@ -1,23 +1,39 @@
 /**
  * Gestiona las interacciones generales de la interfaz de usuario (UI).
  * Se encarga de abrir/cerrar paneles (configuración, notas), actualizar el reloj y el saludo,
- * y manejar los controles de apariencia de los paneles como color, opacidad y desenfoque.
+ * mostrar toasts/diálogos no bloqueantes y manejar atajos de teclado globales.
  */
 import { $, $$, saveAndSyncSetting, storageGet } from '../core/utils.js';
 import { FolderManager } from '../core/carpetas.js';
-import { renderTiles, saveAndRender, tiles, trash, setTiles, setTrash } from '../core/tiles.js';
-import { closeModal } from './modal.js'; 
+import { renderTiles, saveAndRender, tiles, trash } from '../core/tiles.js';
+import { closeModal } from './modal.js';
+import { hideContextMenu } from './context-menu.js';
 import { PREDEFINED_GREETINGS } from '../../utils/greetings-list.js';
 import { FileSystem } from '../system/file-system.js';
 import { initPanelSettings } from '../settings/settings-panels.js';
 import { ensurePremiumThemesUI } from '../settings/themes-premium.js';
 import { initDoodleSettings } from '../settings/doodles.js';
 
+let _ensureNotesLoaded = null;
+
+/**
+ * Registra un cargador diferido para inicializar Notas bajo demanda
+ * si el usuario pulsa el botón antes de que termine la Fase 3.
+ */
+export function registerNotesLoader(loaderFn) {
+    if (typeof loaderFn === 'function') _ensureNotesLoaded = loaderFn;
+}
+
+function isPanelOpen(selector) {
+    const el = $(selector);
+    return !!el && el.getAttribute('aria-hidden') === 'false';
+}
+
 export function initUI() {
     updateClock();
 
-    $('#openSettings').addEventListener('click', () => toggleSettings(true));
-    $('#closeSettings').addEventListener('click', () => toggleSettings(false));
+    $('#openSettings')?.addEventListener('click', () => toggleSettings(true));
+    $('#closeSettings')?.addEventListener('click', () => toggleSettings(false));
     $('#openNotes')?.addEventListener('click', () => toggleNotesPanel(true));
 
     document.addEventListener('click', (e) => {
@@ -28,8 +44,32 @@ export function initUI() {
         }
     });
 
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const confirmOverlay = $('.tablero-confirm-overlay');
+        if (confirmOverlay) {
+            confirmOverlay.querySelector('.tablero-confirm-cancel')?.click();
+            return;
+        }
+        if (isPanelOpen('#modal')) {
+            closeModal();
+            return;
+        }
+        const ctxMenu = $('#contextMenu');
+        if (ctxMenu && !ctxMenu.hidden) {
+            hideContextMenu();
+            return;
+        }
+        if (isPanelOpen('#settings')) {
+            toggleSettings(false);
+            return;
+        }
+        if (isPanelOpen('#notes-panel')) {
+            toggleNotesPanel(false);
+        }
+    });
 
-    $('#backBtn').addEventListener('click', () => {
+    $('#backBtn')?.addEventListener('click', () => {
         if (FolderManager.goBack()) {
             renderTiles();
         }
@@ -39,7 +79,7 @@ export function initUI() {
         btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
     });
 
-    $('#userName').addEventListener('input', (e) => {
+    $('#userName')?.addEventListener('input', (e) => {
         const name = e.target.value;
         renderGreeting(name);
         saveAndSyncSetting({ userName: name });
@@ -47,20 +87,101 @@ export function initUI() {
 
     initPanelSettings();
 
-    $('#manualSaveBtn').addEventListener('click', async () => {
+    $('#manualSaveBtn')?.addEventListener('click', async () => {
         await FileSystem.saveDataToFile({ tiles, trash });
         showSaveStatus();
     });
 
-    $('#emptyTrashBtn').addEventListener('click', () => {
+    $('#emptyTrashBtn')?.addEventListener('click', async () => {
         if (trash.length === 0) return;
-        if (confirm('¿Estás seguro de que quieres vaciar la papelera? Todos los elementos se eliminarán permanentemente.')) {
-            trash.length = 0; // Vacía el array
+        const confirmed = await showConfirmDialog('¿Estás seguro de que quieres vaciar la papelera? Todos los elementos se eliminarán permanentemente.');
+        if (confirmed) {
+            trash.length = 0;
             saveAndRender();
         }
     });
+}
 
+/**
+ * Muestra una notificación flotante no bloqueante (toast).
+ */
+export function showToast(message, type = 'info') {
+    let container = document.getElementById('tablero-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'tablero-toast-container';
+        container.className = 'tablero-toast-container';
+        document.body.appendChild(container);
+    }
 
+    const toast = document.createElement('div');
+    toast.className = `tablero-toast tablero-toast-${type}`;
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+/**
+ * Muestra un diálogo de confirmación integrado que reemplaza window.confirm().
+ */
+export function showConfirmDialog(message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar') {
+    return new Promise((resolve) => {
+        const existing = document.querySelector('.tablero-confirm-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'tablero-confirm-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+
+        const card = document.createElement('div');
+        card.className = 'tablero-confirm-card';
+
+        const msgP = document.createElement('p');
+        msgP.className = 'tablero-confirm-message';
+        msgP.textContent = message;
+
+        const actions = document.createElement('div');
+        actions.className = 'tablero-confirm-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn tablero-confirm-cancel';
+        cancelBtn.textContent = cancelLabel;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn primary tablero-confirm-ok';
+        confirmBtn.textContent = confirmLabel;
+
+        const finish = (result) => {
+            overlay.classList.remove('is-open');
+            setTimeout(() => overlay.remove(), 200);
+            resolve(result);
+        };
+
+        cancelBtn.addEventListener('click', () => finish(false));
+        confirmBtn.addEventListener('click', () => finish(true));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) finish(false);
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(confirmBtn);
+        card.appendChild(msgP);
+        card.appendChild(actions);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        requestAnimationFrame(() => {
+            overlay.classList.add('is-open');
+            confirmBtn.focus();
+        });
+    });
 }
 
 /**
@@ -73,20 +194,18 @@ export async function switchToTab(tabId) {
     tabButtons.forEach(b => b.classList.remove('active'));
     tabPanes.forEach(pane => {
         pane.classList.remove('active');
-        pane.style.display = 'none'; // Ocultar para la animación
+        pane.style.display = 'none';
     });
     const btnToActivate = $(`.tab-btn[data-tab="${tabId}"]`);
     const paneToActivate = $(`#tab-${tabId}`);
     if (btnToActivate) btnToActivate.classList.add('active');
     if (paneToActivate) paneToActivate.style.display = 'block';
-    setTimeout(() => paneToActivate?.classList.add('active'), 10); // Permitir que se aplique display:block
-    
-    // Si entramos en la pestaña de fondo, asegurar que los temas premium estén renderizados
+    setTimeout(() => paneToActivate?.classList.add('active'), 10);
+
     if (tabId === 'fondo') {
         ensurePremiumThemesUI();
     }
 
-    // Si entramos en la pestaña de doodle, asegurar que la lista esté cargada
     if (tabId === 'doodle') {
         const { doodle } = await storageGet(['doodle']);
         initDoodleSettings(doodle || 'none');
@@ -116,16 +235,16 @@ export async function renderGreeting(name) {
         const randomGreeting = getRandomGreeting(period, PREDEFINED_GREETINGS);
         greetingText = randomGreeting.text;
     } else {
-        // Es un ID de saludo específico
         const selectedGreeting = PREDEFINED_GREETINGS.find(g => g.id === preference);
         greetingText = selectedGreeting ? selectedGreeting.text : getRandomGreeting(period, PREDEFINED_GREETINGS).text;
     }
 
     const greetingEl = $('#header-greeting');
-    
-    // Verificación temprana para evitar saltos en el DOM
-    const targetHtml = name ? `${greetingText}<strong>, ${name}</strong>` : greetingText;
-    if (greetingEl.innerHTML === targetHtml) return;
+    if (!greetingEl) return;
+
+    const currentText = greetingEl.textContent;
+    const expectedText = name ? `${greetingText}, ${name}` : greetingText;
+    if (currentText === expectedText) return;
 
     greetingEl.textContent = greetingText;
     if (name) {
@@ -138,7 +257,6 @@ export async function renderGreeting(name) {
 let clockTimer = null;
 export async function updateClock() {
   const now = new Date();
-  // Obtenemos la configuración del reloj desde el storage.
   const { use12HourFormat, showSeconds } = await storageGet(['use12HourFormat', 'showSeconds']);
 
   let hours = now.getHours();
@@ -149,7 +267,7 @@ export async function updateClock() {
   if (use12HourFormat) {
     ampm = hours >= 12 ? ' PM' : ' AM';
     hours = hours % 12;
-    hours = hours || 12; // La hora 0 debe ser 12
+    hours = hours || 12;
   }
 
   let timeString = use12HourFormat ? `${hours}:${minutes}` : `${String(hours).padStart(2, '0')}:${minutes}`;
@@ -158,13 +276,17 @@ export async function updateClock() {
   }
   timeString += ampm;
 
-  $('#header-clock').textContent = timeString;
-  const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  const formattedDate = new Intl.DateTimeFormat('es-ES', dateOptions).format(now);
-  $('#date').textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-  
+  const clockEl = $('#header-clock');
+  if (clockEl) clockEl.textContent = timeString;
+
+  const dateEl = $('#date');
+  if (dateEl) {
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = new Intl.DateTimeFormat('es-ES', dateOptions).format(now);
+    dateEl.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+  }
+
   if (clockTimer) clearTimeout(clockTimer);
-  // Optimización de rendimiento: Si no se muestran segundos, el reloj solo "despierta" cada minuto.
   const delay = showSeconds ? 1000 : (60000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
   clockTimer = setTimeout(updateClock, delay);
 }
@@ -190,38 +312,54 @@ export function updateBgModeUI(isCustomBg, activeMode) {
         btn.classList.toggle('active', btn.dataset.mode === activeMode);
     });
 }
+
+function updateOverlayAndScrollState() {
+    const anyPanelOpen = isPanelOpen('#settings') || isPanelOpen('#notes-panel') || isPanelOpen('#modal');
+    $('#overlay')?.setAttribute('aria-hidden', String(!anyPanelOpen));
+    document.body.classList.toggle('no-scroll', anyPanelOpen);
+    updateMainBlur();
+}
+
 export function toggleSettings(show) {
     const settings = $('#settings');
+    if (!settings) return;
     const isHidden = show === undefined ? settings.getAttribute('aria-hidden') === 'false' : !show;
-    settings.setAttribute('aria-hidden', isHidden);
-    $('#overlay').setAttribute('aria-hidden', isHidden && $('#notes-panel').getAttribute('aria-hidden') === 'true');
-    document.body.classList.toggle('no-scroll', !isHidden);
-    $('#openSettings').classList.toggle('active', !isHidden);
-    if (!isHidden) toggleNotesPanel(false); // Close notes if opening settings
-    updateMainBlur();
+    settings.setAttribute('aria-hidden', String(isHidden));
+    $('#openSettings')?.classList.toggle('active', !isHidden);
+    if (!isHidden && isPanelOpen('#notes-panel')) {
+        toggleNotesPanel(false);
+    }
+    updateOverlayAndScrollState();
 }
 
-export function toggleNotesPanel(show) {
-    const notesPanel = $('#notes-panel');
+export async function toggleNotesPanel(show) {
+    let notesPanel = $('#notes-panel');
+    if (!notesPanel && show !== false && _ensureNotesLoaded) {
+        await _ensureNotesLoaded();
+        notesPanel = $('#notes-panel');
+    }
+    if (!notesPanel) {
+        updateOverlayAndScrollState();
+        return;
+    }
+
     const isHidden = show === undefined ? notesPanel.getAttribute('aria-hidden') === 'false' : !show;
-    notesPanel.setAttribute('aria-hidden', isHidden);
-    $('#overlay').setAttribute('aria-hidden', isHidden && $('#settings').getAttribute('aria-hidden') === 'true');
-    document.body.classList.toggle('no-scroll', !isHidden);
-    $('#openNotes').classList.toggle('active', !isHidden);
-    if (!isHidden) toggleSettings(false); // Close settings if opening notes
-    updateMainBlur();
+    notesPanel.setAttribute('aria-hidden', String(isHidden));
+    $('#openNotes')?.classList.toggle('active', !isHidden);
+    if (!isHidden && isPanelOpen('#settings')) {
+        toggleSettings(false);
+    }
+    updateOverlayAndScrollState();
 }
-
-
 
 function updateMainBlur() {
-    $('.main').classList.toggle('blurred', !!($('#settings[aria-hidden="false"]') || $('#notes-panel[aria-hidden="false"]')));
+    $('.main')?.classList.toggle('blurred', isPanelOpen('#settings') || isPanelOpen('#notes-panel'));
 }
 
 export function showSaveStatus() {
     const saveStatus = $('#saveStatus');
     if (!saveStatus) return;
-    
+
     if (saveStatus.timeout) clearTimeout(saveStatus.timeout);
     saveStatus.textContent = 'Guardado!';
     saveStatus.classList.remove('error');
@@ -232,27 +370,25 @@ export function showSaveStatus() {
 }
 
 /**
- * Muestra un mensaje de error temporal en el panel de configuración.
- * @param {string} message El mensaje de error a mostrar.
+ * Muestra un mensaje de error temporal en el panel de configuración y en toast si está cerrado.
  */
 export function showSettingError(message) {
     const saveStatus = $('#saveStatus');
-    if (!saveStatus) return;
-
-    if (saveStatus.timeout) clearTimeout(saveStatus.timeout);
-    saveStatus.textContent = message;
-    saveStatus.classList.add('error');
-    saveStatus.classList.add('visible');
-    saveStatus.timeout = setTimeout(() => {
-        saveStatus.classList.remove('visible');
-        // La clase de error se limpia la próxima vez que se muestre un estado normal.
-    }, 3000);
+    if (saveStatus && isPanelOpen('#settings')) {
+        if (saveStatus.timeout) clearTimeout(saveStatus.timeout);
+        saveStatus.textContent = message;
+        saveStatus.classList.add('error');
+        saveStatus.classList.add('visible');
+        saveStatus.timeout = setTimeout(() => {
+            saveStatus.classList.remove('visible');
+        }, 3000);
+    } else {
+        showToast(message, 'error');
+    }
 }
 
 /**
  * Muestra un mensaje de error persistente relacionado con operaciones de archivo.
- * @param {string} message - El mensaje de error a mostrar.
- * @param {boolean} isPermissionError - Si es true, añade un botón para re-seleccionar el directorio.
  */
 export function showFileError(message, isPermissionError = false) {
     const saveStatus = $('#saveStatus');
@@ -278,10 +414,10 @@ export function showFileError(message, isPermissionError = false) {
     closeIcon.src = 'images/cerrar.svg';
     closeIcon.alt = 'Ícono de cerrar';
     closeIcon.style.cssText = 'width: 16px; height: 16px; cursor: pointer; vertical-align: middle; margin-left: 8px;';
-    closeIcon.onclick = () => {
+    closeIcon.addEventListener('click', () => {
         saveStatus.style.opacity = '0';
         setTimeout(() => saveStatus.classList.remove('visible', 'error'), 300);
-    };
+    });
     saveStatus.appendChild(closeIcon);
 
     saveStatus.classList.add('error');
@@ -311,4 +447,3 @@ export async function updateDataTabUI() {
         manualSaveBtn.hidden = autoSync || false;
     }
 }
-

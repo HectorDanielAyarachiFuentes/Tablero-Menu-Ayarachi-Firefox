@@ -1,28 +1,34 @@
 /**
- * Gestiona el modal para crear y editar accesos y notas.
- * Se encarga de abrir, cerrar, rellenar los datos y guardar los cambios del modal.
+ * Gestiona el modal para crear y editar accesos, carpetas y notas.
+ * Se encarga de abrir, cerrar, validar URLs, rellenar los datos y guardar cambios.
  */
-import { $, $$, storageSet, storageGet, setHTML } from '../core/utils.js';
+import { $, $$, setHTML, isSafeWebUrl, normalizeWebUrl } from '../core/utils.js';
 import { tiles, saveAndRender } from '../core/tiles.js';
 import { FolderManager } from '../core/carpetas.js';
 import { DOMPurify } from '../lib/lib.js';
+import { showToast } from './ui.js';
 
 let editingPath = null;
 let debounceTimer;
-const MAX_NOTE_LENGTH = 10000; // Límite de 10,000 caracteres para el contenido de las notas.
+const MAX_NOTE_LENGTH = 10000;
 
 export function initModal() {
-    $('#modalSave').addEventListener('click', handleModalSave);
-    $('#modalCancel').addEventListener('click', () => closeModal());
+    $('#modalSave')?.addEventListener('click', handleModalSave);
+    $('#modalCancel')?.addEventListener('click', () => closeModal());
     $('#closeModal')?.addEventListener('click', () => closeModal());
-    $('#modalIconPreview').addEventListener('click', () => $('#modalIconFile').click());
+    $('#modalIconPreview')?.addEventListener('click', () => $('#modalIconFile')?.click());
+    $('#modalIconPreview')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $('#modalIconFile')?.click();
+        }
+    });
     $('#addFolder')?.addEventListener('click', () => openModal(null, 'folder'));
-    $('#modalIconFile').addEventListener('change', handleModalIconFileChange);
-    $('#modalResetIcon').addEventListener('click', handleModalResetIcon);
+    $('#modalIconFile')?.addEventListener('change', handleModalIconFileChange);
+    $('#modalResetIcon')?.addEventListener('click', handleModalResetIcon);
 
     document.addEventListener('keydown', handleModalKeydown);
 
-    // Listeners para la barra de herramientas del editor de texto enriquecido
     $$('.rich-editor-toolbar button').forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
@@ -30,25 +36,27 @@ export function initModal() {
         });
     });
 
-    // Añadir listener para obtener el título de la página automáticamente
     const urlInput = $('#modalUrl');
-    urlInput.addEventListener('paste', (e) => {
-        setTimeout(() => handleUrlMetadata(e), 100);
-    });
-    urlInput.addEventListener('change', handleUrlMetadata);
-    urlInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => handleUrlMetadata({ target: urlInput }), 1000);
-    });
+    if (urlInput) {
+        urlInput.addEventListener('paste', (e) => {
+            setTimeout(() => handleUrlMetadata(e), 100);
+        });
+        urlInput.addEventListener('change', handleUrlMetadata);
+        urlInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => handleUrlMetadata({ target: urlInput }), 1000);
+        });
+    }
 }
 
 function getTileByPath(pathArr) {
     if (!pathArr || pathArr.length === 0) return null;
     let current = tiles;
     for (let i = 0; i < pathArr.length - 1; i++) {
-        current = current[pathArr[i]].children;
+        current = current[pathArr[i]]?.children;
+        if (!current) return null;
     }
-    return current[pathArr[pathArr.length - 1]];
+    return current[pathArr[pathArr.length - 1]] || null;
 }
 
 export function openModal(pathOrIndex = null, forceType = null) {
@@ -61,13 +69,13 @@ export function openModal(pathOrIndex = null, forceType = null) {
     }
 
     const modal = $('#modal');
+    if (!modal) return;
     modal.dataset.editingIndex = editingPath ? editingPath.join(',') : 'null';
 
-    $('#overlay').setAttribute('aria-hidden', 'false');
+    $('#overlay')?.setAttribute('aria-hidden', 'false');
     const tile = getTileByPath(editingPath);
-    const type = forceType || tile?.type || 'link';
+    const type = forceType || (tile?.type === 'enlace' ? 'link' : tile?.type) || 'link';
 
-    // Reset state
     $('#modalUrlGroup').hidden = true;
     $('#modalContentGroup').hidden = true;
     $('#modalName').placeholder = '';
@@ -75,7 +83,6 @@ export function openModal(pathOrIndex = null, forceType = null) {
     $('#modalContent').dataset.placeholder = ' ';
     $('#modalIconContainer').hidden = true;
 
-    // Remove existing classes
     modal.classList.remove('modal-type-link', 'modal-type-folder', 'modal-type-note');
     modal.classList.add(`modal-type-${type}`);
 
@@ -84,9 +91,15 @@ export function openModal(pathOrIndex = null, forceType = null) {
         $('#modalUrlGroup').hidden = false;
         $('#modalIconContainer').hidden = false;
         if (tile) {
-            $('#modalName').value = tile.name;
-            $('#modalUrl').value = tile.url;
-            updateIconPreview(tile.customIcon || `https://www.google.com/s2/favicons?sz=128&domain=${new URL(tile.url).hostname}`, !!tile.customIcon);
+            $('#modalName').value = tile.name || '';
+            $('#modalUrl').value = tile.url || '';
+            let faviconSrc = '';
+            if (tile.customIcon) {
+                faviconSrc = tile.customIcon;
+            } else if (isSafeWebUrl(tile.url)) {
+                faviconSrc = `https://www.google.com/s2/favicons?sz=128&domain=${new URL(tile.url).hostname}`;
+            }
+            updateIconPreview(faviconSrc, !!tile.customIcon);
         } else {
             $('#modalName').value = '';
             $('#modalUrl').value = '';
@@ -94,18 +107,18 @@ export function openModal(pathOrIndex = null, forceType = null) {
         }
     } else if (type === 'folder') {
         $('#modalTitle').textContent = tile ? 'Editar Carpeta' : 'Crear Carpeta';
-        $('#modalName').value = tile ? tile.name : '';
+        $('#modalName').value = tile ? (tile.name || '') : '';
     } else if (type === 'note') {
         $('#modalTitle').textContent = tile ? 'Editar Nota' : 'Crear Nota';
         $('#modalContentGroup').hidden = false;
         $('#modalName').placeholder = 'Título de la nota (opcional)';
-        $('#modalName').value = tile ? tile.name : '';
-        setHTML($('#modalContent'), tile ? (tile.content || '') : '');
+        $('#modalName').value = tile ? (tile.name || '') : '';
+        setHTML($('#modalContent'), tile ? DOMPurify.sanitize(tile.content || '') : '');
     }
 
     setTimeout(() => {
-        if (type === 'link' && !tile) $('#modalUrl').focus();
-        else $('#modalName').focus();
+        if (type === 'link' && !tile) $('#modalUrl')?.focus();
+        else $('#modalName')?.focus();
     }, 50);
     modal.setAttribute('aria-hidden', 'false');
     setTimeout(() => modal.classList.add('is-open'), 10);
@@ -113,58 +126,81 @@ export function openModal(pathOrIndex = null, forceType = null) {
 
 export function closeModal() {
     const modal = $('#modal');
+    if (!modal) return;
     modal.classList.remove('is-open');
-    $('#overlay').setAttribute('aria-hidden', 'true');
+    const settingsOpen = $('#settings')?.getAttribute('aria-hidden') === 'false';
+    const notesOpen = $('#notes-panel')?.getAttribute('aria-hidden') === 'false';
+    if (!settingsOpen && !notesOpen) {
+        $('#overlay')?.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('no-scroll');
+    }
     editingPath = null;
-    $('#modalIconFile').value = '';
-    $('#modalPreviewImg').dataset.isCustom = 'false';
+    const iconFile = $('#modalIconFile');
+    if (iconFile) iconFile.value = '';
+    const previewImg = $('#modalPreviewImg');
+    if (previewImg) previewImg.dataset.isCustom = 'false';
     setTimeout(() => { modal.setAttribute('aria-hidden', 'true'); }, 300);
 }
 
 function handleModalSave() {
     const name = $('#modalName').value.trim();
-    const type = editingPath !== null ? getTileByPath(editingPath).type : 
-                 (!$('#modalUrlGroup').hidden ? 'link' : 
-                  !$('#modalContentGroup').hidden ? 'note' : 'folder');
+    const existingTile = editingPath !== null ? getTileByPath(editingPath) : null;
+    const type = existingTile
+        ? (existingTile.type === 'enlace' ? 'link' : existingTile.type)
+        : (!$('#modalUrlGroup').hidden ? 'link' : !$('#modalContentGroup').hidden ? 'note' : 'folder');
 
-    if (editingPath !== null) {
-        const tileToEdit = getTileByPath(editingPath);
-        if (tileToEdit.type === 'link') {
-            const url = $('#modalUrl').value.trim();
-            if (!url) { alert('Por favor, introduce una URL.'); return; }
-            try { new URL(url); } catch (e) { alert('La URL introducida no es válida.'); return; }
-            tileToEdit.name = name;
-            tileToEdit.url = url;
-            if ($('#modalPreviewImg').src.startsWith('data:image')) {
-                tileToEdit.customIcon = $('#modalPreviewImg').src;
-            } else if ($('#modalPreviewImg').hidden) {
-                tileToEdit.customIcon = null;
+    if (existingTile) {
+        if (type === 'link') {
+            const url = normalizeWebUrl($('#modalUrl').value);
+            if (!url) { showToast('Por favor, introduce una URL.', 'error'); return; }
+            if (!isSafeWebUrl(url)) { showToast('La URL debe comenzar con http:// o https://', 'error'); return; }
+            existingTile.type = 'link';
+            existingTile.name = name || new URL(url).hostname.replace(/^www\./, '');
+            existingTile.url = url;
+            const previewImg = $('#modalPreviewImg');
+            if (previewImg.dataset.isCustom === 'true' && previewImg.src.startsWith('data:image')) {
+                existingTile.customIcon = previewImg.src;
+            } else if (previewImg.dataset.isCustom === 'false') {
+                existingTile.customIcon = null;
             }
-        } else if (tileToEdit.type === 'note') {
+        } else if (type === 'note') {
             const content = $('#modalContent').innerHTML;
-            if (content.length > MAX_NOTE_LENGTH) { alert(`El contenido de la nota excede el límite de ${MAX_NOTE_LENGTH} caracteres.`); return; }
-            tileToEdit.content = DOMPurify.sanitize(content);
-            tileToEdit.name = name;
-        } else if (tileToEdit.type === 'folder') {
-            tileToEdit.name = name;
+            if (content.length > MAX_NOTE_LENGTH) {
+                showToast(`El contenido de la nota excede el límite de ${MAX_NOTE_LENGTH} caracteres.`, 'error');
+                return;
+            }
+            existingTile.content = DOMPurify.sanitize(content);
+            existingTile.name = name;
+        } else if (type === 'folder') {
+            existingTile.name = name || 'Carpeta';
         }
     } else {
         if (type === 'link') {
-            const url = $('#modalUrl').value.trim();
-            if (!url) { alert('Por favor, introduce una URL.'); return; }
-            try { new URL(url); } catch (e) { alert('La URL introducida no es válida.'); return; }
-            const newLink = { type: 'link', name, url, favorite: false, customIcon: null };
-            if ($('#modalPreviewImg').src.startsWith('data:image')) {
-                newLink.customIcon = $('#modalPreviewImg').src;
+            const url = normalizeWebUrl($('#modalUrl').value);
+            if (!url) { showToast('Por favor, introduce una URL.', 'error'); return; }
+            if (!isSafeWebUrl(url)) { showToast('La URL debe comenzar con http:// o https://', 'error'); return; }
+            const newLink = {
+                type: 'link',
+                name: name || new URL(url).hostname.replace(/^www\./, ''),
+                url,
+                favorite: false,
+                customIcon: null
+            };
+            const previewImg = $('#modalPreviewImg');
+            if (previewImg.dataset.isCustom === 'true' && previewImg.src.startsWith('data:image')) {
+                newLink.customIcon = previewImg.src;
             }
             const currentFolder = FolderManager.getTilesForCurrentView(tiles);
             currentFolder.unshift(newLink);
         } else if (type === 'note') {
             const content = $('#modalContent').innerHTML;
-            if (content.length > MAX_NOTE_LENGTH) { alert(`El contenido de la nota excede el límite de ${MAX_NOTE_LENGTH} caracteres.`); return; }
+            if (content.length > MAX_NOTE_LENGTH) {
+                showToast(`El contenido de la nota excede el límite de ${MAX_NOTE_LENGTH} caracteres.`, 'error');
+                return;
+            }
             tiles.unshift({ type: 'note', name, content: DOMPurify.sanitize(content) });
         } else if (type === 'folder') {
-            const newFolder = { type: 'folder', name, children: [] };
+            const newFolder = { type: 'folder', name: name || 'Nueva Carpeta', children: [] };
             const currentFolder = FolderManager.getTilesForCurrentView(tiles);
             currentFolder.unshift(newFolder);
         }
@@ -176,21 +212,23 @@ function handleModalSave() {
 function handleUrlMetadata(e) {
     const urlInput = e.target;
     const nameInput = $('#modalName');
-    const url = urlInput.value.trim();
+    const url = normalizeWebUrl(urlInput.value);
 
-    if (nameInput.value.trim() !== '') return;
+    if (!isSafeWebUrl(url)) return;
 
     try {
         const parsedUrl = new URL(url);
-        let hostname = parsedUrl.hostname.replace(/^www\./, '');
-        const domainParts = hostname.split('.');
-        if (domainParts.length > 1) {
-            nameInput.value = domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+        const hostname = parsedUrl.hostname.replace(/^www\./, '');
+        if (nameInput.value.trim() === '') {
+            const domainParts = hostname.split('.');
+            if (domainParts.length > 0 && domainParts[0]) {
+                nameInput.value = domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+            }
         }
-        if (!$('#modalPreviewImg').dataset.isCustom) {
-            updateIconPreview(`https://www.google.com/s2/favicons?sz=128&domain=${hostname}`, false);
+        if ($('#modalPreviewImg').dataset.isCustom !== 'true') {
+            updateIconPreview(`https://www.google.com/s2/favicons?sz=128&domain=${parsedUrl.hostname}`, false);
         }
-    } catch (error) { /* Ignorar errores de URL inválida mientras se escribe */ }
+    } catch (error) { /* Ignorar URLs incompletas mientras escribe */ }
 }
 
 function handleModalIconFileChange(e) {
@@ -203,36 +241,48 @@ function handleModalIconFileChange(e) {
 }
 
 function handleModalResetIcon() {
-    const index = $('#modal').dataset.editingIndex;
-    const url = $('#modalUrl').value;
-    const tile = (index !== null && index !== 'null') ? tiles[index] : null;
-    const finalUrl = url || tile?.url;
+    const tile = getTileByPath(editingPath);
+    const rawUrl = $('#modalUrl').value || tile?.url;
+    const finalUrl = normalizeWebUrl(rawUrl);
 
-    if (finalUrl) {
+    if (isSafeWebUrl(finalUrl)) {
         try {
             const newIconSrc = `https://www.google.com/s2/favicons?sz=128&domain=${new URL(finalUrl).hostname}`;
             updateIconPreview(newIconSrc, false);
         } catch (e) {
             updateIconPreview('', false);
         }
+    } else {
+        updateIconPreview('', false);
     }
     if (tile) tile.customIcon = null;
 }
 
 function updateIconPreview(src, isCustom) {
     const previewImg = $('#modalPreviewImg');
+    if (!previewImg) return;
     previewImg.src = src;
     previewImg.hidden = !src;
-    previewImg.dataset.isCustom = isCustom;
+    previewImg.dataset.isCustom = String(!!isCustom);
     $('#modalIconPlaceholder').hidden = !!src;
     $('#modalResetIcon').hidden = !isCustom;
 }
 
 function handleModalKeydown(e) {
-    if ($('#modal').getAttribute('aria-hidden') === 'true') return;
-    if (e.key === 'Enter' && e.ctrlKey) { handleModalSave(); }
-    else if (e.key === 'Tab') {
-        const focusable = $$('#modal button, #modal input').filter(el => !el.hidden && !el.disabled);
+    if ($('#modal')?.getAttribute('aria-hidden') !== 'false') return;
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+        return;
+    }
+    if (e.key === 'Enter' && e.ctrlKey) {
+        handleModalSave();
+        return;
+    }
+    if (e.key === 'Tab') {
+        const focusable = $$('#modal button, #modal input, #modal select, #modal textarea, #modal [contenteditable="true"]')
+            .filter(el => !el.hidden && !el.disabled && el.offsetParent !== null);
+        if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
         if (e.shiftKey && document.activeElement === first) {
@@ -243,13 +293,4 @@ function handleModalKeydown(e) {
             e.preventDefault();
         }
     }
-}
-
-function escapeHTML(str) {
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }

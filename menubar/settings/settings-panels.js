@@ -1,11 +1,12 @@
 /**
  * Gestiona la lógica de los controles de personalización de los paneles.
- * Incluye color, opacidad, desenfoque, radio y ahora también sombras.
+ * Incluye color, opacidad, desenfoque, radio, sombras y temas predefinidos sin sobreescribir temas al iniciar.
  */
-import { $, $$, saveAndSyncSetting, storageGet } from '../core/utils.js';
+import { $, $$, saveAndSyncSetting, storageGet, parseColorToRgb, toHexColor } from '../core/utils.js';
+import { showConfirmDialog } from '../components/ui.js';
 
 const PANEL_THEMES = [
-    { id: 'default', name: 'Por Defecto', panelBg: 'rgba(0, 0, 0, 0.2)', panelOpacity: 0.1, panelBlur: 10, panelRadius: 12, panelShadowEnabled: false, panelTextColor: '#ffffff', panelTextSecondaryColor: 'rgba(255, 255, 255, 0.7)' },
+    { id: 'default', name: 'Por Defecto', panelBg: '#000000', panelOpacity: 0.2, panelBlur: 10, panelRadius: 12, panelShadowEnabled: false, panelTextColor: '#ffffff', panelTextSecondaryColor: 'rgba(255, 255, 255, 0.7)' },
     { id: 'glass', name: 'Cristalino', panelBg: '#ffffff', panelOpacity: 0.1, panelBlur: 10, panelRadius: 16, panelShadowEnabled: false, panelShadowColor: '#000000', panelShadowBlur: 20, panelTextColor: '#000000', panelTextSecondaryColor: '#333333' },
     { id: 'solid', name: 'Sólido', panelBg: '#1C1C1E', panelOpacity: 0.85, panelBlur: 0, panelRadius: 10, panelShadowEnabled: false, panelShadowColor: '#000000', panelShadowBlur: 15, panelTextColor: '#f5f5f7', panelTextSecondaryColor: '#a0a0a0' },
     { id: 'deep-ocean', name: 'Océano', panelBg: '#001f3f', panelOpacity: 0.2, panelBlur: 8, panelRadius: 14, panelShadowEnabled: false, panelShadowColor: '#000000', panelShadowBlur: 15, panelTextColor: '#f0f8ff', panelTextSecondaryColor: '#b3e5fc' },
@@ -56,62 +57,57 @@ const PANEL_THEMES = [
 export function initPanelSettings() {
     renderPanelThemes();
 
-    // Listeners para las sub-pestañas de paneles
     $$('#tab-paneles .sub-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchToPanelSubTab(btn.dataset.subtab));
     });
-    
-    // Controles de apariencia
-    $('#panelColor').addEventListener('input', (e) => handleColorChange('panelBg', e.target.value, '--panel-bg'));
-    $('#panelTextColor').addEventListener('input', (e) => handleColorChange('panelTextColor', e.target.value, '--panel-text-color'));
-    $('#panelTextSecondaryColor').addEventListener('input', (e) => handleColorChange('panelTextSecondaryColor', e.target.value, '--panel-text-secondary-color'));
-    $('#panelOpacity').addEventListener('input', (e) => handlePanelSliderChange('panelOpacity', e.target.value, '--panel-opacity'));
-    $('#panelBlur').addEventListener('input', (e) => handlePanelSliderChange('panelBlur', e.target.value, '--panel-blur', 'px'));
-    $('#panelRadius').addEventListener('input', (e) => handlePanelSliderChange('panelRadius', e.target.value, '--panel-radius', 'px'));
-    $('#resetPanelsBtn').addEventListener('click', resetPanelStyles);
-    
-    $('#panelShadowToggle').addEventListener('change', handleShadowToggle); // Controles de sombra
-    $('#panelShadowColor').addEventListener('input', (e) => handleShadowColorChange(e.target.value));
-    $('#panelShadowBlur').addEventListener('input', (e) => handlePanelSliderChange('panelShadowBlur', e.target.value, '--panel-shadow-blur', 'px'));
 
-    // Cargar y aplicar estado inicial
+    $('#panelColor')?.addEventListener('input', (e) => handleColorChange('panelBg', e.target.value, '--panel-bg'));
+    $('#panelTextColor')?.addEventListener('input', (e) => handleColorChange('panelTextColor', e.target.value, '--panel-text-color'));
+    $('#panelTextSecondaryColor')?.addEventListener('input', (e) => handleColorChange('panelTextSecondaryColor', e.target.value, '--panel-text-secondary-color'));
+    $('#panelOpacity')?.addEventListener('input', (e) => handlePanelSliderChange('panelOpacity', e.target.value, '--panel-opacity'));
+    $('#panelBlur')?.addEventListener('input', (e) => handlePanelSliderChange('panelBlur', e.target.value, '--panel-blur', 'px'));
+    $('#panelRadius')?.addEventListener('input', (e) => handlePanelSliderChange('panelRadius', e.target.value, '--panel-radius', 'px'));
+    $('#resetPanelsBtn')?.addEventListener('click', resetPanelStyles);
+
+    $('#panelShadowToggle')?.addEventListener('change', handleShadowToggle);
+    $('#panelShadowColor')?.addEventListener('input', (e) => handleShadowColorChange(e.target.value));
+    $('#panelShadowBlur')?.addEventListener('input', (e) => handlePanelSliderChange('panelShadowBlur', e.target.value, '--panel-shadow-blur', 'px'));
+
     loadAndApplyPanelSettings();
 }
 
 function switchToPanelSubTab(subTabId) {
-    // Ocultar todos los paneles y desactivar todos los botones
-    $$('#tab-paneles .sub-tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    $$('#tab-paneles .sub-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+    $$('#tab-paneles .sub-tab-pane').forEach(pane => pane.classList.remove('active'));
+    $$('#tab-paneles .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
 
-    // Activar el panel y el botón correctos
-    // CORRECCIÓN: Asegurarse de que el selector apunte solo a los elementos dentro de la pestaña de paneles.
     const paneToActivate = $(`#tab-paneles #subtab-${subTabId}`);
     const btnToActivate = $(`#tab-paneles .sub-tab-btn[data-subtab="${subTabId}"]`);
-    
+
     if (paneToActivate) paneToActivate.classList.add('active');
     if (btnToActivate) btnToActivate.classList.add('active');
 }
 
 function renderPanelThemes() {
     const listEl = $('#panel-theme-list');
+    if (!listEl) return;
+    listEl.textContent = '';
+
     PANEL_THEMES.forEach(theme => {
         const btn = document.createElement('button');
         btn.className = 'theme-btn panel-theme-btn';
         btn.dataset.themeId = theme.id;
+
         const nameSpan = document.createElement('span');
         nameSpan.className = 'theme-name';
         nameSpan.textContent = theme.name;
         btn.appendChild(nameSpan);
-        // Previsualización del tema más precisa
+
         const previewOpacity = theme.panelOpacity > 0.1 ? theme.panelOpacity : (theme.panelOpacity + 0.1);
-        btn.style.backgroundColor = `${theme.panelBg}${Math.round(previewOpacity * 255).toString(16).padStart(2, '0')}`;
+        const rgb = parseColorToRgb(theme.panelBg, [0, 0, 0]);
+        btn.style.backgroundColor = `rgba(${rgb.join(', ')}, ${previewOpacity})`;
         btn.style.backdropFilter = `blur(${theme.panelBlur}px)`;
         btn.style.borderRadius = `${theme.panelRadius}px`;
-        btn.style.color = theme.panelTextColor; // Usar el color de texto del tema para la previsualización
+        btn.style.color = theme.panelTextColor;
         btn.style.border = '1px solid rgba(255,255,255,0.1)';
 
         btn.addEventListener('click', () => applyPanelTheme(theme.id));
@@ -121,100 +117,119 @@ function renderPanelThemes() {
 
 function handleColorChange(key, color, cssVar) {
     document.documentElement.style.setProperty(cssVar, color);
-    saveAndSyncSetting({ [key]: color });
     if (key === 'panelBg') {
         updatePanelRgb(color);
     }
-    clearActiveTheme();
+    saveAndSyncSetting({
+        [key]: color,
+        activePanelTheme: null,
+        activePremiumTheme: null
+    });
+    updateActivePanelThemeButton(null);
 }
 
 function handleShadowColorChange(color) {
     document.documentElement.style.setProperty('--panel-shadow-color', color);
-    saveAndSyncSetting({ panelShadowColor: color });
-    clearActiveTheme();
+    saveAndSyncSetting({
+        panelShadowColor: color,
+        activePanelTheme: null,
+        activePremiumTheme: null
+    });
+    updateActivePanelThemeButton(null);
 }
 
 function handlePanelSliderChange(key, value, cssVar, unit = '') {
     document.documentElement.style.setProperty(cssVar, `${value}${unit}`);
-    saveAndSyncSetting({ [key]: value });
     updateSliderValueSpans();
-    clearActiveTheme();
+    saveAndSyncSetting({
+        [key]: value,
+        activePanelTheme: null,
+        activePremiumTheme: null
+    });
+    updateActivePanelThemeButton(null);
 }
 
 function handleShadowToggle(e) {
     const enabled = e.target.checked;
-    $('#panelShadowOptions').hidden = !enabled;
-    saveAndSyncSetting({ panelShadowEnabled: enabled });
+    const opts = $('#panelShadowOptions');
+    if (opts) opts.hidden = !enabled;
     applyShadowStyle(enabled);
-    clearActiveTheme();
+    saveAndSyncSetting({
+        panelShadowEnabled: enabled,
+        activePanelTheme: null,
+        activePremiumTheme: null
+    });
+    updateActivePanelThemeButton(null);
 }
 
 function applyPanelTheme(themeId) {
     const theme = PANEL_THEMES.find(t => t.id === themeId);
     if (!theme) return;
 
-    // Aplicar todos los valores del tema
-    $('#panelColor').value = theme.panelBg; handleColorChange('panelBg', theme.panelBg, '--panel-bg');
-    $('#panelTextColor').value = theme.panelTextColor; handleColorChange('panelTextColor', theme.panelTextColor, '--panel-text-color');
-    $('#panelTextSecondaryColor').value = theme.panelTextSecondaryColor; handleColorChange('panelTextSecondaryColor', theme.panelTextSecondaryColor, '--panel-text-secondary-color');
-    $('#panelOpacity').value = theme.panelOpacity;
-    handlePanelSliderChange('panelOpacity', theme.panelOpacity, '--panel-opacity');
-    $('#panelBlur').value = theme.panelBlur;
-    handlePanelSliderChange('panelBlur', theme.panelBlur, '--panel-blur', 'px');
-    $('#panelRadius').value = theme.panelRadius;
-    handlePanelSliderChange('panelRadius', theme.panelRadius, '--panel-radius', 'px');
+    const root = document.documentElement.style;
+    root.setProperty('--panel-bg', theme.panelBg);
+    updatePanelRgb(theme.panelBg);
+    root.setProperty('--panel-text-color', theme.panelTextColor);
+    root.setProperty('--panel-text-secondary-color', theme.panelTextSecondaryColor);
+    root.setProperty('--panel-opacity', theme.panelOpacity);
+    root.setProperty('--panel-blur', `${theme.panelBlur}px`);
+    root.setProperty('--panel-radius', `${theme.panelRadius}px`);
 
-    $('#panelShadowToggle').checked = theme.panelShadowEnabled;
-    handleShadowToggle({ target: { checked: theme.panelShadowEnabled } });
+    if ($('#panelColor')) $('#panelColor').value = toHexColor(theme.panelBg, '#000000');
+    if ($('#panelTextColor')) $('#panelTextColor').value = toHexColor(theme.panelTextColor, '#ffffff');
+    if ($('#panelTextSecondaryColor')) $('#panelTextSecondaryColor').value = toHexColor(theme.panelTextSecondaryColor, '#ffffff');
+    if ($('#panelOpacity')) $('#panelOpacity').value = theme.panelOpacity;
+    if ($('#panelBlur')) $('#panelBlur').value = theme.panelBlur;
+    if ($('#panelRadius')) $('#panelRadius').value = theme.panelRadius;
+
+    if ($('#panelShadowToggle')) $('#panelShadowToggle').checked = theme.panelShadowEnabled;
+    if ($('#panelShadowOptions')) $('#panelShadowOptions').hidden = !theme.panelShadowEnabled;
+    applyShadowStyle(theme.panelShadowEnabled);
+
+    const payload = {
+        panelBg: theme.panelBg,
+        panelTextColor: theme.panelTextColor,
+        panelTextSecondaryColor: theme.panelTextSecondaryColor,
+        panelOpacity: theme.panelOpacity,
+        panelBlur: theme.panelBlur,
+        panelRadius: theme.panelRadius,
+        panelShadowEnabled: theme.panelShadowEnabled,
+        activePanelTheme: themeId,
+        activePremiumTheme: null
+    };
 
     if (theme.panelShadowEnabled) {
-        $('#panelShadowColor').value = theme.panelShadowColor;
-        handleShadowColorChange(theme.panelShadowColor);
-        $('#panelShadowBlur').value = theme.panelShadowBlur;
-        handlePanelSliderChange('panelShadowBlur', theme.panelShadowBlur, '--panel-shadow-blur', 'px');
+        const sColor = theme.panelShadowColor || '#000000';
+        const sBlur = theme.panelShadowBlur ?? 10;
+        root.setProperty('--panel-shadow-color', sColor);
+        root.setProperty('--panel-shadow-blur', `${sBlur}px`);
+        if ($('#panelShadowColor')) $('#panelShadowColor').value = toHexColor(sColor, '#000000');
+        if ($('#panelShadowBlur')) $('#panelShadowBlur').value = sBlur;
+        payload.panelShadowColor = sColor;
+        payload.panelShadowBlur = sBlur;
     }
 
-    saveAndSyncSetting({ activePanelTheme: themeId });
+    updateSliderValueSpans();
     updateActivePanelThemeButton(themeId);
+    saveAndSyncSetting(payload);
 }
 
 export function updateSliderValueSpans() {
-    $('#opacityValue').textContent = `${Math.round($('#panelOpacity').value * 100)}%`;
-    $('#blurValue').textContent = `${$('#panelBlur').value}px`;
-    $('#radiusValue').textContent = `${$('#panelRadius').value}px`;
-    $('#shadowBlurValue').textContent = `${$('#panelShadowBlur').value}px`;
+    if ($('#opacityValue') && $('#panelOpacity')) $('#opacityValue').textContent = `${Math.round($('#panelOpacity').value * 100)}%`;
+    if ($('#blurValue') && $('#panelBlur')) $('#blurValue').textContent = `${$('#panelBlur').value}px`;
+    if ($('#radiusValue') && $('#panelRadius')) $('#radiusValue').textContent = `${$('#panelRadius').value}px`;
+    if ($('#shadowBlurValue') && $('#panelShadowBlur')) $('#shadowBlurValue').textContent = `${$('#panelShadowBlur').value}px`;
 }
 
 export function updatePanelRgb(color) {
-    let rgb = [0, 0, 0];
-    const hex = color.trim();
-    if (hex.startsWith('#')) {
-        if (hex.length === 4) {
-            rgb = [1, 2, 3].map(i => parseInt(hex[i] + hex[i], 16));
-        } else {
-            const match = hex.substring(1).match(/.{2}/g);
-            if (match) rgb = match.slice(0, 3).map(x => parseInt(x, 16));
-        }
-    } else if (hex.includes('rgb')) {
-        const match = hex.match(/\d+/g);
-        if (match) rgb = match.slice(0, 3).map(Number);
-    }
+    const rgb = parseColorToRgb(color, [0, 0, 0]);
     document.documentElement.style.setProperty('--panel-bg-rgb', rgb.join(', '));
 }
 
 async function resetPanelStyles() {
-    if (!confirm('¿Restablecer todos los estilos de los paneles a sus valores por defecto?')) return;
-
-    // Simplemente aplica el tema "default"
+    const confirmed = await showConfirmDialog('¿Restablecer todos los estilos de los paneles a sus valores por defecto?');
+    if (!confirmed) return;
     applyPanelTheme('default');
-}
-
-function clearActiveTheme() {
-    saveAndSyncSetting({ 
-        activePanelTheme: null,
-        activePremiumTheme: null // Desvincular de temas premium para evitar sobreescritura
-    });
-    updateActivePanelThemeButton(null);
 }
 
 async function loadAndApplyPanelSettings() {
@@ -225,30 +240,40 @@ async function loadAndApplyPanelSettings() {
         'activePanelTheme'
     ]);
 
-    // Aplicar valores o defaults
-    const panelBg = settings.panelBg || 'rgba(0, 0, 0, 0.2)';
-    $('#panelColor').value = panelBg; handleColorChange('panelBg', panelBg, '--panel-bg');
-    $('#panelTextColor').value = settings.panelTextColor || '#ffffff'; handleColorChange('panelTextColor', settings.panelTextColor || '#ffffff', '--panel-text-color');
-    $('#panelTextSecondaryColor').value = settings.panelTextSecondaryColor || 'rgba(255, 255, 255, 0.7)'; handleColorChange('panelTextSecondaryColor', settings.panelTextSecondaryColor || 'rgba(255, 255, 255, 0.7)', '--panel-text-secondary-color');
-
-    $('#panelOpacity').value = settings.panelOpacity ?? 0.1;
-    $('#panelBlur').value = settings.panelBlur ?? 10;
-    $('#panelRadius').value = settings.panelRadius ?? 12;
-
+    const root = document.documentElement.style;
+    const panelBg = settings.panelBg || '#064e3b';
+    const textColor = settings.panelTextColor || '#ecfdf5';
+    const textSecondary = settings.panelTextSecondaryColor || '#6ee7b7';
+    const opacity = settings.panelOpacity ?? 0.2;
+    const blur = settings.panelBlur ?? 25;
+    const radius = settings.panelRadius ?? 18;
     const shadowEnabled = settings.panelShadowEnabled || false;
-    $('#panelShadowToggle').checked = shadowEnabled;
-    $('#panelShadowOptions').hidden = !shadowEnabled;
+    const shadowColor = settings.panelShadowColor || '#000000';
+    const shadowBlur = settings.panelShadowBlur ?? 10;
+
+    // Aplicar silenciosamente en DOM sin escribir ni limpiar activePremiumTheme
+    root.setProperty('--panel-bg', panelBg);
+    updatePanelRgb(panelBg);
+    root.setProperty('--panel-text-color', textColor);
+    root.setProperty('--panel-text-secondary-color', textSecondary);
+    root.setProperty('--panel-opacity', opacity);
+    root.setProperty('--panel-blur', `${blur}px`);
+    root.setProperty('--panel-radius', `${radius}px`);
+    root.setProperty('--panel-shadow-color', shadowColor);
+    root.setProperty('--panel-shadow-blur', `${shadowBlur}px`);
     applyShadowStyle(shadowEnabled);
 
-    const shadowColor = settings.panelShadowColor || '#000000';
-    $('#panelShadowColor').value = shadowColor; handleShadowColorChange(shadowColor);
-    $('#panelShadowBlur').value = settings.panelShadowBlur ?? 10;
+    if ($('#panelColor')) $('#panelColor').value = toHexColor(panelBg, '#000000');
+    if ($('#panelTextColor')) $('#panelTextColor').value = toHexColor(textColor, '#ffffff');
+    if ($('#panelTextSecondaryColor')) $('#panelTextSecondaryColor').value = toHexColor(textSecondary, '#ffffff');
+    if ($('#panelOpacity')) $('#panelOpacity').value = opacity;
+    if ($('#panelBlur')) $('#panelBlur').value = blur;
+    if ($('#panelRadius')) $('#panelRadius').value = radius;
+    if ($('#panelShadowToggle')) $('#panelShadowToggle').checked = shadowEnabled;
+    if ($('#panelShadowOptions')) $('#panelShadowOptions').hidden = !shadowEnabled;
+    if ($('#panelShadowColor')) $('#panelShadowColor').value = toHexColor(shadowColor, '#000000');
+    if ($('#panelShadowBlur')) $('#panelShadowBlur').value = shadowBlur;
 
-    // Actualizar estilos y sliders
-    document.documentElement.style.setProperty('--panel-opacity', $('#panelOpacity').value);
-    document.documentElement.style.setProperty('--panel-blur', `${$('#panelBlur').value}px`);
-    document.documentElement.style.setProperty('--panel-radius', `${$('#panelRadius').value}px`);
-    document.documentElement.style.setProperty('--panel-shadow-blur', `${$('#panelShadowBlur').value}px`);
     updateSliderValueSpans();
     updateActivePanelThemeButton(settings.activePanelTheme);
 }

@@ -2,7 +2,7 @@
  * Gestiona la funcionalidad de la barra de búsqueda.
  * Incluye la lógica para realizar búsquedas y para el selector de motores de búsqueda y favoritos.
  */
-import { $, storageGet, storageSet } from '../menubar/core/utils.js';
+import { $, storageGet, storageSet, isSafeWebUrl } from '../menubar/core/utils.js';
 import { tiles } from '../menubar/core/tiles.js';
 
 export function initSearch() {
@@ -51,7 +51,7 @@ async function performSearch() {
         const isPrivate = $('#privacyToggle')?.classList.contains('active');
         const { engine } = await storageGet(['engine']);
         const activeEngine = isPrivate ? 'startpage' : (engine || 'google');
-        window.open(buildSearchUrl(activeEngine, q));
+        window.open(buildSearchUrl(activeEngine, q), '_blank', 'noopener,noreferrer');
     }
 }
 
@@ -115,7 +115,7 @@ export async function renderFavoritesInSelect() {
     };
 
     engines.forEach(createOption);
-    tiles.filter(t => t.favorite).forEach(tile => createOption({
+    tiles.filter(t => t.favorite && isSafeWebUrl(t.url)).forEach(tile => createOption({
         value: `favorite-${tile.url}`, text: `⭐ ${tile.name}`, url: tile.url
     }));
 
@@ -129,7 +129,9 @@ async function handleEngineSelect(e) {
     if (!option) return;
     const selectedValue = option.dataset.value;
     if (selectedValue.startsWith('favorite-')) {
-        window.open(option.dataset.url);
+        if (isSafeWebUrl(option.dataset.url)) {
+            window.open(option.dataset.url, '_blank', 'noopener,noreferrer');
+        }
     } else {
         await storageSet({ engine: selectedValue });
         updateSearchIcon(selectedValue);

@@ -1,4 +1,8 @@
-import { $, setSVG } from './core/utils.js';
+/**
+ * Integración diferida del panel lateral de Widgets mediante iframe aislado.
+ * Gestiona el botón flotante accesible por teclado y la carga bajo demanda de widgets.html.
+ */
+import { setSVG } from './core/utils.js';
 
 export function initWidgetsSidebar() {
     let sidebar = null;
@@ -6,13 +10,12 @@ export function initWidgetsSidebar() {
     let isOpen = false;
     let iframeLoaded = false;
 
-    // Crear Toggle Button
-    toggleBtn = document.createElement('div');
+    toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
     toggleBtn.id = 'widgets-toggle-btn';
-    toggleBtn.title = "Abrir Widgets";
-    // Reuse original styles for toggle button, so we inject them here if needed 
-    // or rely on a small inline style since widgets.css is no longer globally loaded.
-    // For now we add basic styling or a small stylesheet specifically for the toggle button.
+    toggleBtn.title = 'Abrir Widgets';
+    toggleBtn.setAttribute('aria-label', 'Abrir barra de widgets');
+    toggleBtn.setAttribute('aria-expanded', 'false');
     Object.assign(toggleBtn.style, {
         position: 'fixed',
         bottom: '30px',
@@ -42,19 +45,19 @@ export function initWidgetsSidebar() {
             <rect x="3" y="14" width="7" height="7" rx="2"></rect>
         </svg>
     `);
-    
-    // Add hover styles via JS events since CSS is moved
+
     toggleBtn.addEventListener('mouseenter', () => {
-        if(!isOpen) toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        if (!isOpen) toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
     });
     toggleBtn.addEventListener('mouseleave', () => {
-        if(!isOpen) toggleBtn.style.background = 'rgba(var(--panel-bg-rgb), var(--panel-opacity))';
+        if (!isOpen) toggleBtn.style.background = 'rgba(var(--panel-bg-rgb), var(--panel-opacity))';
     });
 
     document.body.appendChild(toggleBtn);
 
     sidebar = document.createElement('aside');
     sidebar.id = 'widgets-sidebar-container';
+    sidebar.setAttribute('aria-hidden', 'true');
     Object.assign(sidebar.style, {
         position: 'fixed',
         top: '0',
@@ -68,16 +71,15 @@ export function initWidgetsSidebar() {
         zIndex: '9999',
         transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
         boxShadow: '-10px 0 50px rgba(0, 0, 0, 0.3)',
-        overflow: 'hidden' // Important for iframe
+        overflow: 'hidden'
     });
-    
+
     document.body.appendChild(sidebar);
 
-    const toggleSidebar = () => {
-        isOpen = !isOpen;
-        
+    const setSidebarOpen = (open) => {
+        isOpen = open;
+
         if (isOpen && !iframeLoaded) {
-            // Load iframe exactly when first opened
             const iframe = document.createElement('iframe');
             iframe.src = 'widgets/widgets.html';
             iframe.style.width = '100%';
@@ -90,17 +92,24 @@ export function initWidgetsSidebar() {
         }
 
         sidebar.style.right = isOpen ? '0' : '-420px';
+        sidebar.setAttribute('aria-hidden', String(!isOpen));
+        toggleBtn.setAttribute('aria-expanded', String(isOpen));
         toggleBtn.style.background = isOpen ? 'var(--accent-color)' : 'rgba(var(--panel-bg-rgb), var(--panel-opacity))';
         toggleBtn.style.color = isOpen ? '#fff' : 'var(--panel-text-color)';
         toggleBtn.style.borderColor = isOpen ? 'transparent' : 'rgba(255, 255, 255, 0.1)';
     };
 
-    toggleBtn.addEventListener('click', toggleSidebar);
+    toggleBtn.addEventListener('click', () => setSidebarOpen(!isOpen));
 
-    // Cerrar al hacer clic fuera
     document.addEventListener('click', (e) => {
         if (isOpen && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
-            toggleSidebar();
+            setSidebarOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen) {
+            setSidebarOpen(false);
         }
     });
 }

@@ -1,13 +1,15 @@
 /**
  * Punto de entrada principal de la aplicación.
- * Optimizada para carga progresiva (Layered Loading)
+ * Optimizada para carga progresiva (Layered Loading) y sincronización Zero-Flash.
  */
-import { $, storageGet, storageSet, safeGetHostname } from './core/utils.js';
-import { STORAGE_KEYS } from './core/config.js';
-
+import { $, storageGet, storageSet, safeGetHostname, toHexColor } from './core/utils.js';
+import { set as idbSet } from './lib/idb-keyval.js';
 import { registerSaveHandlers } from './core/utils.js';
-import { initUI, renderGreeting, updateActiveThemeButton, updateActiveGradientButton, updateDataTabUI, toggleSettings, switchToTab, showSaveStatus, showFileError } from './components/ui.js';
-import { updateSliderValueSpans, updatePanelRgb } from './settings/settings-panels.js';
+import {
+  initUI, renderGreeting, updateDataTabUI, showSaveStatus, showFileError,
+  registerNotesLoader
+} from './components/ui.js';
+import { updateSliderValueSpans } from './settings/settings-panels.js';
 import { initTiles, renderTiles, tiles, setTiles, setTrash, registerTilesHandlers, onTilesChange } from './core/tiles.js';
 import { initContextMenu, showContextMenu } from './components/context-menu.js';
 import { initModal, openModal } from './components/modal.js';
@@ -19,16 +21,16 @@ import { initSettings, loadGradients } from './settings/settings.js';
 import { GRADIENTS } from '../utils/gradients.js';
 window.GRADIENTS = GRADIENTS;
 import { WeatherManager } from '../utils/tiempo.js';
-import { loadDoodles, initDoodleSettings, updateDoodleSelectionUI } from './settings/doodles.js';
+import { initDoodleSettings } from './settings/doodles.js';
 import { DOODLES_LIST } from './settings/doodles-list.js';
 window.DOODLES_LIST = DOODLES_LIST;
 import { FileSystem, setFileSystemErrorHandler } from './system/file-system.js';
-import { initPremiumThemes } from './settings/themes-premium.js';
+import { initPremiumThemes, DEFAULT_PREMIUM_THEME_ID, getPremiumThemeById } from './settings/themes-premium.js';
 import { initWidgetsSidebar } from './widgets-integration.js';
-// BackgroundManager ahora es global
 
-// Conexión desacoplada de handlers (sin dependencias circulares)
 setFileSystemErrorHandler(showFileError);
+
+registerNotesLoader(() => initNotesComponent());
 
 registerSaveHandlers({
   saveToFile: (data) => FileSystem.saveDataToFile(data),
@@ -49,6 +51,7 @@ onTilesChange(() => {
   if (searchInput) searchInput.value = '';
   if (typeof renderEditor === 'function') renderEditor();
   if (typeof renderTrash === 'function') renderTrash();
+  updateZeroFlashTileSummaries(tiles);
   window.dispatchEvent(new CustomEvent('tablero:tiles-changed'));
 });
 
@@ -56,23 +59,73 @@ let currentBackgroundValue = '';
 
 async function init() {
   // =====================================================================
-  // FASE 0: CARGA MÍNIMA — Solo lo necesario para el primer pintado
-  // Cargamos tiles + settings visuales. NO cargamos todo el storage.
+  // FASE 0: CARGA MÍNIMA — Solo claves críticas para el primer pintado
   // =====================================================================
   const criticalKeys = [
-    'tiles', 'trash', 'socialMigrationDone',
+    'tiles', 'trash', 'socialMigrationDone', 'defaultThemeApplied',
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
-    'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
-    'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
+    'greetingFont', 'dateFont', 'activePanelTheme', 'activePremiumTheme', 'premiumThemeData',
+    'doodle', 'gradient', 'bgData', 'hasCustomBgData', 'bgUrl', 'bgColor', 'bgDisplayMode', 'randomBg',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
     'syncFirefoxTheme'
   ];
 
   const settings = await storageGet(criticalKeys);
 
-  // MIGRACIÓN ÚNICA: Añadir nuevos iconos recomendados si no existen
+  // Estilo inicial por defecto: Bosque Esmeralda (solo si nunca se eligió tema o fondo antes)
+  const hasCustomVisualChoice = Boolean(
+    settings.defaultThemeApplied ||
+    settings.activePremiumTheme ||
+    settings.activePanelTheme ||
+    settings.gradient ||
+    settings.bgUrl ||
+    settings.bgData ||
+    settings.hasCustomBgData ||
+    settings.syncFirefoxTheme ||
+    (settings.doodle && settings.doodle !== 'none')
+  );
+  if (!hasCustomVisualChoice) {
+    const defaultTheme = getPremiumThemeById(DEFAULT_PREMIUM_THEME_ID);
+    if (defaultTheme) {
+      const defaultPayload = {
+        defaultThemeApplied: true,
+        activePremiumTheme: defaultTheme.id,
+        premiumThemeData: defaultTheme,
+        gradient: defaultTheme.background.gradient,
+        bgType: 'premium',
+        panelBg: defaultTheme.panel.bg,
+        panelOpacity: defaultTheme.panel.opacity,
+        panelBlur: defaultTheme.panel.blur,
+        panelRadius: defaultTheme.panel.radius,
+        panelTextColor: defaultTheme.colors.text,
+        panelTextSecondaryColor: defaultTheme.colors.textSecondary,
+        accentColor: defaultTheme.colors.accent,
+        greetingColor: defaultTheme.colors.greeting,
+        nameColor: defaultTheme.colors.name,
+        clockColor: defaultTheme.colors.clock,
+        dateColor: defaultTheme.colors.date,
+        greetingFont: defaultTheme.fonts?.main,
+        dateFont: defaultTheme.fonts?.secondary
+      };
+      Object.assign(settings, defaultPayload);
+      storageSet(defaultPayload);
+    }
+  }
+
+  // Migración única de fondos pesados desde chrome.storage.local hacia IndexedDB
+  if (settings.bgData && !settings.hasCustomBgData) {
+    try {
+      await idbSet('custom_bg_data', settings.bgData);
+      settings.hasCustomBgData = true;
+      storageSet({ hasCustomBgData: true, bgData: null });
+    } catch (err) {
+      console.warn('No se pudo migrar bgData a IndexedDB:', err);
+    }
+  }
+
+  // Migración única: añadir accesos recomendados si nunca se corrió
   let initialTiles = settings.tiles || [];
   if (!settings.socialMigrationDone) {
     const recommended = [
@@ -92,35 +145,30 @@ async function init() {
 
   // =====================================================================
   // FASE 1: RENDERIZAR TILES INMEDIATAMENTE — No esperar al fondo
-  // El sistema de paginación en tiles.js ya carga de a 100 (PAGE_SIZE)
-  // y usa IntersectionObserver para cargar más al hacer scroll.
   // =====================================================================
   renderTiles();
   document.body.classList.remove('loading');
 
   // =====================================================================
   // FASE 1.5: FONDO EN PARALELO — No bloquea los tiles
-  // BackgroundManager.apply() puede tardar (ej. fetch de tema Firefox)
-  // así que lo lanzamos sin await para no bloquear nada.
   // =====================================================================
   BackgroundManager.apply(settings);
 
-  // Actualizar caché síncrona para la PRÓXIMA carga (Zero-Flash)
+  // Actualizar caché síncrona para la próxima carga (Zero-Flash)
   const zfCacheKeys = [
     'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
     'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
     'greetingColor', 'nameColor', 'clockColor', 'dateColor',
     'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
-    'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
+    'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData', 'randomBg',
     'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
     'syncFirefoxTheme'
   ];
   const zeroFlashCache = {};
   zfCacheKeys.forEach(k => {
-    if (settings[k] !== undefined) zeroFlashCache[k] = settings[k];
+    if (settings[k] !== undefined && settings[k] !== null) zeroFlashCache[k] = settings[k];
   });
 
-  // Añadir template del doodle actual para carga instantánea
   const currentDoodle = DOODLES_LIST.find(d => d.id === settings.doodle);
   if (currentDoodle) {
     zeroFlashCache.doodleTemplate = currentDoodle.template;
@@ -128,30 +176,34 @@ async function init() {
     if (bgMatch) zeroFlashCache.doodleColor = bgMatch[1];
   }
 
-  // Cachear resúmenes de tiles para renderizado instantáneo en zero-flash
   cacheTileSummaries(initialTiles, zeroFlashCache);
 
-  // Escuchar cambios de fondo desde la configuración (evita dependencias circulares)
+  // Escuchar cambios de fondo desde la configuración
   window.addEventListener('background-changed', async () => {
     const currentSettings = await storageGet(null);
     BackgroundManager.apply(currentSettings, true);
     renderDoodleBackground(currentSettings.doodle, currentSettings.doodleTemplate);
   });
 
-  // Escuchar mensajes desde el background script (como actualizaciones de tema de Firefox)
-  chrome.runtime.onMessage.addListener(async (message) => {
-    if (message.type === 'FIREFOX_THEME_UPDATED') {
-      console.log('Tablero received FIREFOX_THEME_UPDATED message, updating theme...');
-      const currentSettings = await storageGet(null);
-      if (currentSettings.syncFirefoxTheme) {
-        BackgroundManager.apply(currentSettings);
+  // Escuchar mensajes desde el background script (ej. tema de Firefox o nuevo marcador)
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener(async (message) => {
+      if (message.type === 'FIREFOX_THEME_UPDATED') {
+        const currentSettings = await storageGet(null);
+        if (currentSettings.syncFirefoxTheme) {
+          BackgroundManager.apply(currentSettings, true);
+        }
+      } else if (message.type === 'BOOKMARK_ADDED') {
+        const { tiles: updatedTiles } = await storageGet(['tiles']);
+        if (Array.isArray(updatedTiles)) {
+          setTiles(updatedTiles);
+          renderTiles();
+          updateZeroFlashTileSummaries(updatedTiles);
+        }
       }
-    }
-  });
+    });
+  }
 
-  /**
-   * Renderiza o elimina el doodle en el contenedor #doodle-background
-   */
   function renderDoodleBackground(doodleId, doodleTemplate) {
     const container = document.getElementById('doodle-background');
     if (!container) return;
@@ -160,7 +212,7 @@ async function init() {
       container.textContent = '';
       container.classList.remove('ready');
       if (BackgroundManager.lastAppliedBg) {
-        BackgroundManager.applyBackground(BackgroundManager.lastAppliedBg);
+        BackgroundManager.applyBackground(BackgroundManager.lastAppliedBg, false, BackgroundManager.lastDisplayMode);
       }
       return;
     }
@@ -174,10 +226,10 @@ async function init() {
     container.textContent = '';
     const doodle = document.createElement('css-doodle');
     doodle.textContent = `
-            ${doodleTemplate}
-            @keyframes reveal-stagger { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            &, :after, :before { animation: reveal-stagger 0.6s ease forwards !important; animation-delay: @calc(@i * 0.02)s !important; opacity: 0; }
-        `;
+      ${doodleTemplate}
+      @keyframes reveal-stagger { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      &, :after, :before { animation: reveal-stagger 0.6s ease forwards !important; animation-delay: @calc(@i * 0.02)s !important; opacity: 0; }
+    `;
     container.appendChild(doodle);
     container.classList.add('ready');
   }
@@ -191,18 +243,13 @@ async function init() {
 
   // =====================================================================
   // FASE 3: SISTEMAS PESADOS — Diferida 500ms
-  // Aquí cargamos el RESTO del storage que no era crítico para el primer
-  // pintado (notas, editor, papelera, etc.)
   // =====================================================================
   setTimeout(async () => {
-    // Cargar settings adicionales que no eran críticos para el pintado inicial
     const fullSettings = await storageGet(null);
     Object.assign(settings, fullSettings);
 
-    initHeavySystems(settings);
+    await initHeavySystems(settings);
     loadNonCriticalCSS();
-    
-    // Remover clase de carga para permitir interacciones en UI diferida
     document.body.classList.remove('loading');
   }, 500);
 
@@ -217,11 +264,13 @@ async function init() {
       if (isEmpty) {
         const fileSettings = await FileSystem.loadDataFromFile();
         if (fileSettings) {
+          if (Array.isArray(fileSettings.tiles)) setTiles(fileSettings.tiles);
+          if (Array.isArray(fileSettings.trash)) setTrash(fileSettings.trash);
+          renderTiles();
           await BackgroundManager.apply(fileSettings);
-          console.log("Restauración automática desde respaldo interno completada.");
         }
       }
-    } catch (e) { console.warn("FS Sync postponed:", e); }
+    } catch (e) { console.warn('FS Sync postponed:', e); }
   }, 2000);
 }
 
@@ -240,7 +289,7 @@ function initInteractionLogic(settings) {
     syncFirefoxTheme: settings.syncFirefoxTheme,
     autoSync: settings.autoSync,
     bgDisplayMode: settings.bgDisplayMode,
-    isCustomBg: !!(settings.bgData || settings.bgUrl)
+    isCustomBg: !!(settings.hasCustomBgData || settings.bgData || settings.bgUrl)
   });
   loadGradients(settings.gradient);
 }
@@ -251,20 +300,22 @@ async function initHeavySystems(settings) {
   WeatherManager.init();
 
   renderEditor();
-  initNotesComponent();
+  await initNotesComponent();
   renderTrash();
   renderFavoritesInSelect();
 
   updateSliderValueSpans();
-  $('#panelColor').value = document.documentElement.style.getPropertyValue('--panel-bg').trim();
+  const panelColorInput = $('#panelColor');
+  if (panelColorInput) {
+    panelColorInput.value = toHexColor(document.documentElement.style.getPropertyValue('--panel-bg').trim(), '#000000');
+  }
 }
-
-
 
 function loadNonCriticalCSS() {
   ['css/panels.css', 'css/notes-doodle.css', 'css/weather.css', 'css/form-controls.css', 'css/context-menu.css', 'css/themes-premium.css', 'css/drag-drop.css', 'css/drag-drop-safe.css'].forEach(file => {
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = file;
+    link.rel = 'stylesheet';
+    link.href = file;
     document.head.appendChild(link);
   });
 }
@@ -292,54 +343,55 @@ function initScrollToTop() {
   });
 }
 
-/**
- * Cachea resúmenes ligeros de los tiles en localStorage para que
- * zero-flash.js pueda renderizarlos instantáneamente al abrir una nueva pestaña.
- * Solo se guardan datos mínimos para mantener el tamaño del caché bajo.
- */
-function cacheTileSummaries(tilesData, zeroFlashCache) {
-  try {
-    // Filtrar notas (no se muestran en root) y limitar cantidad
-    const rootTiles = (tilesData || []).filter(t => t.type !== 'note');
-    const maxTiles = Math.min(rootTiles.length, 50); // Limitar para no saturar localStorage
-    const summaries = [];
+function buildTileSummaries(tilesData) {
+  const rootTiles = (tilesData || []).filter(t => t.type !== 'note');
+  const maxTiles = Math.min(rootTiles.length, 50);
+  const summaries = [];
 
-    for (let i = 0; i < maxTiles; i++) {
-      const t = rootTiles[i];
-      const summary = { name: t.name, type: t.type || 'link' };
+  for (let i = 0; i < maxTiles; i++) {
+    const t = rootTiles[i];
+    const summary = { name: t.name, type: t.type || 'link' };
 
-      if (t.type === 'folder') {
-        summary.childCount = (t.children || []).length;
-      } else if (t.url) {
-        summary.url = t.url;
+    if (t.type === 'folder') {
+      summary.childCount = (t.children || []).length;
+    } else if (t.url) {
+      summary.url = t.url;
+      summary.host = safeGetHostname(t.url);
+      if (t.customIcon && t.customIcon.length < 2000) {
+        summary.icon = t.customIcon;
+      } else {
         try {
-          summary.host = safeGetHostname(t.url);
-        } catch (e) {
-          summary.host = t.url;
-        }
-        // Cachear ícono si es personalizado (data URIs pequeños o URLs de favicons)
-        if (t.customIcon && t.customIcon.length < 2000) {
-          summary.icon = t.customIcon;
-        } else if (t.url) {
-          try {
-            const hostname = safeGetHostname(t.url);
-            if (hostname && hostname.includes('.')) {
-              summary.icon = `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`;
-            }
-          } catch (e) { /* ignorar */ }
-        }
+          const hostname = safeGetHostname(t.url);
+          if (hostname && hostname.includes('.')) {
+            summary.icon = `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`;
+          }
+        } catch (e) {}
       }
-
-      summaries.push(summary);
     }
 
-    zeroFlashCache._tileSummaries = summaries;
+    summaries.push(summary);
+  }
+  return summaries;
+}
+
+function updateZeroFlashTileSummaries(tilesData) {
+  try {
+    const existingStr = localStorage.getItem('zero_flash_cache');
+    const cache = existingStr ? JSON.parse(existingStr) : {};
+    cache._tileSummaries = buildTileSummaries(tilesData);
+    localStorage.setItem('zero_flash_cache', JSON.stringify(cache));
+  } catch (e) {}
+}
+
+function cacheTileSummaries(tilesData, zeroFlashCache) {
+  try {
+    zeroFlashCache._tileSummaries = buildTileSummaries(tilesData);
     localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
   } catch (e) {
-    // Si falla (ej. quota), guardar al menos la caché sin tiles
     try {
+      delete zeroFlashCache._tileSummaries;
       localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
-    } catch (e2) { /* ignorar */ }
+    } catch (e2) {}
   }
 }
 

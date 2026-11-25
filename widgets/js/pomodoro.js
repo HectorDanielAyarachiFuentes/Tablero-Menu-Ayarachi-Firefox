@@ -1,7 +1,9 @@
 /**
  * Widget Pomodoro — Pro Edition
+ * Temporizador con modos de foco/descanso, persistencia entre pestañas (endTimestamp),
+ * steppers corregidos (data-step), anillo SVG y alertas sonoras/de escritorio.
  */
-import { storageSet, storageGet, setSVG, setHTML } from '../../menubar/core/utils.js';
+import { storageSet, storageGet } from '../../menubar/core/utils.js';
 
 export class PomodoroWidget {
     constructor(container) {
@@ -13,58 +15,84 @@ export class PomodoroWidget {
         this.timerId = null;
         this.isRunning = false;
         this.mode = 'focus';
+        this.endTimestamp = null;
         this.STORAGE_KEY = 'widget_pomodoro_config';
+        this.STATE_KEY = 'widget_pomodoro_state';
 
         this.init();
     }
 
     async init() {
-        const stored = await storageGet([this.STORAGE_KEY]);
+        const stored = await storageGet([this.STORAGE_KEY, this.STATE_KEY]);
         if (stored[this.STORAGE_KEY]) {
-            this.config = stored[this.STORAGE_KEY];
-            if (!this.isRunning) {
-                this.timeLeft = this.config.focusTime * 60;
-                this.totalTime = this.config.focusTime * 60;
-            }
+            this.config = {
+                focusTime: Math.max(1, Math.min(120, stored[this.STORAGE_KEY].focusTime || 25)),
+                breakTime: Math.max(1, Math.min(30, stored[this.STORAGE_KEY].breakTime || 5))
+            };
         }
+
+        const savedState = stored[this.STATE_KEY];
+        if (savedState) {
+            this.mode = savedState.mode || 'focus';
+            this.totalTime = savedState.totalTime || (this.mode === 'focus' ? this.config.focusTime : this.config.breakTime) * 60;
+            if (savedState.isRunning && savedState.endTimestamp) {
+                const remaining = Math.ceil((savedState.endTimestamp - Date.now()) / 1000);
+                if (remaining > 0) {
+                    this.timeLeft = remaining;
+                    this.endTimestamp = savedState.endTimestamp;
+                    this.render();
+                    this.start(true);
+                    return;
+                }
+                // El temporizador terminó mientras estaba en otra pestaña
+                this.timeLeft = 0;
+                this.isRunning = false;
+                this.endTimestamp = null;
+                this.saveState();
+            } else if (typeof savedState.timeLeft === 'number') {
+                this.timeLeft = savedState.timeLeft;
+            } else {
+                this.timeLeft = this.totalTime;
+            }
+        } else {
+            this.timeLeft = this.config.focusTime * 60;
+            this.totalTime = this.timeLeft;
+        }
+
         this.render();
     }
 
     render() {
         this.container.textContent = '';
-        
+
         const template = document.getElementById('pomodoro-template');
         if (!template) {
             console.error('No se encontró el template de Pomodoro');
             return;
         }
-        
+
         const clone = template.content.cloneNode(true);
         this.container.appendChild(clone);
-        
-        // Inicializar los valores de los inputs
+
         const focusInput = this.container.querySelector('#pomo-focus-input');
         const breakInput = this.container.querySelector('#pomo-break-input');
         if (focusInput) focusInput.value = this.config.focusTime;
         if (breakInput) breakInput.value = this.config.breakTime;
-        
-        // Actualizar el tiempo en pantalla
+
         const timeDiv = this.container.querySelector('#pomo-time');
         if (timeDiv) timeDiv.textContent = this.formatTime(this.timeLeft);
-        
-        // Actualizar el modo
+
+        const ringContainer = this.container.querySelector('#pomo-ring-container');
+        if (ringContainer) ringContainer.dataset.mode = this.mode;
+
         const labelDiv = this.container.querySelector('#pomo-mode-label');
         if (labelDiv) labelDiv.textContent = this.mode === 'focus' ? 'FOCO' : 'DESCANSO';
-        
-        // Actualizar la clase active en el switch
+
         const focusBtn = this.container.querySelector('.pomodoro-mode-btn[data-mode="focus"]');
         const breakBtn = this.container.querySelector('.pomodoro-mode-btn[data-mode="short-break"]');
-        if (this.mode === 'focus') {
-            if (focusBtn) focusBtn.classList.add('active');
-            if (breakBtn) breakBtn.classList.remove('active');
-        } else {
-            if (focusBtn) focusBtn.classList.remove('active');
-            if (breakBtn) breakBtn.classList.add('active');
+        if (focusBtn && breakBtn) {
+            focusBtn.classList.toggle('active', this.mode === 'focus');
+            breakBtn.classList.toggle('active', this.mode !== 'focus');
         }
 
         this.bindEvents();
@@ -86,7 +114,10 @@ export class PomodoroWidget {
         resetBtn.addEventListener('click', e => { e.stopPropagation(); this.resetTimer(); });
 
         modeBtns.forEach(btn =>
-            btn.addEventListener('click', e => { e.stopPropagation(); this.setMode(e.target.dataset.mode); })
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                this.setMode(e.currentTarget.dataset.mode);
+            })
         );
 
         settingsBtn.addEventListener('click', e => {
@@ -94,15 +125,16 @@ export class PomodoroWidget {
             configPanel.classList.toggle('show');
         });
 
-        // Steppers
+        // Steppers: leen data-step (con respaldo a data-dir)
         stepBtns.forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 const field = btn.dataset.field;
-                const dir = parseInt(btn.dataset.dir);
-                this.config[field] = Math.max(1, Math.min(field === 'focusTime' ? 60 : 30, this.config[field] + dir));
+                const step = parseInt(btn.dataset.step ?? btn.dataset.dir, 10);
+                if (!field || Number.isNaN(step)) return;
+                const maxLimit = field === 'focusTime' ? 120 : 30;
+                this.config[field] = Math.max(1, Math.min(maxLimit, this.config[field] + step));
                 this.save();
-                // Update input display
                 const inp = this.container.querySelector(field === 'focusTime' ? '#pomo-focus-input' : '#pomo-break-input');
                 if (inp) inp.value = this.config[field];
                 if (!this.isRunning) this.resetTimer();
@@ -110,10 +142,12 @@ export class PomodoroWidget {
         });
 
         const saveConfig = () => {
-            const fTime = parseInt(focusInput.value) || 25;
-            const bTime = parseInt(breakInput.value) || 5;
-            this.config.focusTime = Math.max(1, Math.min(60, fTime));
+            const fTime = parseInt(focusInput.value, 10) || 25;
+            const bTime = parseInt(breakInput.value, 10) || 5;
+            this.config.focusTime = Math.max(1, Math.min(120, fTime));
             this.config.breakTime = Math.max(1, Math.min(30, bTime));
+            focusInput.value = this.config.focusTime;
+            breakInput.value = this.config.breakTime;
             this.save();
             if (!this.isRunning) this.resetTimer();
         };
@@ -128,31 +162,55 @@ export class PomodoroWidget {
         await storageSet({ [this.STORAGE_KEY]: this.config });
     }
 
+    async saveState() {
+        await storageSet({
+            [this.STATE_KEY]: {
+                isRunning: this.isRunning,
+                mode: this.mode,
+                endTimestamp: this.endTimestamp,
+                timeLeft: this.timeLeft,
+                totalTime: this.totalTime
+            }
+        });
+    }
+
     toggleTimer() {
         this.isRunning ? this.pause() : this.start();
     }
 
-    start() {
+    start(resuming = false) {
         if (this.isRunning) return;
+        if (this.timeLeft <= 0) {
+            this.timeLeft = (this.mode === 'focus' ? this.config.focusTime : this.config.breakTime) * 60;
+            this.totalTime = this.timeLeft;
+        }
         this.isRunning = true;
+        if (!resuming || !this.endTimestamp) {
+            this.endTimestamp = Date.now() + this.timeLeft * 1000;
+            this.saveState();
+        }
         this.updatePlayPauseIcon();
         this.container.querySelector('#pomo-ring-container')?.classList.add('running');
 
         this.timerId = setInterval(() => {
-            if (this.timeLeft > 0) {
-                this.timeLeft--;
-                this.updateDisplay();
-                this.updateRing();
-            } else {
+            const remaining = Math.max(0, Math.ceil((this.endTimestamp - Date.now()) / 1000));
+            this.timeLeft = remaining;
+            this.updateDisplay();
+            this.updateRing();
+
+            if (remaining <= 0) {
                 this.pause();
                 this.notifyComplete();
             }
-        }, 1000);
+        }, 500);
     }
 
     pause() {
         this.isRunning = false;
         clearInterval(this.timerId);
+        this.timerId = null;
+        this.endTimestamp = null;
+        this.saveState();
         this.updatePlayPauseIcon();
         this.container.querySelector('#pomo-ring-container')?.classList.remove('running');
     }
@@ -161,6 +219,7 @@ export class PomodoroWidget {
         this.pause();
         this.timeLeft = (this.mode === 'focus' ? this.config.focusTime : this.config.breakTime) * 60;
         this.totalTime = this.timeLeft;
+        this.saveState();
         this.updateDisplay();
         this.updateRing();
     }
@@ -199,15 +258,10 @@ export class PomodoroWidget {
         const running = this.isRunning;
         const playIcon = this.container.querySelector('.pomo-icon-play');
         const pauseIcon = this.container.querySelector('.pomo-icon-pause');
-        
+
         if (playIcon && pauseIcon) {
-            if (running) {
-                playIcon.style.display = 'none';
-                pauseIcon.style.display = 'block';
-            } else {
-                playIcon.style.display = 'block';
-                pauseIcon.style.display = 'none';
-            }
+            playIcon.style.display = running ? 'none' : 'block';
+            pauseIcon.style.display = running ? 'block' : 'none';
         }
     }
 

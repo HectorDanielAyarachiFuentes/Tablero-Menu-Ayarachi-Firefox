@@ -1,7 +1,9 @@
-import { setHTML } from '../../menubar/core/utils.js';
 /**
- * Widget Frases Inspiradoras
+ * Widget Frases Inspiradoras.
+ * Muestra citas motivacionales aleatorias usando creación segura de nodos DOM.
  */
+import { setSVG } from '../../menubar/core/utils.js';
+
 const QUOTES = [
     { text: "El éxito es la suma de pequeños esfuerzos repetidos día tras día.", author: "Robert Collier" },
     { text: "No cuentes los días, haz que los días cuenten.", author: "Muhammad Ali" },
@@ -22,17 +24,32 @@ export class QuotesWidget {
     }
 
     render() {
-        setHTML(this.container, `
-            <div class="widget-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>
-                Inspiración
-            </div>
-            <div class="quote-content">
-                <div class="quote-text">...</div>
-                <div class="quote-author"></div>
-            </div>
-            <button class="quote-refresh-btn">Nueva Frase</button>
-        `);
+        this.container.textContent = '';
+
+        const title = document.createElement('div');
+        title.className = 'widget-title';
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'widget-title-icon';
+        setSVG(iconSpan, '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>');
+        title.appendChild(iconSpan);
+        title.appendChild(document.createTextNode(' Inspiración'));
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'quote-content';
+        const quoteText = document.createElement('div');
+        quoteText.className = 'quote-text';
+        const quoteAuthor = document.createElement('div');
+        quoteAuthor.className = 'quote-author';
+        contentDiv.appendChild(quoteText);
+        contentDiv.appendChild(quoteAuthor);
+
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'quote-refresh-btn';
+        refreshBtn.textContent = 'Nueva Frase';
+
+        this.container.appendChild(title);
+        this.container.appendChild(contentDiv);
+        this.container.appendChild(refreshBtn);
 
         this.showNewQuote();
         this.bindEvents();

@@ -1,44 +1,81 @@
 /**
  * Gestiona toda la lógica del panel de configuración.
- * Incluye la inicialización de los listeners para las diferentes pestañas (General, Fondo, Datos, etc.),
- * y maneja la lógica para cambiar temas, fondos, importar/exportar datos y más.
+ * Incluye fondos (IndexedDB, URLs, degradados y modo aleatorio), temas, colores,
+ * tipografía, importación/exportación de respaldos y sincronización con tema de Firefox.
  */
-import { $, $$, storageGet, storageSet } from '../core/utils.js';
-import { saveAndSyncSetting } from '../core/utils.js';
-import { updateActiveGradientButton, showSaveStatus, updateDataTabUI, renderGreeting, updateBgModeUI } from '../components/ui.js';
-import { updateSliderValueSpans, updatePanelRgb } from './settings-panels.js';
-// BackgroundManager ahora es global
-import { tiles, trash, setTiles, setTrash, saveAndRender, renderTiles } from '../core/tiles.js';
+import { $, $$, storageGet, storageSet, saveAndSyncSetting, isSafeWebUrl, toHexColor } from '../core/utils.js';
+import { get as idbGet, set as idbSet, del as idbDel } from '../lib/idb-keyval.js';
+import { showSaveStatus, updateDataTabUI, renderGreeting, updateBgModeUI, showToast } from '../components/ui.js';
+import { updateSliderValueSpans } from './settings-panels.js';
+import { tiles, setTiles, setTrash, saveAndRender, renderTiles } from '../core/tiles.js';
 import { renderNotes } from '../../notas/notas.js';
 import { renderTrash } from '../components/trash.js';
-import { GRADIENTS, DEFAULT_GRADIENT_COLORS } from '../../utils/gradients.js';
-import { FileSystem } from '../system/file-system.js';
+import { GRADIENTS } from '../../utils/gradients.js';
 import { PREDEFINED_GREETINGS } from '../../utils/greetings-list.js';
 import { STORAGE_KEYS } from '../core/config.js';
 
 let appState = {};
 let importInput;
 
-const DEFAULT_PANEL_SETTINGS = {
-    panelBg: 'rgba(0, 0, 0, 0.2)',
-    panelOpacity: 0.1,
-    panelBlur: 10,
-    panelRadius: 12
-};
+/**
+ * Extrae el color promedio de una imagen Data URL en un canvas 1x1 para pre-pintado Zero-Flash.
+ */
+function extractAverageColor(dataUrl) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1;
+                canvas.height = 1;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, 1, 1);
+                const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+                resolve(`rgb(${r}, ${g}, ${b})`);
+            } catch (err) {
+                resolve('#050505');
+            }
+        };
+        img.onerror = () => resolve('#050505');
+        img.src = dataUrl;
+    });
+}
 
 export function initSettings(initialState) {
     appState = initialState;
 
-    $('#bgFile').addEventListener('change', handleBgFileChange);
-    $('#bgUrl').addEventListener('input', (e) => {
-        if (e.target.value.trim()) document.documentElement.style.setProperty('background', `url('${e.target.value.trim()}')`, 'important');
+    $('#bgFile')?.addEventListener('change', handleBgFileChange);
+    $('#bgUrl')?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (val && (isSafeWebUrl(val) || val.startsWith('data:image/') || val.startsWith('blob:'))) {
+            const bgLayer = $('#bg-layer');
+            if (bgLayer) {
+                bgLayer.style.setProperty('background', `url("${val}")`, 'important');
+                bgLayer.style.opacity = '1';
+            }
+        }
     });
-    $('#bgUrl').addEventListener('change', async (e) => {
+    $('#bgUrl')?.addEventListener('change', async (e) => {
         const url = e.target.value.trim();
         if (!url) return;
+        if (!isSafeWebUrl(url) && !url.startsWith('data:image/')) {
+            showToast('Introduce una URL de imagen válida (http/https).', 'error');
+            return;
+        }
+        await idbDel('custom_bg_data').catch(() => {});
         const { bgDisplayMode: currentMode } = await storageGet(['bgDisplayMode']);
         const mode = currentMode || 'cover';
-        saveAndSyncSetting({ bgUrl: url, bgData: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null, syncFirefoxTheme: false }, () => {
+        saveAndSyncSetting({
+            bgUrl: url,
+            bgData: null,
+            hasCustomBgData: false,
+            gradient: null,
+            doodle: 'none',
+            bgDisplayMode: mode,
+            activePremiumTheme: null,
+            syncFirefoxTheme: false
+        }, () => {
+            updateBgModeUI(true, mode);
             window.dispatchEvent(new CustomEvent('background-changed'));
             const syncToggle = $('#syncFirefoxThemeToggle');
             if (syncToggle) syncToggle.checked = false;
@@ -48,11 +85,16 @@ export function initSettings(initialState) {
     $$('#bgModeSelector button').forEach(btn => {
         btn.addEventListener('click', handleBgModeChange);
     });
-    updateBgModeUI(initialState.isCustomBg, initialState.bgDisplayMode);
-    $('#randomBgToggle').checked = initialState.randomBg || false;
-    $('#randomBgToggle').addEventListener('change', (e) => { // CAMBIO: El texto de la etiqueta se cambió en el HTML
-        storageSet({ randomBg: e.target.checked }).then(showSaveStatus);
-    });
+    updateBgModeUI(initialState.isCustomBg, initialState.bgDisplayMode || 'cover');
+
+    if ($('#randomBgToggle')) {
+        $('#randomBgToggle').checked = initialState.randomBg || false;
+        $('#randomBgToggle').addEventListener('change', (e) => {
+            saveAndSyncSetting({ randomBg: e.target.checked }, () => {
+                window.dispatchEvent(new CustomEvent('background-changed'));
+            });
+        });
+    }
 
     if ($('#syncFirefoxThemeToggle')) {
         $('#syncFirefoxThemeToggle').checked = initialState.syncFirefoxTheme || false;
@@ -60,21 +102,21 @@ export function initSettings(initialState) {
             const isChecked = e.target.checked;
             const updateObj = { syncFirefoxTheme: isChecked };
             if (isChecked) {
-                // Desactivar otros fondos para que el tema de Firefox tome control exclusivo
                 updateObj.doodle = 'none';
                 updateObj.gradient = null;
                 updateObj.bgUrl = null;
                 updateObj.bgData = null;
+                updateObj.hasCustomBgData = false;
                 updateObj.activePremiumTheme = null;
+                idbDel('custom_bg_data').catch(() => {});
             }
             saveAndSyncSetting(updateObj, () => {
+                updateBgModeUI(false, initialState.bgDisplayMode || 'cover');
                 window.dispatchEvent(new CustomEvent('background-changed'));
                 if (isChecked) {
-                    // Desmarcar visualmente gradientes y doodles activos en la interfaz
                     $$('.gradient-btn.active').forEach(el => el.classList.remove('active'));
                     $$('.doodle-item.active').forEach(el => el.classList.remove('active'));
-                    
-                    // Mostrar placeholder en vista previa del doodle
+
                     const preview = $('#doodle-preview');
                     if (preview) {
                         preview.textContent = '';
@@ -100,29 +142,27 @@ export function initSettings(initialState) {
         btn.addEventListener('click', () => switchToPanelSubTab(btn.dataset.subtab));
     });
 
-    // --- Lógica para la pestaña General (nuevas opciones de reloj y saludos) ---
     populateGreetingSelect();
     storageGet(['use12HourFormat', 'showSeconds', 'greetingPreference', 'customGreetings', 'userName', 'weatherCity']).then(settings => {
-        $('#clockFormatToggle').checked = settings.use12HourFormat ?? false;
-        $('#showSecondsToggle').checked = settings.showSeconds ?? false;
-        $('#greetingSelect').value = settings.greetingPreference || 'random';
-        $('#customGreetingsInput').value = settings.customGreetings || '';
-        $('#customGreetingsContainer').hidden = $('#greetingSelect').value !== 'custom';
-        
-        // Inicializar nombre y ciudad
+        if ($('#clockFormatToggle')) $('#clockFormatToggle').checked = settings.use12HourFormat ?? false;
+        if ($('#showSecondsToggle')) $('#showSecondsToggle').checked = settings.showSeconds ?? false;
+        if ($('#greetingSelect')) $('#greetingSelect').value = settings.greetingPreference || 'random';
+        if ($('#customGreetingsInput')) $('#customGreetingsInput').value = settings.customGreetings || '';
+        if ($('#customGreetingsContainer')) $('#customGreetingsContainer').hidden = $('#greetingSelect').value !== 'custom';
+
         if ($('#userName')) $('#userName').value = settings.userName || '';
         if ($('#weatherCity')) $('#weatherCity').value = settings.weatherCity || '';
     });
 
-    $('#clockFormatToggle').addEventListener('change', e => {
+    $('#clockFormatToggle')?.addEventListener('change', e => {
         saveAndSyncSetting({ use12HourFormat: e.target.checked });
     });
 
-    $('#showSecondsToggle').addEventListener('change', e => {
+    $('#showSecondsToggle')?.addEventListener('change', e => {
         saveAndSyncSetting({ showSeconds: e.target.checked });
     });
 
-    $('#greetingSelect').addEventListener('change', e => {
+    $('#greetingSelect')?.addEventListener('change', e => {
         const preference = e.target.value;
         $('#customGreetingsContainer').hidden = (preference !== 'custom');
         saveAndSyncSetting({ greetingPreference: preference }, () => {
@@ -130,15 +170,12 @@ export function initSettings(initialState) {
         });
     });
 
-    $('#customGreetingsInput').addEventListener('input', e => {
-        // Usamos un debounce implícito al guardar solo al final de la escritura
+    $('#customGreetingsInput')?.addEventListener('input', e => {
         saveAndSyncSetting({ customGreetings: e.target.value }, () => {
-            // Si el modo "custom" está activo, actualiza el saludo en tiempo real
             if ($('#greetingSelect').value === 'custom') renderGreeting($('#userName').value);
         });
     });
 
-    // --- Lógica para la pestaña General (nuevas opciones) ---
     const uiToggles = {
         showSearchToggle: { selector: '.search-section', key: 'showSearch' },
         showWeatherToggle: { selector: '#weather', key: 'showWeather' },
@@ -148,55 +185,46 @@ export function initSettings(initialState) {
     Object.entries(uiToggles).forEach(([toggleId, { selector, key }]) => {
         const toggle = $(`#${toggleId}`);
         const element = $(selector);
-        // Establecer estado inicial del interruptor
-        storageGet([key]).then(settings => toggle.checked = settings[key] ?? true);
-        // Añadir listener
+        if (!toggle || !element) return;
+        storageGet([key]).then(settings => { toggle.checked = settings[key] ?? true; });
         toggle.addEventListener('change', (e) => {
-            saveAndSyncSetting({ [key]: e.target.checked }, () => element.hidden = !e.target.checked);
+            saveAndSyncSetting({ [key]: e.target.checked }, () => { element.hidden = !e.target.checked; });
         });
     });
 
-    // --- Lógica para controlar animaciones de carga ---
     const loadAnimToggle = $('#enableLoadAnimationsToggle');
-    storageGet(['enableLoadAnimations']).then(settings => {
-        const enableLoadAnimations = settings.enableLoadAnimations ?? false; // Por defecto desactivado (carga rápida)
-        loadAnimToggle.checked = enableLoadAnimations;
-        // Aplicar clase al body
-        if (enableLoadAnimations) {
-            document.body.classList.add('with-load-animations');
-        }
-    });
-
-    loadAnimToggle.addEventListener('change', (e) => {
-        const enableLoadAnimations = e.target.checked;
-        saveAndSyncSetting({ enableLoadAnimations }, () => {
+    if (loadAnimToggle) {
+        storageGet(['enableLoadAnimations']).then(settings => {
+            const enableLoadAnimations = settings.enableLoadAnimations ?? false;
+            loadAnimToggle.checked = enableLoadAnimations;
             if (enableLoadAnimations) {
                 document.body.classList.add('with-load-animations');
-            } else {
-                document.body.classList.remove('with-load-animations');
             }
         });
-    });
 
-    // --- Nueva lógica para la pestaña de Datos ---
-    // El sistema de archivos ahora es interno y automático (OPFS)
-    updateDataTabUI();
-
-    $('#autoSyncToggle').checked = initialState.autoSync || false;
-    $('#autoSyncToggle').addEventListener('change', (e) => {
-        storageSet({ autoSync: e.target.checked }).then(() => {
-            showSaveStatus();
-            updateDataTabUI();
+        loadAnimToggle.addEventListener('change', (e) => {
+            const enableLoadAnimations = e.target.checked;
+            saveAndSyncSetting({ enableLoadAnimations }, () => {
+                document.body.classList.toggle('with-load-animations', enableLoadAnimations);
+            });
         });
-    });
+    }
 
     updateDataTabUI();
 
-    // Listeners para los botones de Importar/Exportar
-    $('#importJsonBtn').addEventListener('click', () => importInput.click());
-    $('#exportJsonBtn').addEventListener('click', exportData);
+    if ($('#autoSyncToggle')) {
+        $('#autoSyncToggle').checked = initialState.autoSync || false;
+        $('#autoSyncToggle').addEventListener('change', (e) => {
+            storageSet({ autoSync: e.target.checked }).then(() => {
+                showSaveStatus();
+                updateDataTabUI();
+            });
+        });
+    }
 
-    // Add hidden input for import if not already added
+    $('#importJsonBtn')?.addEventListener('click', () => importInput.click());
+    $('#exportJsonBtn')?.addEventListener('click', exportData);
+
     if (!importInput) {
         importInput = document.createElement('input');
         importInput.type = 'file';
@@ -206,62 +234,58 @@ export function initSettings(initialState) {
         document.body.appendChild(importInput);
     }
 
-    // --- Lógica para la pestaña General (Colores de Texto) ---
     const textColors = {
-        greetingColor: { selector: '#header-greeting', cssVar: '--greeting-color' },
-        nameColor: { selector: '#header-greeting strong', cssVar: '--name-color' },
-        clockColor: { selector: '#header-clock', cssVar: '--clock-color' },
-        dateColor: { selector: '#date', cssVar: '--date-color' }
+        greetingColor: { cssVar: '--greeting-color' },
+        nameColor: { cssVar: '--name-color' },
+        clockColor: { cssVar: '--clock-color' },
+        dateColor: { cssVar: '--date-color' }
     };
 
-    // Cargar colores iniciales
     storageGet(Object.keys(textColors)).then(settings => {
         Object.entries(textColors).forEach(([key, { cssVar }]) => {
             const color = settings[key] || '#FFFFFF';
-            $(`#${key}`).value = color;
+            const inputEl = $(`#${key}`);
+            if (inputEl) inputEl.value = toHexColor(color, '#ffffff');
             document.documentElement.style.setProperty(cssVar, color);
         });
     });
 
-    // Listeners para los selectores de color individuales
     Object.entries(textColors).forEach(([key, { cssVar }]) => {
-        $(`#${key}`).addEventListener('input', (e) => {
+        $(`#${key}`)?.addEventListener('input', (e) => {
             const color = e.target.value;
             document.documentElement.style.setProperty(cssVar, color);
             saveAndSyncSetting({ [key]: color });
         });
     });
 
-    // Listener para el botón "Aplicar a todos"
-    $('#applyMasterTextColor').addEventListener('click', () => {
+    $('#applyMasterTextColor')?.addEventListener('click', () => {
         const masterColor = $('#masterTextColor').value;
         const settingsToSave = {};
         Object.entries(textColors).forEach(([key, { cssVar }]) => {
-            $(`#${key}`).value = masterColor;
+            const inputEl = $(`#${key}`);
+            if (inputEl) inputEl.value = masterColor;
             document.documentElement.style.setProperty(cssVar, masterColor);
             settingsToSave[key] = masterColor;
         });
         saveAndSyncSetting(settingsToSave);
     });
 
-    // --- Lógica para la pestaña General (Tipografía) ---
     const textFonts = {
         greetingFont: { cssVar: '--greeting-font' },
         dateFont: { cssVar: '--date-font' }
     };
 
-    // Cargar fuentes iniciales
     storageGet(Object.keys(textFonts)).then(settings => {
         Object.entries(textFonts).forEach(([key, { cssVar }]) => {
             const font = settings[key] || '\'Poppins\', sans-serif';
-            $(`#${key}`).value = font;
+            const selectEl = $(`#${key}`);
+            if (selectEl) selectEl.value = font;
             document.documentElement.style.setProperty(cssVar, font);
         });
     });
 
-    // Listeners para los selectores de fuente
     Object.entries(textFonts).forEach(([key, { cssVar }]) => {
-        $(`#${key}`).addEventListener('change', (e) => {
+        $(`#${key}`)?.addEventListener('change', (e) => {
             const font = e.target.value;
             document.documentElement.style.setProperty(cssVar, font);
             saveAndSyncSetting({ [key]: font });
@@ -269,63 +293,30 @@ export function initSettings(initialState) {
     });
 }
 
-/**
- * Cambia entre las sub-pestañas de la sección "Fondo".
- * @param {string} subTabId - El ID de la sub-pestaña a activar (ej. 'degradados', 'imagen').
- */
 function switchToBackgroundSubTab(subTabId) {
-    // Ocultar todos los paneles y desactivar todos los botones de la pestaña Fondo
-    $$('#tab-fondo .sub-tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    $$('#tab-fondo .sub-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // Activar el panel y el botón correctos
-    $(`#subtab-${subTabId}`).classList.add('active');
-    $(`.sub-tab-btn[data-subtab="${subTabId}"]`).classList.add('active');
+    $$('#tab-fondo .sub-tab-pane').forEach(pane => pane.classList.remove('active'));
+    $$('#tab-fondo .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    $(`#subtab-${subTabId}`)?.classList.add('active');
+    $(`.sub-tab-btn[data-subtab="${subTabId}"]`)?.classList.add('active');
 }
 
-/**
- * Cambia entre las sub-pestañas de la sección "General".
- * @param {string} subTabId - El ID de la sub-pestaña a activar (ej. 'contenido', 'apariencia').
- */
 function switchToGeneralSubTab(subTabId) {
-    // Ocultar todos los paneles y desactivar todos los botones de la pestaña General.
-    $$('#tab-general .sub-tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    $$('#tab-general .sub-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // Activar el panel y el botón correctos
-    $(`#subtab-${subTabId}`).classList.add('active');
-    $(`#tab-general .sub-tab-btn[data-subtab="${subTabId}"]`).classList.add('active');
+    $$('#tab-general .sub-tab-pane').forEach(pane => pane.classList.remove('active'));
+    $$('#tab-general .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    $(`#subtab-${subTabId}`)?.classList.add('active');
+    $(`#tab-general .sub-tab-btn[data-subtab="${subTabId}"]`)?.classList.add('active');
 }
 
-/**
- * Cambia entre las sub-pestañas de la sección "Paneles".
- * @param {string} subTabId - El ID de la sub-pestaña a activar (ej. 'temas', 'apariencia').
- */
 function switchToPanelSubTab(subTabId) {
-    $$('#tab-paneles .sub-tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    $$('#tab-paneles .sub-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    $(`#tab-paneles #subtab-${subTabId}`).classList.add('active');
-    $(`#tab-paneles .sub-tab-btn[data-subtab="${subTabId}"]`).classList.add('active');
+    $$('#tab-paneles .sub-tab-pane').forEach(pane => pane.classList.remove('active'));
+    $$('#tab-paneles .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    $(`#tab-paneles #subtab-${subTabId}`)?.classList.add('active');
+    $(`#tab-paneles .sub-tab-btn[data-subtab="${subTabId}"]`)?.classList.add('active');
 }
 
-/**
- * Rellena el <select> de saludos con las opciones predefinidas.
- */
 function populateGreetingSelect() {
     const select = $('#greetingSelect');
+    if (!select) return;
     const optgroupMorning = document.createElement('optgroup');
     optgroupMorning.label = 'Mañana';
     const optgroupAfternoon = document.createElement('optgroup');
@@ -344,13 +335,14 @@ function populateGreetingSelect() {
 
 export async function loadGradients(activeGradient) {
     const gradientListEl = $('#gradient-list');
+    if (!gradientListEl) return;
 
     gradientListEl.textContent = '';
     GRADIENTS.forEach(g => {
         const btn = document.createElement('button');
         btn.className = 'gradient-btn';
         btn.style.setProperty('--gradient-bg-preview', g.gradient);
-        btn.title = g.name.trim(); // Show name on hover
+        btn.title = g.name.trim();
         btn.dataset.gradientId = g.id;
         btn.dataset.type = 'gradient';
         if (g.id === activeGradient) btn.classList.add('active');
@@ -359,24 +351,37 @@ export async function loadGradients(activeGradient) {
     });
 }
 
-
-
 function handleBgFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Liberar memoria del Object URL anterior si existe
     if (appState.currentBackgroundValue && appState.currentBackgroundValue.startsWith('blob:')) {
         URL.revokeObjectURL(appState.currentBackgroundValue);
     }
+
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = async (event) => {
+        const dataUrl = event.target.result;
+        const avgColor = await extractAverageColor(dataUrl);
+        await idbSet('custom_bg_data', dataUrl);
+
         const { bgDisplayMode } = await storageGet(['bgDisplayMode']);
         const mode = bgDisplayMode || 'cover';
-        // Guardamos y sincronizamos, asegurándonos de desactivar el doodle y el tema premium
-        saveAndSyncSetting({ bgData: e.target.result, bgUrl: null, gradient: null, doodle: 'none', bgDisplayMode: mode, activePremiumTheme: null, syncFirefoxTheme: false }, () => {
+
+        saveAndSyncSetting({
+            hasCustomBgData: true,
+            bgData: null,
+            bgUrl: null,
+            bgColor: avgColor,
+            gradient: null,
+            doodle: 'none',
+            bgDisplayMode: mode,
+            activePremiumTheme: null,
+            syncFirefoxTheme: false
+        }, () => {
+            updateBgModeUI(true, mode);
             window.dispatchEvent(new CustomEvent('background-changed'));
-            $('#bgUrl').value = '';
+            if ($('#bgUrl')) $('#bgUrl').value = '';
             const syncToggle = $('#syncFirefoxThemeToggle');
             if (syncToggle) syncToggle.checked = false;
         });
@@ -392,42 +397,36 @@ function handleBgModeChange(e) {
     });
 }
 
-function handleBackgroundChange(e) {
-    const gradientId = e.target.dataset.gradientId;
-    saveAndSyncSetting({ gradient: gradientId, bgUrl: null, bgData: null, doodle: 'none', activePremiumTheme: null, syncFirefoxTheme: false }, () => {
+async function handleBackgroundChange(e) {
+    const gradientId = e.currentTarget.dataset.gradientId;
+    await idbDel('custom_bg_data').catch(() => {});
+    $$('.gradient-btn.active').forEach(el => el.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+
+    saveAndSyncSetting({
+        gradient: gradientId,
+        bgUrl: null,
+        bgData: null,
+        hasCustomBgData: false,
+        doodle: 'none',
+        activePremiumTheme: null,
+        syncFirefoxTheme: false
+    }, () => {
+        updateBgModeUI(false, appState.bgDisplayMode || 'cover');
         window.dispatchEvent(new CustomEvent('background-changed'));
         const syncToggle = $('#syncFirefoxThemeToggle');
         if (syncToggle) syncToggle.checked = false;
     });
-    // Actualizamos el estado de la aplicación para que el hover no lo revierta al anterior.
     appState.currentGradient = gradientId;
     appState.currentBackgroundValue = null;
 }
 
-function handleBackgroundHover(e) {
-    const target = e.target;
-}
-
-/**
- * Importa los marcadores del navegador y los añade al tablero.
- */
-async function importBrowserBookmarks() {
-    if (!confirm('Esto añadirá todos tus marcadores al inicio de la lista de accesos. ¿Quieres continuar?')) {
-        return;
-    }
-    const { getBookmarks } = await import('../app.js');
-    const bookmarks = await getBookmarks();
-    if (bookmarks.length > 0) {
-        setTiles([...bookmarks, ...tiles]);
-        saveAndRender();
-        alert(`${bookmarks.length} marcadores han sido importados y añadidos a tu tablero.`);
-    } else {
-        alert('No se encontraron marcadores para importar.');
-    }
-}
-
 async function exportData() {
     const allData = await storageGet(STORAGE_KEYS);
+    if (allData.hasCustomBgData) {
+        const customBg = await idbGet('custom_bg_data').catch(() => null);
+        if (customBg) allData.bgData = customBg;
+    }
     const json = JSON.stringify(allData, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -442,12 +441,11 @@ async function handleImport(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = async (event) => {
         try {
-            const content = e.target.result;
+            const content = event.target.result;
             let data;
-            
-            // Detectar si es un archivo HTML (marcadores exportados)
+
             if (file.name.endsWith('.html') || file.type === 'text/html') {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(content, 'text/html');
@@ -455,56 +453,61 @@ async function handleImport(e) {
                 data = [];
                 links.forEach(link => {
                     const url = link.getAttribute('href');
-                    if (url && !url.startsWith('javascript:')) {
+                    if (isSafeWebUrl(url)) {
                         data.push({
-                            type: 'enlace',
+                            type: 'link',
                             name: link.textContent.trim() || url,
-                            url: url,
-                            icon: link.getAttribute('icon') || ''
+                            url,
+                            favorite: false,
+                            customIcon: link.getAttribute('icon') || null
                         });
                     }
                 });
             } else {
                 data = JSON.parse(content);
             }
-            
-            // Si los datos son un array, asumimos que es una lista de marcadores/tiles
+
             if (Array.isArray(data)) {
                 setTiles([...data, ...tiles]);
                 saveAndRender();
-                alert(`${data.length} marcadores han sido importados y añadidos a tu tablero.`);
+                showToast(`${data.length} marcadores importados al tablero.`);
                 return;
             }
 
-            await storageSet(data);
-            if (data.tiles) setTiles(data.tiles);
-            if (data.trash) setTrash(data.trash);
-            renderTiles();
-            renderTrash();
-            renderNotes();
-            // Update settings
-            if (data.userName !== undefined) {
-                $('#userName').value = data.userName;
-                renderGreeting(data.userName);
+            if (data && typeof data === 'object') {
+                if (data.bgData) {
+                    await idbSet('custom_bg_data', data.bgData);
+                    data.hasCustomBgData = true;
+                    data.bgData = null;
+                }
+                await storageSet(data);
+                if (Array.isArray(data.tiles)) setTiles(data.tiles);
+                if (Array.isArray(data.trash)) setTrash(data.trash);
+                renderTiles();
+                renderTrash();
+                renderNotes();
+                if (data.userName !== undefined && $('#userName')) {
+                    $('#userName').value = data.userName;
+                    renderGreeting(data.userName);
+                }
+                if (data.panelOpacity !== undefined && $('#panelOpacity')) {
+                    $('#panelOpacity').value = data.panelOpacity;
+                    document.documentElement.style.setProperty('--panel-opacity', data.panelOpacity);
+                    updateSliderValueSpans();
+                }
+                if (data.panelBlur !== undefined && $('#panelBlur')) {
+                    $('#panelBlur').value = data.panelBlur;
+                    document.documentElement.style.setProperty('--panel-blur', `${data.panelBlur}px`);
+                    updateSliderValueSpans();
+                }
+                window.dispatchEvent(new CustomEvent('background-changed'));
+                showSaveStatus();
+                showToast('Datos importados correctamente.');
             }
-            if (data.panelOpacity) {
-                $('#panelOpacity').value = data.panelOpacity;
-                document.documentElement.style.setProperty('--panel-opacity', data.panelOpacity);
-                updateSliderValueSpans();
-            }
-            if (data.panelBlur) {
-                $('#panelBlur').value = data.panelBlur;
-                document.documentElement.style.setProperty('--panel-blur', `${data.panelBlur}px`);
-                updateSliderValueSpans();
-            }
-            showSaveStatus();
-            alert('Datos importados correctamente.');
         } catch (err) {
-            alert('Error al importar el archivo JSON: ' + err.message);
+            showToast('Error al importar el archivo: ' + err.message, 'error');
         }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input
+    e.target.value = '';
 }
-
-

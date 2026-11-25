@@ -1,8 +1,7 @@
-// --- START OF FILE utils.js ---
-
 /**
  * Proporciona funciones de utilidad reutilizables en toda la aplicación.
- * Incluye selectores de DOM, helpers para el almacenamiento y una función de guardado con debounce.
+ * Incluye selectores de DOM, sanitización HTML, validación de URLs, helpers de color
+ * y abstracción del almacenamiento con caché Zero-Flash.
  */
 let _saveToFileHandler = null;
 let _showSaveStatusHandler = null;
@@ -27,12 +26,44 @@ export const clearHTML = (el) => {
   while (el.firstChild) el.removeChild(el.firstChild);
 };
 
+/**
+ * Elimina nodos y atributos potencialmente peligrosos de un documento parseado
+ * como defensa adicional cuando DOMPurify aún no ha sido cargado en memoria.
+ */
+function stripDangerousNodes(doc) {
+  const blockedTags = 'script, iframe, object, embed, link, meta, base';
+  doc.querySelectorAll(blockedTags).forEach(node => node.remove());
+
+  doc.querySelectorAll('*').forEach(el => {
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase();
+      const val = attr.value.trim().toLowerCase();
+      if (name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+      } else if ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+                 (val.startsWith('javascript:') || val.startsWith('vbscript:') || val.startsWith('data:text/html'))) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  });
+}
+
+/**
+ * Inserta HTML sanitizado en un elemento usando DOMPurify (si está disponible)
+ * y saneamiento estructural mediante DOMParser.
+ */
 export const setHTML = (el, html) => {
   if (!el) return;
   clearHTML(el);
+  const rawHtml = String(html || '');
+  const cleanHtml = (typeof window !== 'undefined' && window.DOMPurify)
+    ? window.DOMPurify.sanitize(rawHtml)
+    : rawHtml;
+
   const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  // Usamos un fragmento para mover los elementos de forma segura
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+  stripDangerousNodes(doc);
+
   const fragment = document.createDocumentFragment();
   while (doc.body.firstChild) {
     fragment.appendChild(doc.body.firstChild);
@@ -49,11 +80,87 @@ export const setSVG = (el, svgString) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgString, 'image/svg+xml');
   const svgElement = doc.documentElement;
-  
+
   clearHTML(el);
-  // Importar el nodo al documento actual
   const importedNode = document.importNode(svgElement, true);
   el.appendChild(importedNode);
+};
+
+/**
+ * Verifica si una URL usa un protocolo web seguro (http o https).
+ */
+export const isSafeWebUrl = (urlStr) => {
+  try {
+    if (!urlStr) return false;
+    const parsed = new URL(urlStr);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Normaliza una cadena URL agregando https:// si carece de esquema,
+ * siempre que no use un protocolo prohibido.
+ */
+export const normalizeWebUrl = (rawUrl) => {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
+/**
+ * Convierte un color CSS (#hex o rgb/rgba) a componentes RGB [r, g, b].
+ */
+export const parseColorToRgb = (color, fallback = [0, 0, 0]) => {
+  try {
+    if (!color) return fallback;
+    const hex = String(color).trim();
+    if (hex.startsWith('#')) {
+      if (hex.length === 4) {
+        return [1, 2, 3].map(i => parseInt(hex[i] + hex[i], 16));
+      }
+      const match = hex.substring(1).match(/.{2}/g);
+      if (match && match.length >= 3) {
+        return match.slice(0, 3).map(x => parseInt(x, 16));
+      }
+    } else if (hex.includes('rgb')) {
+      const match = hex.match(/\d+/g);
+      if (match && match.length >= 3) {
+        return match.slice(0, 3).map(Number);
+      }
+    }
+  } catch (e) { /* usar fallback */ }
+  return fallback;
+};
+
+/**
+ * Convierte cualquier color #hex o rgb/rgba a formato #rrggbb compatible con <input type="color">.
+ */
+export const toHexColor = (color, fallback = '#000000') => {
+  if (!color) return fallback;
+  const trimmed = String(color).trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`.toLowerCase();
+  }
+  const [r, g, b] = parseColorToRgb(trimmed, null);
+  if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return fallback;
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * Actualiza las variables CSS --accent-color y --accent-color-rgb en :root.
+ */
+export const setAccentColorVars = (color) => {
+  if (!color) return;
+  const root = document.documentElement.style;
+  root.setProperty('--accent-color', color);
+  const rgb = parseColorToRgb(color, [168, 85, 247]);
+  root.setProperty('--accent-color-rgb', rgb.join(', '));
 };
 
 /**
@@ -73,8 +180,7 @@ let syncBuffer = {};
 let syncTimer = null;
 
 /**
- * Throttle function to limit how often a function can execute.
- * Uses requestAnimationFrame for optimal performance with DOM/layout operations.
+ * Limita la frecuencia de ejecución de una función.
  */
 export const throttle = (callback, limit) => {
     let waiting = false;
@@ -86,140 +192,141 @@ export const throttle = (callback, limit) => {
                 waiting = false;
             }, limit);
         }
-    }
+    };
 };
 
-// storage helpers supporting chrome.storage.sync or fallback to localStorage
-export const storageGet = (keys, useCache = false) => new Promise(resolve => {
+// storage helpers supporting chrome.storage.local or fallback to localStorage
+export const storageGet = (keys) => new Promise(resolve => {
   if (window.chrome && chrome.storage?.local) {
-    // Siempre leemos de local, que es nuestra "fuente de verdad" en el navegador para la carga inicial.
     chrome.storage.local.get(keys, resolve);
-  } else { // Fallback para cuando no es una extensión
+  } else {
     const out = {};
-    if (keys) {
-      keys.forEach(k => { 
-        try { out[k] = JSON.parse(localStorage.getItem(k)); } catch(e) { out[k] = localStorage.getItem(k); }
+    const keyList = typeof keys === 'string' ? [keys] : keys;
+    if (Array.isArray(keyList)) {
+      keyList.forEach(k => {
+        try { out[k] = JSON.parse(localStorage.getItem(k)); } catch (e) { out[k] = localStorage.getItem(k); }
       });
     } else {
-      for(let i=0; i<localStorage.length; i++) {
+      for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        try { out[k] = JSON.parse(localStorage.getItem(k)); } catch(e) { out[k] = localStorage.getItem(k); }
+        try { out[k] = JSON.parse(localStorage.getItem(k)); } catch (e) { out[k] = localStorage.getItem(k); }
       }
     }
     resolve(out);
   }
 });
 
-// CAMBIO: La función de guardado ahora escribe en `local` (para velocidad) y `sync` (para sincronización)
-// Se añade un filtro de tamaño para evitar el error "kQuotaBytesPerItem quota exceeded"
+// Escritura en chrome.storage.local + sincronización diferida a sync + caché ligero Zero-Flash
 export const storageSet = (obj) => {
   return new Promise(async (resolve) => {
-    // 1. Guardamos en chrome.storage (Async)
     if (window.chrome && chrome.storage) {
-      // Guardamos SIEMPRE en local para acceso rápido e inmediato en el hilo async.
       await new Promise(res => chrome.storage.local.set(obj, res));
 
-      // 2. Sincronización con Sync (Debounced)
       if (chrome.storage.sync) {
         Object.assign(syncBuffer, obj);
         if (syncTimer) clearTimeout(syncTimer);
         syncTimer = setTimeout(() => {
           const syncObj = {};
           for (const key in syncBuffer) {
-            const size = JSON.stringify(syncBuffer[key]).length;
-            if (size < 7000) syncObj[key] = syncBuffer[key];
+            const val = syncBuffer[key];
+            if (val === undefined) continue;
+            const size = JSON.stringify(val).length;
+            if (size < 7000) syncObj[key] = val;
           }
           if (Object.keys(syncObj).length > 0) {
             chrome.storage.sync.set(syncObj, () => {
-              if (chrome.runtime.lastError) console.warn("Sync quota warning:", chrome.runtime.lastError.message);
+              if (chrome.runtime.lastError) console.warn('Sync quota warning:', chrome.runtime.lastError.message);
               syncBuffer = {};
             });
+          } else {
+            syncBuffer = {};
           }
           syncTimer = null;
-        }, 1000); 
+        }, 1000);
       }
     } else {
-      // Fallback local storage normal
       Object.keys(obj).forEach(k => localStorage.setItem(k, JSON.stringify(obj[k])));
     }
 
-    // 3. CACHE CRÍTICA (Sync) - Para eliminar el destello (Zero-Flash)
+    // Caché crítica síncrona para Zero-Flash (evitando guardar imágenes base64 pesadas en localStorage)
     const criticalKeys = [
       'panelBg', 'panelOpacity', 'panelBlur', 'panelRadius',
       'panelTextColor', 'panelTextSecondaryColor', 'accentColor',
       'greetingColor', 'nameColor', 'clockColor', 'dateColor',
       'greetingFont', 'dateFont', 'activePremiumTheme', 'premiumThemeData',
-      'doodle', 'gradient', 'bgData', 'bgUrl', 'bgColor',
+      'doodle', 'gradient', 'bgUrl', 'bgColor', 'bgDisplayMode', 'hasCustomBgData',
       'userName', 'showSearch', 'showWeather', 'showDate', 'use12HourFormat', 'showSeconds',
       'syncFirefoxTheme'
     ];
 
-    // Obtenemos la caché actual o creamos una nueva
     let zeroFlashCache = {};
     try {
       const existing = localStorage.getItem('zero_flash_cache');
       if (existing) zeroFlashCache = JSON.parse(existing);
-    } catch(e) {}
+    } catch (e) {}
 
-    // Actualizamos solo lo que ha cambiado
     Object.keys(obj).forEach(key => {
       if (criticalKeys.includes(key)) {
-        zeroFlashCache[key] = obj[key];
+        if (obj[key] === null || obj[key] === undefined) {
+          delete zeroFlashCache[key];
+        } else {
+          zeroFlashCache[key] = obj[key];
+        }
+      } else if (key === 'bgData') {
+        if (typeof obj.bgData === 'string' && obj.bgData.length < 150000) {
+          zeroFlashCache.bgData = obj.bgData;
+        } else {
+          delete zeroFlashCache.bgData;
+        }
       }
     });
 
     try {
       localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
-    } catch (e) {}
+    } catch (e) {
+      try {
+        delete zeroFlashCache.bgData;
+        delete zeroFlashCache._tileSummaries;
+        localStorage.setItem('zero_flash_cache', JSON.stringify(zeroFlashCache));
+      } catch (e2) {}
+    }
 
     resolve();
   });
 };
 
-
 /**
  * Función de guardado en archivo con "debounce".
  * Agrupa múltiples llamadas a guardar en un corto período de tiempo en una sola.
- * @param {object} dataToSave - Datos a fusionar y guardar.
- * @param {boolean} forceAll - Si es true, fuerza a guardar todos los datos, no solo los del parámetro.
  */
-const debouncedSaveToFile = (dataToSave, forceAll = false) => {
+const debouncedSaveToFile = (dataToSave) => {
     clearTimeout(saveDebounceTimer);
     saveDebounceTimer = setTimeout(async () => {
         try {
             if (_saveToFileHandler) {
-                await _saveToFileHandler(dataToSave || {}); 
+                await _saveToFileHandler(dataToSave || {});
             }
             if (_showSaveStatusHandler) {
                 _showSaveStatusHandler();
             }
         } catch (error) {
-            console.error("Fallo el guardado automático después de varios intentos.", error);
+            console.error('Fallo el guardado automático después de varios intentos.', error);
         }
-    }, 300); // Espera 300ms antes de guardar
+    }, 300);
 };
 
 /**
  * Guarda una configuración, la almacena en el navegador y sincroniza con el archivo si autoSync está activado.
- * @param {object} setting - Un objeto con la clave y valor a guardar. Ej: { userName: 'Test' }
- * @param {function(object):void} [applyCallback] - Una función opcional para aplicar los cambios en la UI.
  */
 export async function saveAndSyncSetting(setting, applyCallback) {
-    // 1. Guardar el cambio específico en el almacenamiento del navegador.
     await storageSet(setting);
-    // 2. Aplicar el cambio en la UI si se proporciona un callback.
     if (applyCallback) {
         applyCallback(setting);
     }
-    // 3. Comprobar si la sincronización con archivo está activa.
     const { autoSync } = await storageGet(['autoSync']);
     if (autoSync) {
-        // 4. Disparar el guardado en archivo. Pasamos un objeto vacío para forzar
-        //    a que se guarde el estado COMPLETO, no solo este cambio.
         debouncedSaveToFile({});
-    } else {
-        if (_showSaveStatusHandler) {
-            _showSaveStatusHandler();
-        }
+    } else if (_showSaveStatusHandler) {
+        _showSaveStatusHandler();
     }
 }

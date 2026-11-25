@@ -1,6 +1,6 @@
 /* Estilo crítico para eliminar destellos de carga (Permitido por CSP) */
 html {
-  background-color: #050505 !important;
+  background-color: #064e3b !important;
   color-scheme: dark !important;
 }
 
@@ -9,9 +9,10 @@ body {
   margin: 0;
 }
 
-/* Prevenir destello de colores de acento (ej. morado #a855f7) */
+/* Prevenir destello de colores de acento (Bosque Esmeralda por defecto) */
 :root {
-  --accent-color: #050505;
+  --accent-color: #34d399;
+  --accent-color-rgb: 52, 211, 153;
 }
 
 .wrap {
@@ -47,10 +48,9 @@ body.loading .weather-widget-fixed {
   display: none !important;
 }
 
-/* 
+/*
  * ANTI-FLASH CRÍTICO: Ocultar el panel de configuración, modal y overlay ANTES de que
  * panels.css cargue (panels.css se carga de forma diferida ~500ms después).
- * Sin esto, estos elementos aparecen brevemente visibles en su posición normal.
  */
 #settings {
   position: fixed;
@@ -105,14 +105,14 @@ body.loading .weather-widget-fixed {
   pointer-events: auto;
 }
 
-/* Tiles precacheados para Zero-Flash: se renderizan antes de que carguen los módulos JS */
+/* Tiles precacheados para Zero-Flash */
 .tile.skeleton-preview {
   pointer-events: auto;
 }
 
 .tile-skeleton-preview {
   min-height: 68px;
-  border-radius: var(--panel-radius, 12px);
-  background: var(--glass-bg, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--panel-radius, 18px);
+  background: var(--glass-bg, rgba(6, 78, 59, 0.2));
+  border: 1px solid var(--glass-border, rgba(236, 253, 245, 0.2));
 }

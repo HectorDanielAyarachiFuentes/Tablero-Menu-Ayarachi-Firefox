@@ -8,20 +8,18 @@ import { API_URLS } from '../menubar/core/config.js';
 
 export const WeatherManager = {
     init() {
-        // Adjuntar listeners una sola vez
-        $('#weatherCity').addEventListener('change', this.handleCityChange);
-        
+        $('#weatherCity')?.addEventListener('change', this.handleCityChange);
+
         const weatherEl = $('#weather');
+        if (!weatherEl) return;
         weatherEl.addEventListener('click', this.handleWidgetClick);
-        
-        // Cerrar si se hace clic fuera del widget
+
         document.addEventListener('click', (e) => {
             if (!weatherEl.contains(e.target)) {
                 weatherEl.classList.remove('open', 'summary-open');
             }
         });
 
-        // Carga inicial
         this.fetchAndRender();
     },
     async fetchAndRender() {
@@ -313,7 +311,8 @@ function render(data) {
 
         // Hourly forecast (next 5 hours)
         const now = new Date();
-        const currentHourIndex = data.hourly.time.findIndex(t => new Date(t) > now);
+        const rawHourIndex = data.hourly.time.findIndex(t => new Date(t) > now);
+        const currentHourIndex = rawHourIndex >= 0 ? rawHourIndex : 0;
         weatherEl.textContent = '';
 
         const summary = document.createElement('div');
@@ -402,6 +401,7 @@ function render(data) {
         iconImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${icon}.svg`;
         iconImg.alt = description;
         iconImg.className = 'weather-icon';
+        iconImg.addEventListener('error', () => { iconImg.src = 'icons/icon.svg'; }, { once: true });
         summary.appendChild(iconImg);
 
         const expanded = document.createElement('div');
@@ -414,12 +414,11 @@ function render(data) {
 
             const nowMs = Date.now();
             let startMs, endMs, leftLabel, rightLabel, leftTimeMs, rightTimeMs, isNightArc;
-            
+
             const sunrise0 = new Date(data.daily.sunrise[0]).getTime();
             const sunset0  = new Date(data.daily.sunset[0]).getTime();
-            
+
             if (isDay) {
-                // Es de día: El arco muestra el progreso del sol de Amanecer a Atardecer
                 startMs = sunrise0;
                 endMs = sunset0;
                 leftLabel = 'Amanecer';
@@ -428,28 +427,30 @@ function render(data) {
                 rightTimeMs = sunset0;
                 isNightArc = false;
             } else {
-                // Es de noche: El arco muestra el progreso de la luna de Atardecer a Amanecer
                 isNightArc = true;
                 leftLabel = 'Atardecer';
                 rightLabel = 'Amanecer';
-                
+
                 if (nowMs < sunrise0) {
-                    // Madrugada (ej: 2 AM). La noche empezó ayer en el sunset.
                     startMs = sunset0 - (24 * 60 * 60 * 1000);
                     endMs = sunrise0;
                     leftTimeMs = startMs;
                     rightTimeMs = sunrise0;
                 } else {
-                    // Noche (ej: 10 PM). La noche empezó hoy en el sunset, termina mañana al sunrise.
-                    const sunrise1 = new Date(data.daily.sunrise[1]).getTime();
+                    const sunrise1 = data.daily.sunrise[1]
+                        ? new Date(data.daily.sunrise[1]).getTime()
+                        : sunrise0 + (24 * 60 * 60 * 1000);
                     startMs = sunset0;
                     endMs = sunrise1;
                     leftTimeMs = sunset0;
                     rightTimeMs = sunrise1;
                 }
             }
-            
-            const arcProgress = Math.min(100, Math.max(0, ((nowMs - startMs) / (endMs - startMs)) * 100));
+
+            const spanMs = endMs - startMs;
+            const arcProgress = spanMs > 0
+                ? Math.min(100, Math.max(0, ((nowMs - startMs) / spanMs) * 100))
+                : 0;
             const leftIcon = isNightArc ? '🌇' : '🌅';
             const rightIcon = isNightArc ? '🌅' : '🌇';
 
@@ -489,10 +490,11 @@ function render(data) {
 
         const hourlyDiv = document.createElement('div');
         hourlyDiv.className = 'forecast-hourly';
-        
-        // Render hourly
+
+        // Render hourly con verificación de límites del array
         for (let i = 0; i < 5; i++) {
             const hourIndex = currentHourIndex + i;
+            if (hourIndex >= data.hourly.time.length) break;
             const hourTime = new Date(data.hourly.time[hourIndex]);
             const hourTemp = Math.round(data.hourly.temperature_2m[hourIndex]);
             const { icon: hourIcon } = getInterpretation(data.hourly.weather_code[hourIndex], isDay);
@@ -506,6 +508,7 @@ function render(data) {
             const hImg = document.createElement('img');
             hImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${hourIcon}.svg`;
             hImg.alt = '';
+            hImg.addEventListener('error', () => { hImg.src = 'icons/icon.svg'; }, { once: true });
             hDiv.appendChild(hImg);
 
             const hTemp = document.createElement('div');
@@ -519,11 +522,12 @@ function render(data) {
         const dailyDiv = document.createElement('div');
         dailyDiv.className = 'forecast-daily';
 
-        // Render daily
-        for (let i = 1; i < 6; i++) {
-            const dayDate = new Date(data.daily.time[i]);
+        // Render daily usando mediodía local para evitar desfase de día por UTC en zonas negativas
+        for (let i = 1; i < Math.min(6, data.daily.time.length); i++) {
+            const dateStr = data.daily.time[i];
+            const dayDate = dateStr.includes('T') ? new Date(dateStr) : new Date(`${dateStr}T12:00:00`);
             const dayName = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(dayDate);
-            const { icon: dayIcon } = getInterpretation(data.daily.weather_code[i]); // daily siempre usa día
+            const { icon: dayIcon } = getInterpretation(data.daily.weather_code[i]);
             const tempMax = Math.round(data.daily.temperature_2m_max[i]);
             const tempMin = Math.round(data.daily.temperature_2m_min[i]);
 
@@ -536,6 +540,7 @@ function render(data) {
             const dImg = document.createElement('img');
             dImg.src = `https://cdn.jsdelivr.net/gh/basmilius/weather-icons@dev/production/fill/svg/${dayIcon}.svg`;
             dImg.alt = '';
+            dImg.addEventListener('error', () => { dImg.src = 'icons/icon.svg'; }, { once: true });
             dDiv.appendChild(dImg);
 
             const dTemp = document.createElement('div');

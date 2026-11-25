@@ -39,15 +39,18 @@ export function initDoodleSettings(activeDoodleId) {
     button.appendChild(name);
 
     button.addEventListener('click', async () => {
-      // Actualizar el cache de localStorage inmediatamente para nuevas pestañas
       try {
         const cacheStr = localStorage.getItem('zero_flash_cache');
         const cache = cacheStr ? JSON.parse(cacheStr) : {};
         cache.doodle = doodle.id;
-        // Buscar el template del doodle
-        const doodleData = DOODLES_LIST.find(d => d.id === doodle.id);
-        if (doodleData && doodleData.template) {
-          cache.doodleTemplate = doodleData.template;
+        if (doodle.id === 'none') {
+          delete cache.doodleTemplate;
+          delete cache.doodleColor;
+        } else {
+          const doodleData = DOODLES_LIST.find(d => d.id === doodle.id);
+          if (doodleData && doodleData.template) {
+            cache.doodleTemplate = doodleData.template;
+          }
         }
         localStorage.setItem('zero_flash_cache', JSON.stringify(cache));
       } catch (e) { /* ignorar */ }
@@ -56,6 +59,7 @@ export function initDoodleSettings(activeDoodleId) {
         doodle: doodle.id,
         syncFirefoxTheme: false
       });
+      updateDoodleSelectionUI(doodle.id);
       window.dispatchEvent(new CustomEvent('background-changed'));
       const syncToggle = $('#syncFirefoxThemeToggle');
       if (syncToggle) syncToggle.checked = false;

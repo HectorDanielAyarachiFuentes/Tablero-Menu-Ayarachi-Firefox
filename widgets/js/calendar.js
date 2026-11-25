@@ -1,7 +1,9 @@
-import { setSVG } from '../../menubar/core/utils.js';
 /**
- * Widget Calendario Simple
+ * Widget Calendario Simple.
+ * Renderiza el calendario mensual con navegación entre meses y resaltado del día actual.
  */
+import { setSVG } from '../../menubar/core/utils.js';
+
 export class CalendarWidget {
     constructor(container) {
         this.container = container;
@@ -20,24 +22,25 @@ export class CalendarWidget {
         titleIcon.className = 'widget-title-icon';
         setSVG(titleIcon, '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>');
         title.appendChild(titleIcon);
-        const titleText = document.createTextNode(' Calendario');
-        title.appendChild(titleText);
+        title.appendChild(document.createTextNode(' Calendario'));
         this.container.appendChild(title);
 
         const control = document.createElement('div');
         control.className = 'calendar-control';
-        
+
         const prevBtn = document.createElement('button');
         prevBtn.className = 'calendar-nav-btn prev';
+        prevBtn.setAttribute('aria-label', 'Mes anterior');
         prevBtn.textContent = '‹';
-        
+
         const monthSpan = document.createElement('span');
         monthSpan.className = 'calendar-month-name';
         monthSpan.style.textTransform = 'capitalize';
         monthSpan.textContent = monthYear;
-        
+
         const nextBtn = document.createElement('button');
         nextBtn.className = 'calendar-nav-btn next';
+        nextBtn.setAttribute('aria-label', 'Mes siguiente');
         nextBtn.textContent = '›';
 
         control.appendChild(prevBtn);
@@ -62,7 +65,6 @@ export class CalendarWidget {
 
     generateDays() {
         const grid = this.container.querySelector('.calendar-grid');
-        // Mantener headers
         const headers = Array.from(grid.children).slice(0, 7);
         grid.textContent = '';
         headers.forEach(h => grid.appendChild(h));
@@ -74,14 +76,12 @@ export class CalendarWidget {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const today = new Date();
 
-        // Días vacíos previos
         for (let i = 0; i < firstDay; i++) {
             const empty = document.createElement('div');
             empty.className = 'calendar-day empty';
             grid.appendChild(empty);
         }
 
-        // Días del mes
         for (let day = 1; day <= daysInMonth; day++) {
             const el = document.createElement('div');
             el.className = 'calendar-day';

@@ -1,9 +1,10 @@
 /**
  * Abstrae la interacción con el sistema de archivos PRIVADO del navegador (OPFS).
- * Gestiona la persistencia de datos en un archivo interno que sobrevive a limpiezas de caché.
+ * Gestiona la persistencia de datos en un archivo interno mediante requestId correlacionados
+ * para evitar condiciones de carrera entre lecturas y escrituras concurrentes.
  */
 import { storageGet, storageSet } from '../core/utils.js';
-import { STORAGE_KEYS } from '../core/config.js';
+
 let _fileErrorHandler = (err) => console.error(err);
 
 /**
@@ -13,25 +14,41 @@ export function setFileSystemErrorHandler(handler) {
     if (typeof handler === 'function') _fileErrorHandler = handler;
 }
 
-const FILE_NAME = 'tablero-data.json';
 let internalDirHandle = null;
 let fsWorkerInstance = null;
+let nextRequestId = 1;
+const pendingRequests = new Map();
 
-/**
- * Obtiene una instancia única del Web Worker para el sistema de archivos.
- */
 function getWorker() {
     if (!fsWorkerInstance) {
         fsWorkerInstance = new Worker('/menubar/system/file-worker.js', { type: 'module' });
+        fsWorkerInstance.addEventListener('message', (event) => {
+            const { requestId } = event.data || {};
+            if (requestId && pendingRequests.has(requestId)) {
+                const resolver = pendingRequests.get(requestId);
+                pendingRequests.delete(requestId);
+                resolver(event.data);
+            }
+        });
+        fsWorkerInstance.addEventListener('error', (err) => {
+            for (const [, resolver] of pendingRequests) {
+                resolver({ success: false, error: err.message || 'Worker error' });
+            }
+            pendingRequests.clear();
+        });
     }
     return fsWorkerInstance;
 }
 
+function postWorkerRequest(action, payload) {
+    return new Promise((resolve) => {
+        const requestId = nextRequestId++;
+        pendingRequests.set(requestId, resolve);
+        getWorker().postMessage({ requestId, action, payload });
+    });
+}
+
 export const FileSystem = {
-    /**
-     * Obtiene el acceso al directorio raíz privado (OPFS).
-     * Es automático y no requiere intervención del usuario.
-     */
     async getInternalDirectory() {
         if (internalDirHandle) return internalDirHandle;
         try {
@@ -43,74 +60,45 @@ export const FileSystem = {
         }
     },
 
-    /**
-     * Carga los datos desde el archivo interno del navegador.
-     */
     async loadDataFromFile() {
-        return new Promise(async (resolve) => {
-            const handle = await this.getInternalDirectory();
-            if (!handle) return resolve(null);
-            
-            const fsWorker = getWorker();
-            fsWorker.onmessage = (event) => {
-                if (event.data.action === 'loadDataResult') {
-                    if (event.data.success && event.data.data) {
-                        storageSet(event.data.data).then(() => resolve(event.data.data));
-                    } else {
-                        resolve(null);
-                    }
-                }
-            };
-            fsWorker.postMessage({ action: 'loadData', payload: { handle } });
-        });
+        const handle = await this.getInternalDirectory();
+        if (!handle) return null;
+
+        const res = await postWorkerRequest('loadData', { handle });
+        if (res && res.success && res.data) {
+            await storageSet(res.data);
+            return res.data;
+        }
+        return null;
     },
 
-    /**
-     * Guarda el estado actual en el archivo interno (OPFS).
-     */
     async saveDataToFile(dataToSave) {
         const allSettings = await storageGet(null);
-        const fullData = { ...allSettings };
+        const fullData = { ...allSettings, ...(dataToSave || {}) };
 
-        // Limpieza de datos temporales
         delete fullData.weather;
         delete fullData.dirHandle;
+        delete fullData.bgData;
 
-        return new Promise(async (resolve, reject) => {
-            const handle = await this.getInternalDirectory();
+        const handle = await this.getInternalDirectory();
+        if (!handle) {
+            throw new Error('No se pudo acceder al almacenamiento interno del navegador.');
+        }
 
-            if (!handle) {
-                return reject(new Error('No se pudo acceder al almacenamiento interno del navegador.'));
-            }
-            
-            const fsWorker = getWorker();
-            fsWorker.onmessage = (event) => {
-                if (event.data.action === 'saveDataResult') { 
-                    if (event.data.success) {
-                        console.log('[FileSystem] Sincronización interna completada.');
-                        resolve();
-                    } else {
-                        _fileErrorHandler(`Error de sincronización interna: ${event.data.error}`);
-                        reject(new Error(event.data.error));
-                    }
-                }
-            };
-            fsWorker.postMessage({ action: 'saveData', payload: { handle, data: fullData } });
-        });
+        const res = await postWorkerRequest('saveData', { handle, data: fullData });
+        if (res && res.success) {
+            return;
+        }
+        const errMsg = res?.error || 'Error desconocido al guardar en OPFS';
+        _fileErrorHandler(`Error de sincronización interna: ${errMsg}`);
+        throw new Error(errMsg);
     },
 
-    /**
-     * Mantiene compatibilidad con la UI vieja pero ahora informa que es automático.
-     */
     async getPermissionState() {
         return 'granted';
     },
 
-    /**
-     * Selector de directorio ya no es necesario para OPFS.
-     */
     async selectDirectory() {
-        console.log('OPFS activo: El guardado ya es automático e interno.');
         return await this.getInternalDirectory();
     }
 };

@@ -60,6 +60,7 @@ export function initTiles() {
     const tilesEl = $('#tiles');
 
     tilesEl.addEventListener('click', handleTileClick);
+    tilesEl.addEventListener('keydown', handleTileKeydown);
     tilesEl.addEventListener('dragstart', handleTileDragStart);
     tilesEl.addEventListener('dragover', handleTileDragOver);
     tilesEl.addEventListener('dragleave', handleTileDragLeave);
@@ -313,23 +314,48 @@ function ensureAddButton(container, count) {
     if ($('.tile-add')) return;
     const addNode = document.createElement('div');
     addNode.className = 'tile tile-add';
-    addNode.style.gridColumn = 'auto'; 
-    
+    addNode.style.gridColumn = 'auto';
+    addNode.setAttribute('role', 'button');
+    addNode.setAttribute('tabindex', '0');
+    addNode.setAttribute('aria-label', 'Añadir nuevo acceso');
+
     const span = document.createElement('span');
     span.textContent = '+';
     const textDiv = document.createElement('div');
     textDiv.textContent = 'Añadir';
-    
+
     addNode.appendChild(span);
     addNode.appendChild(textDiv);
-    
-    addNode.addEventListener('click', (e) => {
+
+    const openAdd = (e) => {
         e.preventDefault();
         if (_openModal) _openModal();
+    };
+
+    addNode.addEventListener('click', openAdd);
+    addNode.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            openAdd(e);
+        }
     });
     container.appendChild(addNode);
-    
+}
 
+function handleTileKeydown(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tile = e.target.closest('.tile:not(.tile-add)');
+    if (!tile || e.target.closest('.more-btn')) return;
+
+    const idx = Number(tile.dataset.idx);
+    const tileData = FolderManager.getTilesForCurrentView(tiles)[idx];
+    if (tileData?.type === 'folder') {
+        e.preventDefault();
+        FolderManager.navigateToFolder(idx);
+    } else if (tileData?.type === 'note') {
+        e.preventDefault();
+        const itemPath = [...FolderManager.getCurrentPath(), idx];
+        if (_openModal) _openModal(itemPath);
+    }
 }
 
 function handleTileClick(e) {
@@ -707,10 +733,11 @@ function handleTileDrop(e) {
             t.dataset.idx = i;
         });
 
-        // Guardar sin re-renderizar (ya movimos el DOM)
-        saveTilesQuietly().then(() => showSaveStatus());
-
-
+        // Guardar sin re-renderizar (ya movimos el DOM) y notificar a vistas acopladas
+        saveTilesQuietly().then(() => {
+            if (_onSaveStatus) _onSaveStatus();
+            notifyTilesChange();
+        });
 
         return;
     }
@@ -742,6 +769,11 @@ function cleanupDrag() {
     }
     $$('.tile').forEach(t => t.classList.remove('drag-over', 'drag-over-folder'));
     $('#tiles')?.classList.remove('dragging-active');
+
+    if (backBtnDropTarget) {
+        backBtnDropTarget.classList.remove('drag-over-back');
+        backBtnDropTarget = null;
+    }
 
     // Limpiar estado de carpeta
     if (folderDropTarget) {

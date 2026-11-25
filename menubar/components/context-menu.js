@@ -1,9 +1,9 @@
 /**
  * Gestiona la lógica del menú contextual que aparece al hacer clic en los "tres puntos" de un acceso.
- * Se encarga de mostrar, ocultar y manejar las acciones del menú (editar, eliminar, etc.).
+ * Se encarga de mostrar, ocultar y manejar las acciones del menú (editar, eliminar, extraer, etc.).
  */
-import { $, $$ } from '../core/utils.js';
-import { FolderManager } from '../core/carpetas.js';
+import { $, clearHTML, isSafeWebUrl } from '../core/utils.js';
+import { FolderManager, getDynamicFallbackIcon } from '../core/carpetas.js';
 import { tiles, trash, saveAndRender } from '../core/tiles.js';
 import { openModal } from './modal.js';
 
@@ -11,6 +11,8 @@ let activeMenuIndex = null;
 
 export function initContextMenu() {
     const contextMenu = $('#contextMenu');
+    if (!contextMenu) return;
+
     document.addEventListener('click', (e) => {
         if (!contextMenu.hidden && !e.target.closest('.context-menu')) {
             hideContextMenu();
@@ -22,6 +24,8 @@ export function initContextMenu() {
 
 export function showContextMenu(button, index) {
     const contextMenu = $('#contextMenu');
+    if (!contextMenu) return;
+
     activeMenuIndex = index;
     const tileData = FolderManager.getTilesForCurrentView(tiles)[index];
     if (!tileData) return;
@@ -47,41 +51,45 @@ export function showContextMenu(button, index) {
 
     const extractSingleMenu = document.getElementById('extract-single-menu');
     const extractSubmenuList = document.getElementById('extract-submenu-list');
-    
+
     if (extractSingleMenu && extractSubmenuList) {
         if (isFolder && tileData.children && tileData.children.length > 0) {
             extractSingleMenu.hidden = false;
-            extractSubmenuList.innerHTML = '';
+            clearHTML(extractSubmenuList);
+
             tileData.children.forEach((child, i) => {
                 const li = document.createElement('li');
                 const btn = document.createElement('button');
                 btn.dataset.action = 'extract-single';
                 btn.dataset.childIndex = i;
-                
-                // Generar icono para el submenu usando la misma logica simplificada
+
                 let iconSrc = child.customIcon;
                 if (!iconSrc) {
-                    if (child.type === 'link') {
-                        try {
-                            const urlObj = new URL(child.url);
-                            iconSrc = `https://www.google.com/s2/favicons?sz=64&domain=${urlObj.hostname}`;
-                        } catch (e) {
-                            // Sin getDynamicFallbackIcon porque no estamos exportándolo, usamos la inicial
-                            const letter = (child.name || child.url || '?').charAt(0).toUpperCase();
-                            iconSrc = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23666" rx="12"/><text x="50%" y="50%" font-family="sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">${letter}</text></svg>`;
+                    if (child.type === 'link' || child.type === 'enlace') {
+                        if (isSafeWebUrl(child.url)) {
+                            iconSrc = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(child.url).hostname}`;
+                        } else {
+                            iconSrc = getDynamicFallbackIcon(child.name || child.url);
                         }
                     } else if (child.type === 'folder') {
                         iconSrc = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"%3E%3C/path%3E%3C/svg%3E';
+                    } else {
+                        iconSrc = getDynamicFallbackIcon(child.name || 'Nota');
                     }
                 }
-                
+
                 const img = document.createElement('img');
                 img.src = iconSrc || '';
+                img.alt = '';
                 img.width = 16;
                 img.height = 16;
                 img.style.marginRight = '8px';
                 img.style.borderRadius = '4px';
                 img.style.objectFit = 'contain';
+                img.addEventListener('error', () => {
+                    img.src = getDynamicFallbackIcon(child.name || child.url);
+                }, { once: true });
+
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = child.name;
                 btn.appendChild(img);
@@ -95,41 +103,25 @@ export function showContextMenu(button, index) {
     }
 
     const rect = button.getBoundingClientRect();
-    
-    // Primero, hacer visible el menú para obtener sus dimensiones
     contextMenu.hidden = false;
     const menuWidth = contextMenu.offsetWidth;
     const menuHeight = contextMenu.offsetHeight;
-    
-    // Calcular la posición inicial
+
     let left = rect.left;
     let top = rect.bottom + 5;
-    
-    // Verificar si el menú se sale por el borde derecho
+
     if (left + menuWidth > window.innerWidth) {
-        // Alinear el menú al borde derecho del botón
         left = rect.right - menuWidth;
-        // Si aún se sale, alinearlo al borde derecho de la ventana con un margen
-        if (left < 0) {
-            left = window.innerWidth - menuWidth - 10;
-        }
+        if (left < 0) left = window.innerWidth - menuWidth - 10;
     }
-    
-    // Verificar si el menú se sale por el borde inferior
+
     if (top + menuHeight > window.innerHeight) {
-        // Mostrar el menú arriba del botón en lugar de abajo
         top = rect.top - menuHeight - 5;
-        // Si aún se sale por arriba, alinearlo al borde superior con margen
-        if (top < 0) {
-            top = 10;
-        }
+        if (top < 0) top = 10;
     }
-    
-    // Asegurar que no se salga por el borde izquierdo
-    if (left < 0) {
-        left = 10;
-    }
-    
+
+    if (left < 0) left = 10;
+
     contextMenu.style.setProperty('--menu-left', `${left}px`);
     contextMenu.style.setProperty('--menu-top', `${top}px`);
     setTimeout(() => contextMenu.classList.add('is-open'), 10);
@@ -145,49 +137,40 @@ function handleContextMenuClick(e) {
 
     const currentTiles = FolderManager.getTilesForCurrentView(tiles);
     const tile = currentTiles[activeMenuIndex];
+    if (!tile) {
+        hideContextMenu();
+        return;
+    }
 
     switch (action) {
         case 'favorite':
             tile.favorite = !tile.favorite;
             saveAndRender();
             break;
-        case 'open-tab': window.open(tile.url); break;
-        case 'open-window': window.open(tile.url, '_blank', 'noopener,noreferrer'); break;
-        case 'open-private': chrome.windows?.create({ url: tile.url, incognito: true }); break;
-        case 'use-letter':
-            const fallbackText = tile.name || (tile.url ? new URL(tile.url).hostname.replace('www.', '') : '?');
-            const letter = (fallbackText || '?').charAt(0).toUpperCase();
-            
-            let fallbackUrl = '';
-            if (/^[A-Z]$/.test(letter)) {
-                fallbackUrl = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.getURL(`abecedario/${letter.toLowerCase()}.svg`) : `abecedario/${letter.toLowerCase()}.svg`;
-            } else {
-                // Generar canvas simple si no es A-Z
-                const canvas = document.createElement('canvas');
-                canvas.width = 64; canvas.height = 64;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#3498DB';
-                ctx.beginPath(); ctx.roundRect(0, 0, 64, 64, 12); ctx.fill();
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 36px system-ui, sans-serif';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(letter, 32, 34);
-                fallbackUrl = canvas.toDataURL('image/png');
-            }
-            
-            tile.customIcon = fallbackUrl;
+        case 'open-tab':
+            if (isSafeWebUrl(tile.url)) window.open(tile.url, '_blank', 'noopener,noreferrer');
+            break;
+        case 'open-window':
+            if (isSafeWebUrl(tile.url)) window.open(tile.url, '_blank', 'noopener,noreferrer');
+            break;
+        case 'open-private':
+            if (isSafeWebUrl(tile.url)) chrome.windows?.create({ url: tile.url, incognito: true });
+            break;
+        case 'use-letter': {
+            let host = '?';
+            try {
+                if (tile.url) host = new URL(tile.url).hostname.replace('www.', '');
+            } catch (err) {}
+            const fallbackText = tile.name || host;
+            tile.customIcon = getDynamicFallbackIcon(fallbackText);
             saveAndRender();
             break;
+        }
         case 'extract-single': {
             const childIdx = Number(targetButton.dataset.childIndex);
             if (tile.type === 'folder' && tile.children && childIdx >= 0 && childIdx < tile.children.length) {
                 const itemToMove = tile.children.splice(childIdx, 1)[0];
-                const path = FolderManager.getCurrentPath();
-                let parentList = tiles;
-                for (const idx of path) {
-                    parentList = parentList[idx].children;
-                }
-                parentList.push(itemToMove);
+                currentTiles.push(itemToMove);
                 saveAndRender();
             }
             break;
@@ -208,12 +191,7 @@ function handleContextMenuClick(e) {
         case 'empty-folder':
             if (tile.type === 'folder' && tile.children && tile.children.length > 0) {
                 const itemsToMove = tile.children.splice(0, tile.children.length);
-                const path = FolderManager.getCurrentPath();
-                let parentList = tiles;
-                for (const idx of path) {
-                    parentList = parentList[idx].children;
-                }
-                parentList.push(...itemsToMove);
+                currentTiles.push(...itemsToMove);
                 saveAndRender();
             }
             break;
@@ -222,7 +200,7 @@ function handleContextMenuClick(e) {
             openModal(itemPath);
             break;
         }
-        case 'delete':
+        case 'delete': {
             const deleteOption = targetButton;
             if (deleteOption.classList.contains('confirm-delete')) {
                 const itemToTrash = currentTiles.splice(activeMenuIndex, 1)[0];
@@ -235,17 +213,20 @@ function handleContextMenuClick(e) {
                 resetDeleteConfirmation();
                 deleteOption.classList.add('confirm-delete');
                 deleteOption.querySelector('span').textContent = '¿Confirmar envío?';
-                $('#tiles').querySelector(`.tile[data-idx="${activeMenuIndex}"]`)?.classList.add('pending-delete');
+                $('#tiles')?.querySelector(`.tile[data-idx="${activeMenuIndex}"]`)?.classList.add('pending-delete');
             }
             break;
+        }
     }
+
     if (action !== 'delete') {
         hideContextMenu();
     }
 }
 
-function hideContextMenu() {
+export function hideContextMenu() {
     const contextMenu = $('#contextMenu');
+    if (!contextMenu) return;
     contextMenu.classList.remove('is-open');
     resetDeleteConfirmation();
     setTimeout(() => { contextMenu.hidden = true; }, 200);

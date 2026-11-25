@@ -4,6 +4,7 @@
  */
 import { $, $$, setSVG } from '../core/utils.js';
 import { trash, tiles, saveAndRender } from '../core/tiles.js';
+import { showConfirmDialog } from './ui.js';
 
 export function renderTrash() {
     const trashListEl = $('#trash-list');
@@ -76,9 +77,12 @@ function handleRestoreTrash(e) {
     saveAndRender();
 }
 
-function handleDeletePermanent(e) {
+async function handleDeletePermanent(e) {
     const index = parseInt(e.currentTarget.dataset.idx, 10);
-    if (confirm(`¿Estás seguro de que quieres eliminar "${trash[index].name}" permanentemente? Esta acción no se puede deshacer.`)) {
+    const item = trash[index];
+    if (!item) return;
+    const confirmed = await showConfirmDialog(`¿Estás seguro de que quieres eliminar "${item.name}" permanentemente? Esta acción no se puede deshacer.`);
+    if (confirmed) {
         trash.splice(index, 1);
         saveAndRender();
     }
